@@ -214,8 +214,14 @@ export default function PrivateChatScreen() {
     }, 2000);
   };
 
-  const handleSend = async (imageUrl?: string) => {
-    if ((!inputText.trim() && !imageUrl) || !otherUserId || !user) return;
+  const handleSend = async (mediaUrl?: string, mediaType?: 'image' | 'video' | 'file', fileName?: string) => {
+    // Düzenleme modu
+    if (editingMessage) {
+      await handleEditMessage();
+      return;
+    }
+    
+    if ((!inputText.trim() && !mediaUrl) || !otherUserId || !user) return;
 
     setIsTyping(false);
     updateTypingStatus(false);
@@ -225,6 +231,7 @@ export default function PrivateChatScreen() {
     const messageText = inputText.trim();
     setInputText('');
     setShowEmojiPicker(false);
+    setShowAttachMenu(false);
 
     try {
       const chatId = getChatId();
@@ -243,14 +250,19 @@ export default function PrivateChatScreen() {
         senderName: `${userProfile?.firstName || ''} ${userProfile?.lastName || ''}`.trim(),
         senderProfileImage: userProfile?.profileImageUrl || null,
         text: messageText,
-        type: imageUrl ? 'image' : 'text',
+        type: mediaType || 'text',
         createdAt: serverTimestamp(),
         deliveredTo: [],
         readBy: [user.uid],
         status: 'sent',
       };
 
-      if (imageUrl) messageData.imageUrl = imageUrl;
+      if (mediaUrl) {
+        messageData.mediaUrl = mediaUrl;
+        if (mediaType === 'image') messageData.imageUrl = mediaUrl;
+        if (fileName) messageData.fileName = fileName;
+      }
+      
       if (replyingTo) {
         messageData.replyTo = {
           id: replyingTo.id,
