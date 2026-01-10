@@ -1037,23 +1037,32 @@ async def delete_service(service_id: str, current_user: dict = Depends(get_curre
 
 @api_router.get("/communities/{community_id}/announcements")
 async def get_announcements(community_id: str, current_user: dict = Depends(get_current_user)):
+    """Topluluk duyurularını döner.
+
+    - Üye olmayanlar: Son X (varsayılan 5) duyuruyu sadece OKUMA modunda görebilir.
+    - Üyeler / yöneticiler: Daha fazla sayıda (örn. 50) duyuru görebilir.
+    """
     community = await db.communities.find_one({"id": community_id})
     if not community:
         raise HTTPException(status_code=404, detail="Topluluk bulunamadı")
-
-    # Sadece topluluk üyeleri veya yöneticiler duyuruları görebilir
-    is_member = current_user['uid'] in community.get('members', [])
-    is_super_admin = current_user['uid'] in community.get('superAdmins', [])
-    is_global_admin = await check_global_admin(current_user)
-
-    if not (is_member or is_super_admin or is_global_admin):
-        raise HTTPException(status_code=403, detail="Duyuruları görmek için önce topluluğa katılmanız gerekiyor")
 
     announcement_channel_id = community.get('announcementChannelId')
     if not announcement_channel_id:
         return []
 
-    messages = await db.messages.find({"groupId": announcement_channel_id}).sort("timestamp", -1).limit(50).to_list(50)
+    # Üyelik ve yetki durumu
+    is_member = current_user['uid'] in community.get('members', [])
+    is_super_admin = current_user['uid'] in community.get('superAdmins', [])
+    is_global_admin = await check_global_admin(current_user)
+
+    # Üye olmayanlar için sadece son X duyuru (örneğin 5 adet)
+    if not (is_member or is_super_admin or is_global_admin):
+        limit = 5
+    else:
+        # Üyeler ve yöneticiler daha fazla duyuru görebilir
+        limit = 50
+
+    messages = await db.messages.find({"groupId": announcement_channel_id}).sort("timestamp", -1).limit(limit).to_list(limit)
     for msg in messages:
         if '_id' in msg:
             del msg['_id']
