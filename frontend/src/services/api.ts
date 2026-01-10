@@ -1,0 +1,79 @@
+import axios from 'axios';
+import { auth } from '../config/firebase';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+
+const api = axios.create({
+  baseURL: `${API_URL}/api`,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+});
+
+// Add auth token to requests
+api.interceptors.request.use(async (config) => {
+  const user = auth.currentUser;
+  if (user) {
+    const token = await user.getIdToken();
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export const userApi = {
+  register: (data: any) => api.post('/user/register', data),
+  getProfile: () => api.get('/user/profile'),
+  updateProfile: (data: any) => api.put('/user/profile', data),
+  isAdmin: () => api.get('/user/is-admin'),
+};
+
+export const communityApi = {
+  getAll: () => api.get('/communities'),
+  getOne: (id: string) => api.get(`/communities/${id}`),
+  join: (id: string) => api.post(`/communities/${id}/join`),
+  leave: (id: string) => api.post(`/communities/${id}/leave`),
+  createSubgroup: (communityId: string, data: any) => api.post(`/communities/${communityId}/subgroups`, data),
+  getAnnouncements: (id: string) => api.get(`/communities/${id}/announcements`),
+  sendAnnouncement: (id: string, data: any) => api.post(`/communities/${id}/announcements`, data),
+};
+
+export const subgroupApi = {
+  getOne: (id: string) => api.get(`/subgroups/${id}`),
+  join: (id: string) => api.post(`/subgroups/${id}/join`),
+  leave: (id: string) => api.post(`/subgroups/${id}/leave`),
+  getMessages: (id: string) => api.get(`/subgroups/${id}/messages`),
+  sendMessage: (id: string, data: any) => api.post(`/subgroups/${id}/messages`, data),
+};
+
+export const messageApi = {
+  delete: (id: string) => api.delete(`/messages/${id}`),
+  getPrivate: (userId: string) => api.get(`/private-messages/${userId}`),
+  sendPrivate: (data: any) => api.post('/private-messages', data),
+};
+
+export const userListApi = {
+  getAll: () => api.get('/users'),
+  getOne: (id: string) => api.get(`/users/${id}`),
+};
+
+export const postApi = {
+  getAll: () => api.get('/posts'),
+  create: (data: any) => api.post('/posts', data),
+  like: (id: string) => api.post(`/posts/${id}/like`),
+  getComments: (id: string) => api.get(`/posts/${id}/comments`),
+  addComment: (id: string, data: any) => api.post(`/posts/${id}/comments`, data),
+  delete: (id: string) => api.delete(`/posts/${id}`),
+  getMy: () => api.get('/my-posts'),
+};
+
+export const serviceApi = {
+  getAll: () => api.get('/services'),
+  create: (data: any) => api.post('/services', data),
+  delete: (id: string) => api.delete(`/services/${id}`),
+};
+
+export const generalApi = {
+  getCities: () => api.get('/cities'),
+};
+
+export default api;
