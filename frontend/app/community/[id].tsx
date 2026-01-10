@@ -12,8 +12,15 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { communityApi, subgroupApi } from '../../src/services/api';
+import { communityApi, subgroupRequestApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
+
+interface Announcement {
+  id: string;
+  content: string;
+  senderName: string;
+  timestamp: string;
+}
 
 interface Community {
   id: string;
@@ -32,14 +39,37 @@ interface SubGroup {
   description?: string;
   memberCount: number;
   isMember: boolean;
+  hasPendingRequest?: boolean;
 }
+
+// Alt grup kartı için ikon belirleme
+const getSubgroupIcon = (name: string): string => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('start') || lowerName.includes('başla')) return 'rocket';
+  if (lowerName.includes('gelişim')) return 'trending-up';
+  if (lowerName.includes('değerlendirme')) return 'analytics';
+  if (lowerName.includes('mastermind')) return 'bulb';
+  return 'chatbubbles';
+};
+
+// Alt grup kartı için renk belirleme
+const getSubgroupColor = (name: string): string => {
+  const lowerName = name.toLowerCase();
+  if (lowerName.includes('start') || lowerName.includes('başla')) return '#10b981';
+  if (lowerName.includes('gelişim')) return '#3b82f6';
+  if (lowerName.includes('değerlendirme')) return '#f59e0b';
+  if (lowerName.includes('mastermind')) return '#8b5cf6';
+  return '#6366f1';
+};
 
 export default function CommunityDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [community, setCommunity] = useState<Community | null>(null);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [joiningSubgroup, setJoiningSubgroup] = useState<string | null>(null);
   const { userProfile } = useAuth();
   const router = useRouter();
 
@@ -57,14 +87,26 @@ export default function CommunityDetailScreen() {
     }
   }, [id]);
 
+  const loadAnnouncements = useCallback(async () => {
+    if (!id) return;
+    try {
+      const response = await communityApi.getAnnouncements(id);
+      setAnnouncements(response.data || []);
+    } catch (error) {
+      console.error('Error loading announcements:', error);
+    }
+  }, [id]);
+
   useEffect(() => {
     loadCommunity();
-  }, [loadCommunity]);
+    loadAnnouncements();
+  }, [loadCommunity, loadAnnouncements]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadCommunity();
-  }, [loadCommunity]);
+    loadAnnouncements();
+  }, [loadCommunity, loadAnnouncements]);
 
   const handleJoin = async () => {
     if (!community) return;
@@ -72,10 +114,13 @@ export default function CommunityDetailScreen() {
     try {
       if (community.isMember) {
         await communityApi.leave(community.id);
+        Alert.alert('Başarılı', 'Topluluktan ayrıldınız');
       } else {
         await communityApi.join(community.id);
+        Alert.alert('Başarılı', 'Topluluğa katıldınız!');
       }
       loadCommunity();
+      loadAnnouncements();
     } catch (error) {
       console.error('Error joining/leaving community:', error);
       Alert.alert('Hata', 'İşlem başarısız');
@@ -84,17 +129,76 @@ export default function CommunityDetailScreen() {
     }
   };
 
-  const handleJoinSubgroup = async (subgroup: SubGroup) => {
-    try {
-      if (subgroup.isMember) {
-        router.push(`/chat/group/${subgroup.id}`);
-      } else {
-        await subgroupApi.join(subgroup.id);
+  const handleSubgroupAction = async (subgroup: SubGroup) => {
+    if (subgroup.isMember) {
+      // Üyeyse sohbete yönlendir
+      router.push(`/chat/group/${subgroup.id}`);
+    } else if (subgroup.hasPendingRequest) {
+      // Zaten istek varsa bilgi ver
+      Alert.alert('Bilgi', 'Bu grup için zaten bir katılım isteğiniz var. Yönetici onayı bekleniyor.');
+    } else {
+      // Katılım isteği gönder
+      setJoiningSubgroup(subgroup.id);
+      try {
+        const response = await subgroupRequestApi.requestJoin(subgroup.id);
+        if (response.data.status === 'joined') {
+          Alert.alert('Başarılı', 'Gruba katıldınız!');
+        } else {
+          Alert.alert('İstek Gönderildi', 'Katılma isteğiniz gönderildi. Yönetici onayı bekleniyor.');
+        }
         loadCommunity();
+      } catch (error: any) {
+        const message = error.response?.data?.detail || 'İşlem başarısız';
+        Alert.alert('Hata', message);
+      } finally {
+        setJoiningSubgroup(null);
       }
-    } catch (error) {
-      console.error('Error joining subgroup:', error);
     }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(hours / 24);
+
+    if (hours < 1) return 'Az önce';
+    if (hours < 24) return `${hours} saat önce`;
+    if (days < 7) return `${days} gün önce`;
+    return date.toLocaleDateString('tr-TR');
+  };
+
+  // Alt grup kart durumunu render et
+  const renderSubgroupStatus = (subgroup: SubGroup) => {
+    if (joiningSubgroup === subgroup.id) {
+      return <ActivityIndicator size="small" color="#6366f1" />;
+    }
+
+    if (subgroup.isMember) {
+      return (
+        <View style={styles.memberBadge}>
+          <Ionicons name="checkmark-circle" size={20} color="#10b981" />
+          <Text style={styles.memberText}>Üyesin</Text>
+        </View>
+      );
+    }
+
+    if (subgroup.hasPendingRequest) {
+      return (
+        <View style={styles.pendingBadge}>
+          <Ionicons name="time" size={20} color="#f59e0b" />
+          <Text style={styles.pendingText}>Beklemede</Text>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.joinBadge}>
+        <Ionicons name="add-circle" size={20} color="#6366f1" />
+        <Text style={styles.joinText}>Katıl</Text>
+      </View>
+    );
   };
 
   if (loading) {
@@ -121,7 +225,15 @@ export default function CommunityDetailScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{community.name}</Text>
-        <View style={{ width: 44 }} />
+        {community.isSuperAdmin && (
+          <TouchableOpacity 
+            style={styles.adminButton}
+            onPress={() => router.push('/admin/communities')}
+          >
+            <Ionicons name="settings" size={24} color="#6366f1" />
+          </TouchableOpacity>
+        )}
+        {!community.isSuperAdmin && <View style={{ width: 44 }} />}
       </View>
 
       <ScrollView
@@ -170,33 +282,44 @@ export default function CommunityDetailScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Subgroups */}
+        {/* Subgroups Section */}
         <View style={styles.subgroupsSection}>
           <Text style={styles.sectionTitle}>Alt Gruplar</Text>
+          <Text style={styles.sectionSubtitle}>
+            Gruplara katılmak için yönetici onayı gereklidir
+          </Text>
           
           {community.subGroupsList && community.subGroupsList.length > 0 ? (
-            community.subGroupsList.map((subgroup) => (
-              <TouchableOpacity
-                key={subgroup.id}
-                style={styles.subgroupCard}
-                onPress={() => handleJoinSubgroup(subgroup)}
-              >
-                <View style={styles.subgroupIcon}>
-                  <Ionicons name="chatbubbles" size={24} color="#6366f1" />
-                </View>
-                <View style={styles.subgroupInfo}>
-                  <Text style={styles.subgroupName}>{subgroup.name}</Text>
-                  <Text style={styles.subgroupMembers}>{subgroup.memberCount} üye</Text>
-                </View>
-                {subgroup.isMember ? (
-                  <View style={styles.memberBadge}>
-                    <Ionicons name="checkmark" size={14} color="#10b981" />
-                  </View>
-                ) : (
-                  <Ionicons name="chevron-forward" size={22} color="#6b7280" />
-                )}
-              </TouchableOpacity>
-            ))
+            <View style={styles.subgroupGrid}>
+              {community.subGroupsList.map((subgroup) => {
+                const iconName = getSubgroupIcon(subgroup.name);
+                const color = getSubgroupColor(subgroup.name);
+                const displayName = subgroup.name.replace(`${community.name} - `, '');
+                
+                return (
+                  <TouchableOpacity
+                    key={subgroup.id}
+                    style={[styles.subgroupCard, { borderLeftColor: color }]}
+                    onPress={() => handleSubgroupAction(subgroup)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.subgroupIconWrapper, { backgroundColor: `${color}20` }]}>
+                      <Ionicons name={iconName as any} size={28} color={color} />
+                    </View>
+                    <View style={styles.subgroupInfo}>
+                      <Text style={styles.subgroupName}>{displayName}</Text>
+                      {subgroup.description && (
+                        <Text style={styles.subgroupDescription} numberOfLines={2}>
+                          {subgroup.description}
+                        </Text>
+                      )}
+                      <Text style={styles.subgroupMembers}>{subgroup.memberCount} üye</Text>
+                    </View>
+                    {renderSubgroupStatus(subgroup)}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           ) : (
             <View style={styles.emptySubgroups}>
               <Ionicons name="chatbubbles-outline" size={48} color="#374151" />
@@ -204,6 +327,45 @@ export default function CommunityDetailScreen() {
             </View>
           )}
         </View>
+
+        {/* Announcements Section */}
+        <View style={styles.announcementsSection}>
+          <View style={styles.announcementHeader}>
+            <Ionicons name="megaphone" size={24} color="#f59e0b" />
+            <Text style={styles.sectionTitle}>Duyurular</Text>
+          </View>
+          
+          {!community.isMember && (
+            <View style={styles.guestNotice}>
+              <Ionicons name="information-circle" size={18} color="#6b7280" />
+              <Text style={styles.guestNoticeText}>
+                Sadece son 5 duyuruyu görüntülüyorsunuz. Tümünü görmek için topluluğa katılın.
+              </Text>
+            </View>
+          )}
+
+          {announcements.length > 0 ? (
+            announcements.map((announcement) => (
+              <View key={announcement.id} style={styles.announcementCard}>
+                <View style={styles.announcementMeta}>
+                  <Text style={styles.announcementSender}>{announcement.senderName}</Text>
+                  <Text style={styles.announcementTime}>
+                    {formatDate(announcement.timestamp)}
+                  </Text>
+                </View>
+                <Text style={styles.announcementContent}>{announcement.content}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyAnnouncements}>
+              <Ionicons name="megaphone-outline" size={40} color="#374151" />
+              <Text style={styles.emptyText}>Henüz duyuru yok</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Bottom padding */}
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -251,6 +413,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
     textAlign: 'center',
+  },
+  adminButton: {
+    width: 44,
+    height: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   scrollView: {
     flex: 1,
@@ -319,12 +487,22 @@ const styles = StyleSheet.create({
   },
   subgroupsSection: {
     padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f2937',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#fff',
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
     marginBottom: 16,
+  },
+  subgroupGrid: {
+    gap: 12,
   },
   subgroupCard: {
     flexDirection: 'row',
@@ -332,13 +510,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#111827',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    borderLeftWidth: 4,
   },
-  subgroupIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+  subgroupIconWrapper: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -349,20 +526,60 @@ const styles = StyleSheet.create({
   subgroupName: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+  },
+  subgroupDescription: {
+    color: '#9ca3af',
+    fontSize: 12,
+    marginTop: 4,
+    lineHeight: 16,
   },
   subgroupMembers: {
     color: '#6b7280',
-    fontSize: 13,
+    fontSize: 12,
     marginTop: 4,
   },
   memberBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  memberText: {
+    color: '#10b981',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  pendingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  pendingText: {
+    color: '#f59e0b',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  joinBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  joinText: {
+    color: '#6366f1',
+    fontSize: 12,
+    fontWeight: '500',
   },
   emptySubgroups: {
     alignItems: 'center',
@@ -372,5 +589,61 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: 14,
     marginTop: 12,
+  },
+  announcementsSection: {
+    padding: 16,
+  },
+  announcementHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  guestNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1f2937',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    gap: 8,
+  },
+  guestNoticeText: {
+    flex: 1,
+    color: '#9ca3af',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  announcementCard: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#f59e0b',
+  },
+  announcementMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  announcementSender: {
+    color: '#f59e0b',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  announcementTime: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  announcementContent: {
+    color: '#e5e7eb',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  emptyAnnouncements: {
+    alignItems: 'center',
+    paddingVertical: 32,
   },
 });
