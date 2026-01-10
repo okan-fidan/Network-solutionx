@@ -114,6 +114,12 @@ export default function GroupChatScreen() {
   };
 
   const handleSend = async (mediaUrl?: string, mediaType?: 'image' | 'video' | 'file', fileName?: string) => {
+    // Düzenleme modu
+    if (editingMessage) {
+      await handleEditMessage();
+      return;
+    }
+    
     if ((!inputText.trim() && !mediaUrl) || !groupId) return;
 
     setSending(true);
@@ -142,6 +148,68 @@ export default function GroupChatScreen() {
       setInputText(messageText);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!groupId) return;
+    
+    Alert.alert(
+      'Mesajı Sil',
+      'Bu mesajı silmek istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await subgroupApi.deleteMessage(groupId, messageId);
+              setMessages(messages.filter(m => m.id !== messageId));
+            } catch (error) {
+              console.error('Error deleting message:', error);
+              Alert.alert('Hata', 'Mesaj silinemedi');
+            }
+          },
+        },
+      ]
+    );
+    setShowMessageActions(false);
+  };
+
+  const handleEditMessage = async () => {
+    if (!editingMessage || !inputText.trim() || !groupId) return;
+    
+    try {
+      await subgroupApi.editMessage(groupId, editingMessage.id, inputText.trim());
+      setMessages(messages.map(m => 
+        m.id === editingMessage.id 
+          ? { ...m, content: inputText.trim(), edited: true }
+          : m
+      ));
+      setEditingMessage(null);
+      setInputText('');
+    } catch (error) {
+      console.error('Error editing message:', error);
+      Alert.alert('Hata', 'Mesaj düzenlenemedi');
+    }
+  };
+
+  const startEditMessage = (message: Message) => {
+    setEditingMessage(message);
+    setInputText(message.content);
+    setShowMessageActions(false);
+  };
+
+  const cancelEdit = () => {
+    setEditingMessage(null);
+    setInputText('');
+  };
+
+  const handleLongPressMessage = (message: Message) => {
+    if (message.senderId === user?.uid) {
+      setSelectedMessage(message);
+      setShowMessageActions(true);
     }
   };
 
