@@ -18,10 +18,11 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import api from '../../src/services/api';
 
 export default function ProfileScreen() {
-  const { userProfile, signOut } = useAuth();
+  const { userProfile, signOut, refreshProfile } = useAuth();
   const router = useRouter();
   const [stats, setStats] = useState({ posts: 0, connections: 0, communities: 0 });
   const [loading, setLoading] = useState(true);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     loadStats();
@@ -45,6 +46,47 @@ export default function ProfileScreen() {
       console.error('Error loading stats:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleChangeProfileImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Fotoğraf seçmek için galeri izni gerekiyor.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setUploadingImage(true);
+      try {
+        // Upload image - this would need a proper upload endpoint
+        const formData = new FormData();
+        formData.append('image', {
+          uri: result.assets[0].uri,
+          type: 'image/jpeg',
+          name: 'profile.jpg',
+        } as any);
+        
+        await api.put('/user/profile-image', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        
+        // Refresh profile to get new image
+        if (refreshProfile) await refreshProfile();
+        Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        Alert.alert('Hata', 'Fotoğraf yüklenemedi');
+      } finally {
+        setUploadingImage(false);
+      }
     }
   };
 
