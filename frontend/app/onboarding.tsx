@@ -5,7 +5,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  FlatList,
+  ScrollView,
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,7 +13,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface OnboardingSlide {
   id: string;
@@ -56,13 +56,13 @@ const slides: OnboardingSlide[] = [
 
 export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
+  const scrollViewRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
   const router = useRouter();
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      scrollViewRef.current?.scrollTo({ x: (currentIndex + 1) * width, animated: true });
       setCurrentIndex(currentIndex + 1);
     } else {
       handleFinish();
@@ -77,62 +77,11 @@ export default function OnboardingScreen() {
     router.replace('/(auth)/login');
   };
 
-  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => (
-    <View style={styles.slide}>
-      <LinearGradient
-        colors={item.gradient}
-        style={styles.iconContainer}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <Ionicons name={item.icon} size={80} color="#fff" />
-      </LinearGradient>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  );
-
-  const renderPagination = () => (
-    <View style={styles.pagination}>
-      {slides.map((_, index) => {
-        const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-        const scale = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.8, 1.4, 0.8],
-          extrapolate: 'clamp',
-        });
-        const opacity = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.4, 1, 0.4],
-          extrapolate: 'clamp',
-        });
-
-        return (
-          <Animated.View
-            key={index}
-            style={[
-              styles.dot,
-              {
-                transform: [{ scale }],
-                opacity,
-                backgroundColor: index === currentIndex ? '#6366f1' : '#4b5563',
-              },
-            ]}
-          />
-        );
-      })}
-    </View>
-  );
-
-  const onViewableItemsChanged = useRef(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index || 0);
-    }
-  }).current;
-
-  const viewabilityConfig = useRef({
-    viewAreaCoveragePercentThreshold: 50,
-  }).current;
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / width);
+    setCurrentIndex(index);
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -142,25 +91,48 @@ export default function OnboardingScreen() {
         </TouchableOpacity>
       </View>
 
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
-        keyExtractor={(item) => item.id}
+      <ScrollView
+        ref={scrollViewRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false }
+          { useNativeDriver: false, listener: handleScroll }
         )}
-        onViewableItemsChanged={onViewableItemsChanged}
-        viewabilityConfig={viewabilityConfig}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ alignItems: 'center' }}
-      />
+        scrollEventThrottle={16}
+        style={styles.scrollView}
+      >
+        {slides.map((slide, index) => (
+          <View key={slide.id} style={styles.slide}>
+            <LinearGradient
+              colors={slide.gradient}
+              style={styles.iconContainer}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            >
+              <Ionicons name={slide.icon} size={80} color="#fff" />
+            </LinearGradient>
+            <Text style={styles.title}>{slide.title}</Text>
+            <Text style={styles.description}>{slide.description}</Text>
+          </View>
+        ))}
+      </ScrollView>
 
-      {renderPagination()}
+      <View style={styles.pagination}>
+        {slides.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              {
+                backgroundColor: index === currentIndex ? '#6366f1' : '#4b5563',
+                transform: [{ scale: index === currentIndex ? 1.3 : 1 }],
+              },
+            ]}
+          />
+        ))}
+      </View>
 
       <View style={styles.footer}>
         <TouchableOpacity style={styles.button} onPress={handleNext}>
@@ -201,13 +173,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  scrollView: {
+    flex: 1,
+  },
   slide: {
     width,
-    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
-    paddingTop: 60,
   },
   iconContainer: {
     width: 160,
