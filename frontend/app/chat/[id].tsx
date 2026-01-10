@@ -80,8 +80,12 @@ export default function PrivateChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
-  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [showMessageActions, setShowMessageActions] = useState(false);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { userProfile, user } = useAuth();
