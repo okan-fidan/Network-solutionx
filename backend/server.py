@@ -351,6 +351,18 @@ async def leave_community(community_id: str, current_user: dict = Depends(get_cu
 
 # ==================== SUBGROUPS ====================
 
+# Subgroup katılım istekleri için ayrı koleksiyon şeması (bilgi amaçlı)
+# subgroup_join_requests:
+#   - id
+#   - communityId
+#   - subgroupId
+#   - subgroupName
+#   - userId
+#   - status: pending | approved | rejected
+#   - createdAt
+#   - updatedAt
+
+
 @api_router.post("/communities/{community_id}/subgroups")
 async def create_subgroup(community_id: str, subgroup_data: dict, current_user: dict = Depends(get_current_user)):
     community = await db.communities.find_one({"id": community_id})
