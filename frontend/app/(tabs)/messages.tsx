@@ -139,6 +139,11 @@ export default function MessagesScreen() {
   }, [user?.uid]);
 
   const loadData = useCallback(async () => {
+    if (!user?.uid) {
+      setLoading(false);
+      return;
+    }
+    
     try {
       const communitiesRes = await api.get('/communities');
       
