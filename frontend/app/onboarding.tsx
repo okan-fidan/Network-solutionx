@@ -156,6 +156,8 @@ export default function OnboardingScreen() {
         )}
         onViewableItemsChanged={onViewableItemsChanged}
         viewabilityConfig={viewabilityConfig}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ alignItems: 'center' }}
       />
 
       {renderPagination()}
