@@ -41,7 +41,8 @@ ADMIN_EMAIL = "metaticaretim@gmail.com"
 DEFAULT_SUBGROUPS = [
     {"name": "Start", "description": "Yeni başlayanlar için başlangıç grubu", "isPublic": False},
     {"name": "Gelişim", "description": "Gelişim odaklı girişimciler grubu", "isPublic": False},
-    {"name": "Master Mind", "description": "İleri seviye girişimciler grubu", "isPublic": False},
+    {"name": "Değerlendirme", "description": "Performans ve ilerleme değerlendirme grubu", "isPublic": False},
+    {"name": "Mastermind", "description": "İleri seviye girişimciler için mastermind grubu", "isPublic": False},
 ]
 
 # Turkish Cities List
