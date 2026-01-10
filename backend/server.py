@@ -1527,17 +1527,6 @@ async def admin_delete_subgroup(subgroup_id: str, current_user: dict = Depends(g
 
     return {"message": "Alt grup ve mesajları silindi"}
 
-        {"$set": {"isAdmin": False}}
-    )
-
-    # Remove from super admins (but keep as member)
-    await db.communities.update_many(
-        {},
-        {"$pull": {"superAdmins": user_id}}
-    )
-
-    return {"message": "Yönetici yetkisi kaldırıldı"}
-
 # Get all communities (admin)
 @api_router.get("/admin/communities")
 async def admin_get_communities(current_user: dict = Depends(get_current_user)):
