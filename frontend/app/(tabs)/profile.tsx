@@ -196,8 +196,12 @@ export default function ProfileScreen() {
                   </Text>
                 )}
               </View>
-              <TouchableOpacity style={styles.editAvatarButton}>
-                <Ionicons name="camera" size={16} color="#fff" />
+              <TouchableOpacity style={styles.editAvatarButton} onPress={handleChangeProfileImage} disabled={uploadingImage}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={16} color="#fff" />
+                )}
               </TouchableOpacity>
             </View>
 
