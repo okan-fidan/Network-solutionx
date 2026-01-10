@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -12,6 +12,7 @@ import uuid
 from datetime import datetime, timedelta
 from firebase_config import verify_firebase_token
 import socketio
+import base64
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -35,6 +36,13 @@ security = HTTPBearer()
 
 # Admin email - Ana yönetici
 ADMIN_EMAIL = "metaticaretim@gmail.com"
+
+# Default subgroups for each community
+DEFAULT_SUBGROUPS = [
+    {"name": "Start", "description": "Yeni başlayanlar için başlangıç grubu", "isPublic": False},
+    {"name": "Gelişim", "description": "Gelişim odaklı girişimciler grubu", "isPublic": False},
+    {"name": "Master Mind", "description": "İleri seviye girişimciler grubu", "isPublic": False},
+]
 
 # Turkish Cities List
 TURKISH_CITIES = [
@@ -66,14 +74,42 @@ async def check_global_admin(current_user: dict):
         return False
     return user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
 
+# Create default subgroups for a community
+async def create_default_subgroups(community_id: str, community_name: str, creator_uid: str = "system"):
+    subgroup_ids = []
+    for sg_data in DEFAULT_SUBGROUPS:
+        subgroup_id = str(uuid.uuid4())
+        new_subgroup = {
+            "id": subgroup_id,
+            "communityId": community_id,
+            "name": f"{community_name} - {sg_data['name']}",
+            "description": sg_data['description'],
+            "imageUrl": None,
+            "groupAdmins": [],
+            "members": [],
+            "bannedUsers": [],
+            "restrictedUsers": [],
+            "pinnedMessages": [],
+            "pendingRequests": [],
+            "isPublic": sg_data['isPublic'],
+            "requiresApproval": True,
+            "createdBy": creator_uid,
+            "createdByName": "System",
+            "createdAt": datetime.utcnow()
+        }
+        await db.subgroups.insert_one(new_subgroup)
+        subgroup_ids.append(subgroup_id)
+    return subgroup_ids
+
 # Initialize city communities
 async def initialize_city_communities():
     for city in TURKISH_CITIES:
         existing = await db.communities.find_one({"city": city})
         if not existing:
             announcement_id = str(uuid.uuid4())
+            community_id = str(uuid.uuid4())
             community = {
-                "id": str(uuid.uuid4()),
+                "id": community_id,
                 "name": f"{city} Girişimciler",
                 "description": f"{city} ilindeki girişimcilerin buluşma noktası",
                 "city": city,
@@ -89,6 +125,22 @@ async def initialize_city_communities():
                 "createdAt": datetime.utcnow()
             }
             await db.communities.insert_one(community)
+            
+            # Create default subgroups
+            subgroup_ids = await create_default_subgroups(community_id, f"{city} Girişimciler")
+            await db.communities.update_one(
+                {"id": community_id},
+                {"$set": {"subGroups": subgroup_ids}}
+            )
+        else:
+            # Check if community has default subgroups, if not create them
+            subgroups = await db.subgroups.find({"communityId": existing['id']}).to_list(10)
+            if len(subgroups) < 3:
+                subgroup_ids = await create_default_subgroups(existing['id'], existing['name'])
+                await db.communities.update_one(
+                    {"id": existing['id']},
+                    {"$addToSet": {"subGroups": {"$each": subgroup_ids}}}
+                )
 
 # Ensure admin is in all communities
 async def ensure_admin_in_all_communities():
@@ -243,6 +295,7 @@ async def get_community(community_id: str, current_user: dict = Depends(get_curr
             del sg['_id']
         sg['memberCount'] = len(sg.get('members', []))
         sg['isMember'] = current_user['uid'] in sg.get('members', [])
+        sg['hasPendingRequest'] = any(r.get('uid') == current_user['uid'] for r in sg.get('pendingRequests', []))
     
     community['subGroupsList'] = subgroups
     return community
@@ -265,7 +318,7 @@ async def join_community(community_id: str, current_user: dict = Depends(get_cur
         {"uid": current_user['uid']},
         {"$addToSet": {"communities": community_id}}
     )
-    return {"message": "Topluluğa katıldınız"}
+    return {"message": "Topluluğa katıldınız. Duyuru kanalına otomatik eklendiniz."}
 
 @api_router.post("/communities/{community_id}/leave")
 async def leave_community(community_id: str, current_user: dict = Depends(get_current_user)):
@@ -287,6 +340,13 @@ async def leave_community(community_id: str, current_user: dict = Depends(get_cu
         {"uid": current_user['uid']},
         {"$pull": {"communities": community_id}}
     )
+    
+    # Also remove from all subgroups of this community
+    await db.subgroups.update_many(
+        {"communityId": community_id},
+        {"$pull": {"members": current_user['uid'], "groupAdmins": current_user['uid']}}
+    )
+    
     return {"message": "Topluluktan ayrıldınız"}
 
 # ==================== SUBGROUPS ====================
@@ -318,6 +378,7 @@ async def create_subgroup(community_id: str, subgroup_data: dict, current_user: 
         "pinnedMessages": [],
         "pendingRequests": [],
         "isPublic": subgroup_data.get('isPublic', True),
+        "requiresApproval": subgroup_data.get('requiresApproval', True),
         "createdBy": current_user['uid'],
         "createdByName": f"{user['firstName']} {user['lastName']}",
         "createdAt": datetime.utcnow()
@@ -345,6 +406,7 @@ async def get_subgroup(subgroup_id: str, current_user: dict = Depends(get_curren
     subgroup['memberCount'] = len(subgroup.get('members', []))
     subgroup['isMember'] = current_user['uid'] in subgroup.get('members', [])
     subgroup['isGroupAdmin'] = current_user['uid'] in subgroup.get('groupAdmins', [])
+    subgroup['hasPendingRequest'] = any(r.get('uid') == current_user['uid'] for r in subgroup.get('pendingRequests', []))
 
     community = await db.communities.find_one({"id": subgroup['communityId']})
     if community:
@@ -359,6 +421,120 @@ async def get_subgroup(subgroup_id: str, current_user: dict = Depends(get_curren
 
     return subgroup
 
+# Request to join subgroup
+@api_router.post("/subgroups/{subgroup_id}/request-join")
+async def request_join_subgroup(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+
+    if current_user['uid'] in subgroup.get('bannedUsers', []):
+        raise HTTPException(status_code=403, detail="Bu gruptan yasaklandınız")
+
+    if current_user['uid'] in subgroup.get('members', []):
+        raise HTTPException(status_code=400, detail="Zaten bu grubun üyesisiniz")
+
+    # Check if already has pending request
+    pending = subgroup.get('pendingRequests', [])
+    if any(r.get('uid') == current_user['uid'] for r in pending):
+        raise HTTPException(status_code=400, detail="Zaten katılma isteğiniz var")
+
+    # Check if requires approval
+    if subgroup.get('requiresApproval', True):
+        user = await db.users.find_one({"uid": current_user['uid']})
+        request = {
+            "uid": current_user['uid'],
+            "name": f"{user['firstName']} {user['lastName']}",
+            "profileImageUrl": user.get('profileImageUrl'),
+            "requestedAt": datetime.utcnow()
+        }
+        await db.subgroups.update_one(
+            {"id": subgroup_id},
+            {"$push": {"pendingRequests": request}}
+        )
+        return {"message": "Katılma isteği gönderildi. Yönetici onayı bekleniyor.", "status": "pending"}
+    else:
+        # Direct join if no approval required
+        await db.subgroups.update_one(
+            {"id": subgroup_id},
+            {"$addToSet": {"members": current_user['uid']}}
+        )
+        return {"message": "Gruba katıldınız", "status": "joined"}
+
+# Approve join request
+@api_router.post("/subgroups/{subgroup_id}/approve/{user_id}")
+async def approve_join_request(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+
+    # Check if current user is admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    
+    community = await db.communities.find_one({"id": subgroup['communityId']})
+    is_super_admin = current_user['uid'] in community.get('superAdmins', []) if community else False
+
+    if not is_group_admin and not is_super_admin and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor")
+
+    # Remove from pending and add to members
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {
+            "$pull": {"pendingRequests": {"uid": user_id}},
+            "$addToSet": {"members": user_id}
+        }
+    )
+
+    return {"message": "Katılma isteği onaylandı"}
+
+# Reject join request
+@api_router.post("/subgroups/{subgroup_id}/reject/{user_id}")
+async def reject_join_request(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+
+    # Check if current user is admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    
+    community = await db.communities.find_one({"id": subgroup['communityId']})
+    is_super_admin = current_user['uid'] in community.get('superAdmins', []) if community else False
+
+    if not is_group_admin and not is_super_admin and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor")
+
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$pull": {"pendingRequests": {"uid": user_id}}}
+    )
+
+    return {"message": "Katılma isteği reddedildi"}
+
+# Get pending requests
+@api_router.get("/subgroups/{subgroup_id}/pending-requests")
+async def get_pending_requests(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+
+    # Check if current user is admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    
+    community = await db.communities.find_one({"id": subgroup['communityId']})
+    is_super_admin = current_user['uid'] in community.get('superAdmins', []) if community else False
+
+    if not is_group_admin and not is_super_admin and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor")
+
+    return subgroup.get('pendingRequests', [])
+
 @api_router.post("/subgroups/{subgroup_id}/join")
 async def join_subgroup(subgroup_id: str, current_user: dict = Depends(get_current_user)):
     subgroup = await db.subgroups.find_one({"id": subgroup_id})
@@ -370,6 +546,10 @@ async def join_subgroup(subgroup_id: str, current_user: dict = Depends(get_curre
 
     if current_user['uid'] in subgroup.get('members', []):
         raise HTTPException(status_code=400, detail="Zaten bu grubun üyesisiniz")
+
+    # If requires approval, redirect to request-join
+    if subgroup.get('requiresApproval', True):
+        return await request_join_subgroup(subgroup_id, current_user)
 
     await db.subgroups.update_one(
         {"id": subgroup_id},
@@ -430,7 +610,7 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         "senderProfileImage": user.get('profileImageUrl'),
         "content": message_data.get('content', ''),
         "type": message_data.get('type', 'text'),
-        "fileUrl": message_data.get('fileUrl'),
+        "mediaUrl": message_data.get('mediaUrl'),
         "replyTo": message_data.get('replyTo'),
         "reactions": {},
         "isPinned": False,
@@ -438,6 +618,8 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         "deletedForEveryone": False,
         "deletedFor": [],
         "isEdited": False,
+        "status": "sent",
+        "deliveredTo": [],
         "readBy": [current_user['uid']],
         "timestamp": datetime.utcnow()
     }
@@ -476,7 +658,102 @@ async def delete_message(message_id: str, current_user: dict = Depends(get_curre
     )
     return {"message": "Mesaj silindi"}
 
-# ==================== PRIVATE MESSAGES ====================
+# Update message status
+@api_router.post("/messages/{message_id}/status")
+async def update_message_status(message_id: str, status_data: dict, current_user: dict = Depends(get_current_user)):
+    message = await db.messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+
+    status = status_data.get('status')
+    
+    if status == 'delivered':
+        await db.messages.update_one(
+            {"id": message_id},
+            {"$addToSet": {"deliveredTo": current_user['uid']}}
+        )
+    elif status == 'read':
+        await db.messages.update_one(
+            {"id": message_id},
+            {"$addToSet": {"readBy": current_user['uid']}}
+        )
+    
+    # Check if all members have read/received
+    updated_message = await db.messages.find_one({"id": message_id})
+    if '_id' in updated_message:
+        del updated_message['_id']
+    
+    return updated_message
+
+# ==================== PRIVATE MESSAGES / CHATS ====================
+
+# Get chat list
+@api_router.get("/chats")
+async def get_chat_list(current_user: dict = Depends(get_current_user)):
+    # Get all unique chat partners
+    pipeline = [
+        {
+            "$match": {
+                "$or": [
+                    {"senderId": current_user['uid']},
+                    {"receiverId": current_user['uid']}
+                ],
+                "chatId": {"$exists": True}
+            }
+        },
+        {
+            "$sort": {"timestamp": -1}
+        },
+        {
+            "$group": {
+                "_id": "$chatId",
+                "lastMessage": {"$first": "$$ROOT"},
+                "unreadCount": {
+                    "$sum": {
+                        "$cond": [
+                            {
+                                "$and": [
+                                    {"$ne": ["$senderId", current_user['uid']]},
+                                    {"$not": {"$in": [current_user['uid'], {"$ifNull": ["$readBy", []]}]}}
+                                ]
+                            },
+                            1,
+                            0
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "$sort": {"lastMessage.timestamp": -1}
+        }
+    ]
+    
+    chats = await db.messages.aggregate(pipeline).to_list(100)
+    
+    result = []
+    for chat in chats:
+        chat_id = chat['_id']
+        last_message = chat['lastMessage']
+        
+        # Get the other user
+        other_user_id = last_message['receiverId'] if last_message['senderId'] == current_user['uid'] else last_message['senderId']
+        other_user = await db.users.find_one({"uid": other_user_id})
+        
+        if other_user:
+            result.append({
+                "chatId": chat_id,
+                "userId": other_user_id,
+                "userName": f"{other_user['firstName']} {other_user['lastName']}",
+                "userProfileImage": other_user.get('profileImageUrl'),
+                "lastMessage": last_message['content'],
+                "lastMessageTime": last_message['timestamp'].isoformat() if last_message.get('timestamp') else None,
+                "lastMessageType": last_message.get('type', 'text'),
+                "unreadCount": chat['unreadCount'],
+                "isOnline": False  # Can be implemented with Socket.IO
+            })
+    
+    return result
 
 @api_router.get("/private-messages/{other_user_id}")
 async def get_private_messages(other_user_id: str, current_user: dict = Depends(get_current_user)):
@@ -487,6 +764,16 @@ async def get_private_messages(other_user_id: str, current_user: dict = Depends(
         "chatId": chat_id,
         "deletedForEveryone": {"$ne": True}
     }).sort("timestamp", -1).limit(100).to_list(100)
+    
+    # Mark messages as read
+    await db.messages.update_many(
+        {
+            "chatId": chat_id,
+            "senderId": other_user_id,
+            "readBy": {"$ne": current_user['uid']}
+        },
+        {"$addToSet": {"readBy": current_user['uid']}}
+    )
     
     for msg in messages:
         if '_id' in msg:
@@ -510,11 +797,13 @@ async def send_private_message(message: dict, current_user: dict = Depends(get_c
         "receiverId": receiver_id,
         "content": message.get('content', ''),
         "type": message.get('type', 'text'),
-        "fileUrl": message.get('fileUrl'),
+        "mediaUrl": message.get('mediaUrl'),
         "reactions": {},
         "isDeleted": False,
         "deletedForEveryone": False,
         "deletedFor": [],
+        "status": "sent",
+        "deliveredTo": [],
         "readBy": [current_user['uid']],
         "timestamp": datetime.utcnow()
     }
@@ -525,7 +814,41 @@ async def send_private_message(message: dict, current_user: dict = Depends(get_c
         del new_message['_id']
     
     await sio.emit('new_private_message', new_message, room=chat_id)
+    await sio.emit('new_private_message', new_message, room=f"user_{receiver_id}")
     return new_message
+
+# Upload media
+@api_router.post("/upload/media")
+async def upload_media(media_data: dict, current_user: dict = Depends(get_current_user)):
+    # Media is sent as base64
+    base64_data = media_data.get('data')
+    media_type = media_data.get('type', 'image')
+    
+    if not base64_data:
+        raise HTTPException(status_code=400, detail="Medya verisi gerekli")
+    
+    # Store the base64 data directly (for simplicity)
+    # In production, you'd upload to cloud storage
+    return {
+        "url": base64_data,
+        "type": media_type
+    }
+
+# Typing indicator
+@api_router.post("/typing")
+async def typing_indicator(data: dict, current_user: dict = Depends(get_current_user)):
+    room = data.get('room')  # chatId or groupId
+    is_typing = data.get('isTyping', False)
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    
+    await sio.emit('typing', {
+        "userId": current_user['uid'],
+        "userName": f"{user['firstName']} {user['lastName']}",
+        "isTyping": is_typing
+    }, room=room)
+    
+    return {"message": "OK"}
 
 # ==================== USERS ====================
 
@@ -766,6 +1089,11 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
     new_users_week = await db.users.count_documents({"createdAt": {"$gte": week_ago}})
 
     banned_users = await db.users.count_documents({"isBanned": True})
+    
+    pending_requests = 0
+    subgroups = await db.subgroups.find().to_list(1000)
+    for sg in subgroups:
+        pending_requests += len(sg.get('pendingRequests', []))
 
     return {
         "stats": {
@@ -776,7 +1104,8 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
             "totalPosts": total_posts,
             "totalServices": total_services,
             "newUsersThisWeek": new_users_week,
-            "bannedUsers": banned_users
+            "bannedUsers": banned_users,
+            "pendingRequests": pending_requests
         }
     }
 
@@ -1308,12 +1637,27 @@ async def join_room(sid, data):
     room = data.get('room')
     if room:
         sio.enter_room(sid, room)
+        logging.info(f"Client {sid} joined room {room}")
 
 @sio.event
 async def leave_room(sid, data):
     room = data.get('room')
     if room:
         sio.leave_room(sid, room)
+
+@sio.event
+async def typing(sid, data):
+    room = data.get('room')
+    user_id = data.get('userId')
+    user_name = data.get('userName')
+    is_typing = data.get('isTyping', False)
+    
+    if room:
+        await sio.emit('typing', {
+            'userId': user_id,
+            'userName': user_name,
+            'isTyping': is_typing
+        }, room=room, skip_sid=sid)
 
 # Include the router in the main app
 app.include_router(api_router)
