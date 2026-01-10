@@ -203,6 +203,9 @@ test_plan:
     - "Health Check API Endpoint"
     - "Cities API Endpoint"
     - "Server Connectivity"
+    - "Admin Dashboard API Protection"
+    - "Admin Users API Protection"
+    - "Admin Communities API Protection"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
