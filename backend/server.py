@@ -1392,6 +1392,16 @@ async def admin_remove_admin(user_id: str, current_user: dict = Depends(get_curr
 
     await db.users.update_one(
         {"uid": user_id},
+        {"$set": {"isAdmin": False}}
+    )
+
+    # Remove from super admins (but keep as member)
+    await db.communities.update_many(
+        {},
+        {"$pull": {"superAdmins": user_id}}
+    )
+
+    return {"message": "Yönetici yetkisi kaldırıldı"}
 
 # Create new community (admin)
 @api_router.post("/admin/communities")
