@@ -195,7 +195,7 @@ export default function MessagesScreen() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, [loadData, user?.uid]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
