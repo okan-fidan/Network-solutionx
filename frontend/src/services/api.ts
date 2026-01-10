@@ -45,17 +45,47 @@ export const subgroupApi = {
   sendMessage: (id: string, data: any) => api.post(`/subgroups/${id}/messages`, data),
   deleteMessage: (groupId: string, messageId: string) => api.delete(`/subgroups/${groupId}/messages/${messageId}`),
   editMessage: (groupId: string, messageId: string, content: string) => api.put(`/subgroups/${groupId}/messages/${messageId}`, { content }),
+  // Pinned Messages
+  pinMessage: (groupId: string, messageId: string) => api.post(`/subgroups/${groupId}/messages/${messageId}/pin`),
+  unpinMessage: (groupId: string, messageId: string) => api.delete(`/subgroups/${groupId}/messages/${messageId}/pin`),
+  getPinnedMessages: (groupId: string) => api.get(`/subgroups/${groupId}/pinned-messages`),
+  // Polls
+  createPoll: (groupId: string, data: any) => api.post(`/subgroups/${groupId}/polls`, data),
+  getPolls: (groupId: string) => api.get(`/subgroups/${groupId}/polls`),
+  votePoll: (groupId: string, pollId: string, optionIds: string[]) => api.post(`/subgroups/${groupId}/polls/${pollId}/vote`, { optionIds }),
+  deletePoll: (groupId: string, pollId: string) => api.delete(`/subgroups/${groupId}/polls/${pollId}`),
+  // Search
+  searchMessages: (groupId: string, query: string) => api.get(`/subgroups/${groupId}/messages/search?q=${encodeURIComponent(query)}`),
+  // Members
+  getMembers: (groupId: string) => api.get(`/subgroups/${groupId}/members`),
+  // Moderation
+  muteMember: (groupId: string, userId: string, duration: number) => api.post(`/subgroups/${groupId}/members/${userId}/mute`, { duration }),
+  unmuteMember: (groupId: string, userId: string) => api.delete(`/subgroups/${groupId}/members/${userId}/mute`),
+  kickMember: (groupId: string, userId: string) => api.post(`/subgroups/${groupId}/members/${userId}/kick`),
 };
 
 export const messageApi = {
   delete: (id: string) => api.delete(`/messages/${id}`),
   getPrivate: (userId: string) => api.get(`/private-messages/${userId}`),
   sendPrivate: (data: any) => api.post('/private-messages', data),
+  report: (messageId: string, reason: string, description?: string) => api.post(`/messages/${messageId}/report`, { reason, description }),
 };
 
 export const userListApi = {
   getAll: () => api.get('/users'),
   getOne: (id: string) => api.get(`/users/${id}`),
+  getProfile: (id: string) => api.get(`/users/${id}/profile`),
+};
+
+export const communityApi = {
+  getAll: () => api.get('/communities'),
+  getOne: (id: string) => api.get(`/communities/${id}`),
+  join: (id: string) => api.post(`/communities/${id}/join`),
+  leave: (id: string) => api.post(`/communities/${id}/leave`),
+  // Announcements
+  getAnnouncements: (id: string) => api.get(`/communities/${id}/announcements`),
+  createAnnouncement: (id: string, content: string) => api.post(`/communities/${id}/announcements`, { content }),
+  deleteAnnouncement: (communityId: string, announcementId: string) => api.delete(`/communities/${communityId}/announcements/${announcementId}`),
 };
 
 export const postApi = {
