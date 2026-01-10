@@ -134,6 +134,34 @@ class NetworkSolutionAPITester:
             print(f"❌ Invalid JSON response: {str(e)}")
             return False
 
+    def test_admin_endpoints_protection(self):
+        """Test admin endpoints without authentication - should return 401/403"""
+        admin_endpoints = [
+            ("admin_dashboard", "/admin/dashboard"),
+            ("admin_users", "/admin/users"), 
+            ("admin_communities", "/admin/communities")
+        ]
+        
+        for endpoint_key, endpoint_path in admin_endpoints:
+            print(f"🔍 Testing {endpoint_path} protection...")
+            try:
+                response = self.session.get(f"{API_BASE}{endpoint_path}")
+                
+                # Should return 401, 403, or 422 (missing auth header)
+                if response.status_code in [401, 403, 422]:
+                    self.results[endpoint_key]["status"] = "pass"
+                    self.results[endpoint_key]["details"] = f"Correctly requires authentication (status: {response.status_code})"
+                    print(f"✅ {endpoint_path} correctly protected (status: {response.status_code})")
+                else:
+                    self.results[endpoint_key]["status"] = "fail"
+                    self.results[endpoint_key]["details"] = f"Not protected! Status {response.status_code}: {response.text[:200]}"
+                    print(f"❌ {endpoint_path} not protected! Status {response.status_code}")
+                    
+            except requests.exceptions.RequestException as e:
+                self.results[endpoint_key]["status"] = "fail"
+                self.results[endpoint_key]["details"] = f"Request error: {str(e)}"
+                print(f"❌ {endpoint_path} request failed: {str(e)}")
+
     def test_communities_endpoint_auth_required(self):
         """Test GET /api/communities endpoint (should require auth)"""
         print("🔍 Testing communities endpoint (auth required)...")
