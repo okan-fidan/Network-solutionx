@@ -137,7 +137,10 @@ export default function RegisterProfileScreen() {
                   </Text>
                   <Picker
                     selectedValue={city}
-                    onValueChange={setCity}
+                    onValueChange={(itemValue) => {
+                      console.log('City selected:', itemValue);
+                      setCity(itemValue);
+                    }}
                     style={styles.picker}
                     dropdownIconColor="#9ca3af"
                   >
