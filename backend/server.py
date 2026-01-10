@@ -1523,6 +1523,27 @@ async def send_announcement(community_id: str, message_data: dict, current_user:
         del new_message['_id']
     return new_message
 
+@api_router.delete("/communities/{community_id}/announcements/{announcement_id}")
+async def delete_announcement(community_id: str, announcement_id: str, current_user: dict = Depends(get_current_user)):
+    """Duyuru sil"""
+    community = await db.communities.find_one({"id": community_id})
+    if not community:
+        raise HTTPException(status_code=404, detail="Topluluk bulunamadı")
+
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_super_admin = current_user['uid'] in community.get('superAdmins', [])
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+
+    if not is_super_admin and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Sadece yöneticiler duyuru silebilir")
+
+    result = await db.messages.delete_one({"id": announcement_id, "groupId": community.get('announcementChannelId')})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Duyuru bulunamadı")
+    
+    return {"message": "Duyuru silindi"}
+
 # ==================== ADMIN PANEL APIs ====================
 
 # Dashboard Stats
