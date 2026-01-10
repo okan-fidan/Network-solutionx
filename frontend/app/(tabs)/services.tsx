@@ -10,8 +10,10 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { serviceApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
