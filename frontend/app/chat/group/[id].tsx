@@ -492,6 +492,19 @@ export default function GroupChatScreen() {
           </View>
         )}
 
+        {/* Editing indicator */}
+        {editingMessage && (
+          <View style={styles.editingBar}>
+            <View style={styles.editingInfo}>
+              <Ionicons name="pencil" size={18} color="#6366f1" />
+              <Text style={styles.editingText}>Mesaj düzenleniyor</Text>
+            </View>
+            <TouchableOpacity onPress={cancelEdit}>
+              <Ionicons name="close" size={22} color="#6b7280" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Input */}
         <View style={styles.inputContainer}>
           <TouchableOpacity 
@@ -507,8 +520,8 @@ export default function GroupChatScreen() {
             <Ionicons name={showEmojiPicker ? "close" : "happy-outline"} size={26} color="#6b7280" />
           </TouchableOpacity>
           <TextInput
-            style={styles.input}
-            placeholder="Mesaj yaz..."
+            style={[styles.input, editingMessage && styles.inputEditing]}
+            placeholder={editingMessage ? "Mesajı düzenle..." : "Mesaj yaz..."}
             placeholderTextColor="#6b7280"
             value={inputText}
             onChangeText={setInputText}
@@ -516,14 +529,14 @@ export default function GroupChatScreen() {
             maxLength={1000}
           />
           <TouchableOpacity
-            style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled]}
+            style={[styles.sendButton, (!inputText.trim() || sending) && styles.sendButtonDisabled, editingMessage && styles.editSendButton]}
             onPress={() => handleSend()}
             disabled={!inputText.trim() || sending}
           >
             {sending ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Ionicons name="send" size={20} color="#fff" />
+              <Ionicons name={editingMessage ? "checkmark" : "send"} size={20} color="#fff" />
             )}
           </TouchableOpacity>
         </View>
