@@ -1162,6 +1162,301 @@ async def mark_all_notifications_read(current_user: dict = Depends(get_current_u
     )
     return {"message": "Tüm bildirimler okundu olarak işaretlendi"}
 
+# ==================== PINNED MESSAGES ====================
+
+@api_router.post("/subgroups/{subgroup_id}/messages/{message_id}/pin")
+async def pin_message(subgroup_id: str, message_id: str, current_user: dict = Depends(get_current_user)):
+    """Mesajı sabitle"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    # Admin kontrolü
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Mesaj sabitleme yetkisi yok")
+    
+    message = await db.messages.find_one({"id": message_id, "groupId": subgroup_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    await db.messages.update_one({"id": message_id}, {"$set": {"isPinned": True, "pinnedAt": datetime.utcnow()}})
+    await sio.emit('message_pinned', {"messageId": message_id}, room=subgroup_id)
+    return {"message": "Mesaj sabitlendi"}
+
+@api_router.delete("/subgroups/{subgroup_id}/messages/{message_id}/pin")
+async def unpin_message(subgroup_id: str, message_id: str, current_user: dict = Depends(get_current_user)):
+    """Mesaj sabitlemesini kaldır"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Mesaj sabitleme yetkisi yok")
+    
+    await db.messages.update_one({"id": message_id}, {"$set": {"isPinned": False}})
+    await sio.emit('message_unpinned', {"messageId": message_id}, room=subgroup_id)
+    return {"message": "Sabitleme kaldırıldı"}
+
+@api_router.get("/subgroups/{subgroup_id}/pinned-messages")
+async def get_pinned_messages(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Sabitlenmiş mesajları getir"""
+    messages = await db.messages.find({"groupId": subgroup_id, "isPinned": True}).sort("pinnedAt", -1).to_list(20)
+    for msg in messages:
+        if '_id' in msg:
+            del msg['_id']
+    return messages
+
+# ==================== POLLS ====================
+
+@api_router.post("/subgroups/{subgroup_id}/polls")
+async def create_poll(subgroup_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Anket oluştur"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    if current_user['uid'] not in subgroup.get('memberIds', []):
+        raise HTTPException(status_code=403, detail="Grup üyesi değilsiniz")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    
+    poll = {
+        "id": str(uuid.uuid4()),
+        "groupId": subgroup_id,
+        "question": data.get('question', ''),
+        "options": [{"id": str(uuid.uuid4()), "text": opt, "votes": []} for opt in data.get('options', [])],
+        "creatorId": current_user['uid'],
+        "creatorName": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+        "allowMultiple": data.get('allowMultiple', False),
+        "isAnonymous": data.get('isAnonymous', False),
+        "endsAt": data.get('endsAt'),
+        "createdAt": datetime.utcnow().isoformat(),
+        "isActive": True
+    }
+    
+    await db.polls.insert_one(poll)
+    del poll['_id']
+    await sio.emit('new_poll', poll, room=subgroup_id)
+    return poll
+
+@api_router.get("/subgroups/{subgroup_id}/polls")
+async def get_polls(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Grup anketlerini getir"""
+    polls = await db.polls.find({"groupId": subgroup_id, "isActive": True}).sort("createdAt", -1).to_list(20)
+    for poll in polls:
+        if '_id' in poll:
+            del poll['_id']
+    return polls
+
+@api_router.post("/subgroups/{subgroup_id}/polls/{poll_id}/vote")
+async def vote_poll(subgroup_id: str, poll_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Ankete oy ver"""
+    poll = await db.polls.find_one({"id": poll_id, "groupId": subgroup_id})
+    if not poll:
+        raise HTTPException(status_code=404, detail="Anket bulunamadı")
+    
+    option_ids = data.get('optionIds', [])
+    if not poll.get('allowMultiple') and len(option_ids) > 1:
+        raise HTTPException(status_code=400, detail="Bu ankette tek seçim yapılabilir")
+    
+    # Önceki oyları kaldır
+    for opt in poll['options']:
+        if current_user['uid'] in opt['votes']:
+            opt['votes'].remove(current_user['uid'])
+    
+    # Yeni oyları ekle
+    for opt in poll['options']:
+        if opt['id'] in option_ids:
+            opt['votes'].append(current_user['uid'])
+    
+    await db.polls.update_one({"id": poll_id}, {"$set": {"options": poll['options']}})
+    await sio.emit('poll_updated', {"pollId": poll_id, "options": poll['options']}, room=subgroup_id)
+    return {"message": "Oyunuz kaydedildi"}
+
+@api_router.delete("/subgroups/{subgroup_id}/polls/{poll_id}")
+async def delete_poll(subgroup_id: str, poll_id: str, current_user: dict = Depends(get_current_user)):
+    """Anketi sil"""
+    poll = await db.polls.find_one({"id": poll_id, "groupId": subgroup_id})
+    if not poll:
+        raise HTTPException(status_code=404, detail="Anket bulunamadı")
+    
+    if poll['creatorId'] != current_user['uid']:
+        user = await db.users.find_one({"uid": current_user['uid']})
+        if not user.get('isAdmin'):
+            raise HTTPException(status_code=403, detail="Bu anketi silme yetkiniz yok")
+    
+    await db.polls.delete_one({"id": poll_id})
+    await sio.emit('poll_deleted', {"pollId": poll_id}, room=subgroup_id)
+    return {"message": "Anket silindi"}
+
+# ==================== MESSAGE SEARCH ====================
+
+@api_router.get("/subgroups/{subgroup_id}/messages/search")
+async def search_messages(subgroup_id: str, q: str, current_user: dict = Depends(get_current_user)):
+    """Mesajlarda arama yap"""
+    if not q or len(q) < 2:
+        return []
+    
+    messages = await db.messages.find({
+        "groupId": subgroup_id,
+        "content": {"$regex": q, "$options": "i"},
+        "isDeleted": {"$ne": True}
+    }).sort("timestamp", -1).to_list(50)
+    
+    for msg in messages:
+        if '_id' in msg:
+            del msg['_id']
+    return messages
+
+# ==================== MODERATION ====================
+
+@api_router.post("/subgroups/{subgroup_id}/members/{user_id}/mute")
+async def mute_member(subgroup_id: str, user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Üyeyi sustur"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Moderasyon yetkisi yok")
+    
+    duration_minutes = data.get('duration', 60)  # Default 1 saat
+    mute_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
+    
+    muted_members = subgroup.get('mutedMembers', {})
+    muted_members[user_id] = mute_until.isoformat()
+    
+    await db.subgroups.update_one({"id": subgroup_id}, {"$set": {"mutedMembers": muted_members}})
+    return {"message": f"Üye {duration_minutes} dakika susturuldu", "muteUntil": mute_until.isoformat()}
+
+@api_router.delete("/subgroups/{subgroup_id}/members/{user_id}/mute")
+async def unmute_member(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    """Susturmayı kaldır"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Moderasyon yetkisi yok")
+    
+    await db.subgroups.update_one({"id": subgroup_id}, {"$unset": {f"mutedMembers.{user_id}": ""}})
+    return {"message": "Susturma kaldırıldı"}
+
+@api_router.post("/subgroups/{subgroup_id}/members/{user_id}/kick")
+async def kick_member(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    """Üyeyi gruptan çıkar"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Moderasyon yetkisi yok")
+    
+    member_ids = subgroup.get('memberIds', [])
+    if user_id in member_ids:
+        member_ids.remove(user_id)
+    
+    await db.subgroups.update_one(
+        {"id": subgroup_id}, 
+        {"$set": {"memberIds": member_ids}, "$inc": {"memberCount": -1}}
+    )
+    return {"message": "Üye gruptan çıkarıldı"}
+
+@api_router.post("/messages/{message_id}/report")
+async def report_message(message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mesajı raporla"""
+    message = await db.messages.find_one({"id": message_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    report = {
+        "id": str(uuid.uuid4()),
+        "messageId": message_id,
+        "reporterId": current_user['uid'],
+        "reason": data.get('reason', 'spam'),
+        "description": data.get('description', ''),
+        "timestamp": datetime.utcnow().isoformat(),
+        "status": "pending"
+    }
+    
+    await db.reports.insert_one(report)
+    return {"message": "Rapor gönderildi"}
+
+# ==================== MEMBER PROFILES ====================
+
+@api_router.get("/users/{user_id}/profile")
+async def get_user_profile(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcı profilini getir"""
+    user = await db.users.find_one({"uid": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    # Ortak toplulukları bul
+    current_user_communities = await db.communities.find({"memberIds": current_user['uid']}).to_list(100)
+    target_user_communities = await db.communities.find({"memberIds": user_id}).to_list(100)
+    
+    current_ids = {c['id'] for c in current_user_communities}
+    common_communities = [c for c in target_user_communities if c['id'] in current_ids]
+    
+    for c in common_communities:
+        if '_id' in c:
+            del c['_id']
+    
+    return {
+        "uid": user['uid'],
+        "firstName": user.get('firstName', ''),
+        "lastName": user.get('lastName', ''),
+        "profileImageUrl": user.get('profileImageUrl'),
+        "city": user.get('city'),
+        "occupation": user.get('occupation'),
+        "bio": user.get('bio', ''),
+        "commonCommunities": common_communities,
+        "commonCommunitiesCount": len(common_communities)
+    }
+
+@api_router.get("/subgroups/{subgroup_id}/members")
+async def get_group_members(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Grup üyelerini getir"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    member_ids = subgroup.get('memberIds', [])
+    members = await db.users.find({"uid": {"$in": member_ids}}).to_list(100)
+    
+    result = []
+    for member in members:
+        result.append({
+            "uid": member['uid'],
+            "firstName": member.get('firstName', ''),
+            "lastName": member.get('lastName', ''),
+            "profileImageUrl": member.get('profileImageUrl'),
+            "isAdmin": member['uid'] in subgroup.get('groupAdmins', []),
+            "isMuted": member['uid'] in subgroup.get('mutedMembers', {})
+        })
+    
+    return result
+
 # ==================== ANNOUNCEMENTS ====================
 
 @api_router.get("/communities/{community_id}/announcements")
