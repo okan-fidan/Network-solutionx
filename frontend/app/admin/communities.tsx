@@ -17,7 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { adminApi, generalApi } from '../../src/services/api';
+import { adminApi, generalApi, subgroupRequestApi } from '../../src/services/api';
 
 interface Community {
   id: string;
