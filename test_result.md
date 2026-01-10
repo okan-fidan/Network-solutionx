@@ -153,6 +153,42 @@ backend:
         agent: "testing"
         comment: "Backend server responding correctly at https://github-mobile-app-1.preview.emergentagent.com"
 
+  - task: "Admin Dashboard API Protection"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/dashboard correctly requires authentication (returns 403 without token)"
+
+  - task: "Admin Users API Protection"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/users correctly requires authentication (returns 403 without token)"
+
+  - task: "Admin Communities API Protection"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "GET /api/admin/communities correctly requires authentication (returns 403 without token)"
+
 frontend:
   # No frontend testing performed as per instructions
 
