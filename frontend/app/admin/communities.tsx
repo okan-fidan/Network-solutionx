@@ -340,16 +340,11 @@ export default function AdminCommunitiesScreen() {
   // Join Request Functions
   const handleApproveRequest = async (request: JoinRequest) => {
     try {
-      const response = await fetch(`/api/subgroups/${request.subgroupId}/approve/${request.userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      await subgroupRequestApi.approve(request.subgroupId, request.userId);
       Alert.alert('Başarılı', 'Katılım isteği onaylandı');
       loadJoinRequests();
     } catch (error: any) {
-      Alert.alert('Hata', 'İşlem başarısız');
+      Alert.alert('Hata', error.response?.data?.detail || 'İşlem başarısız');
     }
   };
 
@@ -364,13 +359,11 @@ export default function AdminCommunitiesScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const response = await fetch(`/api/subgroups/${request.subgroupId}/reject/${request.userId}`, {
-                method: 'POST',
-              });
+              await subgroupRequestApi.reject(request.subgroupId, request.userId);
               Alert.alert('Başarılı', 'Katılım isteği reddedildi');
               loadJoinRequests();
             } catch (error: any) {
-              Alert.alert('Hata', 'İşlem başarısız');
+              Alert.alert('Hata', error.response?.data?.detail || 'İşlem başarısız');
             }
           },
         },
