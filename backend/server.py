@@ -1117,6 +1117,17 @@ async def admin_dashboard(current_user: dict = Depends(get_current_user)):
 
     return {
         "stats": {
+            "totalUsers": total_users,
+            "totalCommunities": total_communities,
+            "totalSubgroups": total_subgroups,
+            "totalMessages": total_messages,
+            "totalPosts": total_posts,
+            "totalServices": total_services,
+            "newUsersThisWeek": new_users_week,
+            "bannedUsers": banned_users,
+            "pendingRequests": pending_requests
+        }
+    }
 
 # List all pending subgroup join requests (admin global view)
 @api_router.get("/admin/subgroup-join-requests")
@@ -1167,18 +1178,6 @@ async def admin_subgroup_join_requests(community_id: Optional[str] = None, curre
 
     results.sort(key=sort_key, reverse=True)
     return results
-
-            "totalUsers": total_users,
-            "totalCommunities": total_communities,
-            "totalSubgroups": total_subgroups,
-            "totalMessages": total_messages,
-            "totalPosts": total_posts,
-            "totalServices": total_services,
-            "newUsersThisWeek": new_users_week,
-            "bannedUsers": banned_users,
-            "pendingRequests": pending_requests
-        }
-    }
 
 # Get all users (admin)
 @api_router.get("/admin/users")
