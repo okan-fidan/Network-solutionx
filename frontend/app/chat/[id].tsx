@@ -292,7 +292,7 @@ export default function PrivateChatScreen() {
 
   const uploadImage = async (uri: string) => {
     if (!user?.uid) return;
-    setUploadingImage(true);
+    setUploadingMedia(true);
 
     try {
       const response = await fetch(uri);
@@ -303,12 +303,126 @@ export default function PrivateChatScreen() {
       await uploadBytes(storageRef, blob);
       const downloadURL = await getDownloadURL(storageRef);
       
-      await handleSend(downloadURL);
+      await handleSend(downloadURL, 'image');
     } catch (error) {
       console.error('Error uploading image:', error);
       Alert.alert('Hata', 'Fotoğraf yüklenemedi');
     } finally {
-      setUploadingImage(false);
+      setUploadingMedia(false);
+    }
+  };
+
+  const pickVideo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Video seçmek için galeri izni gerekiyor.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      quality: 0.5,
+      videoMaxDuration: 60,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setShowAttachMenu(false);
+      setUploadingMedia(true);
+      try {
+        const response = await fetch(result.assets[0].uri);
+        const blob = await response.blob();
+        const filename = `chat_videos/${getChatId()}/${Date.now()}.mp4`;
+        const storageRef = ref(storage, filename);
+        
+        await uploadBytes(storageRef, blob);
+        const downloadURL = await getDownloadURL(storageRef);
+        await handleSend(downloadURL, 'video');
+      } catch (error) {
+        console.error('Error uploading video:', error);
+        Alert.alert('Hata', 'Video yüklenemedi');
+      } finally {
+        setUploadingMedia(false);
+      }
+    }
+  };
+
+  const pickDocument = async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: '*/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setShowAttachMenu(false);
+        setUploadingMedia(true);
+        const file = result.assets[0];
+        try {
+          const response = await fetch(file.uri);
+          const blob = await response.blob();
+          const ext = file.name?.split('.').pop() || 'file';
+          const filename = `chat_files/${getChatId()}/${Date.now()}.${ext}`;
+          const storageRef = ref(storage, filename);
+          
+          await uploadBytes(storageRef, blob);
+          const downloadURL = await getDownloadURL(storageRef);
+          await handleSend(downloadURL, 'file', file.name);
+        } catch (error) {
+          console.error('Error uploading file:', error);
+          Alert.alert('Hata', 'Dosya yüklenemedi');
+        } finally {
+          setUploadingMedia(false);
+        }
+      }
+    } catch (error) {
+      console.error('Error picking document:', error);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    const chatId = getChatId();
+    if (!chatId) return;
+    
+    Alert.alert(
+      'Mesajı Sil',
+      'Bu mesajı silmek istediğinize emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const msgRef = doc(db, 'conversations', chatId, 'messages', messageId);
+              await deleteDoc(msgRef);
+            } catch (error) {
+              Alert.alert('Hata', 'Mesaj silinemedi');
+            }
+          },
+        },
+      ]
+    );
+    setShowMessageActions(false);
+  };
+
+  const handleEditMessage = async () => {
+    if (!editingMessage || !inputText.trim()) return;
+    
+    const chatId = getChatId();
+    if (!chatId) return;
+    
+    try {
+      const msgRef = doc(db, 'conversations', chatId, 'messages', editingMessage.id);
+      await updateDoc(msgRef, { 
+        text: inputText.trim(),
+        edited: true,
+        editedAt: serverTimestamp()
+      });
+      setEditingMessage(null);
+      setInputText('');
+    } catch (error) {
+      Alert.alert('Hata', 'Mesaj düzenlenemedi');
     }
   };
 
