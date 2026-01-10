@@ -53,7 +53,17 @@ export default function ServicesScreen() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [creating, setCreating] = useState(false);
-  const { userProfile } = useAuth();
+  const { userProfile, user } = useAuth();
+  const router = useRouter();
+
+  const handleContactService = (service: Service) => {
+    if (service.userId === user?.uid) {
+      Alert.alert('Bilgi', 'Kendi hizmetinize mesaj gönderemezsiniz');
+      return;
+    }
+    // Mesajlar sayfasına yönlendir ve sohbet başlat
+    router.push(`/chat/${service.userId}`);
+  };
 
   const loadServices = useCallback(async () => {
     try {
