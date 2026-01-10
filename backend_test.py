@@ -19,6 +19,9 @@ class NetworkSolutionAPITester:
             "health_check": {"status": "pending", "details": ""},
             "cities_endpoint": {"status": "pending", "details": ""},
             "communities_endpoint": {"status": "pending", "details": ""},
+            "admin_dashboard": {"status": "pending", "details": ""},
+            "admin_users": {"status": "pending", "details": ""},
+            "admin_communities": {"status": "pending", "details": ""},
             "server_connectivity": {"status": "pending", "details": ""}
         }
         self.session = requests.Session()
