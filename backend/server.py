@@ -1392,6 +1392,131 @@ async def admin_remove_admin(user_id: str, current_user: dict = Depends(get_curr
 
     await db.users.update_one(
         {"uid": user_id},
+
+# Create new community (admin)
+@api_router.post("/admin/communities")
+async def admin_create_community(data: dict, current_user: dict = Depends(get_current_user)):
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+
+    name = data.get("name")
+    city = data.get("city")
+    description = data.get("description", "")
+
+    if not name or not city:
+        raise HTTPException(status_code=400, detail="İsim ve şehir zorunludur")
+
+    existing = await db.communities.find_one({"name": name})
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu isimde bir topluluk zaten var")
+
+    community_id = str(uuid.uuid4())
+    announcement_id = str(uuid.uuid4())
+
+    community = {
+        "id": community_id,
+        "name": name,
+        "description": description,
+        "city": city,
+        "imageUrl": data.get("imageUrl"),
+        "superAdmins": [],
+        "members": [],
+        "subGroups": [],
+        "bannedUsers": [],
+        "restrictedUsers": [],
+        "announcementChannelId": announcement_id,
+        "createdBy": current_user['uid'],
+        "createdByName": data.get("createdByName") or "Admin",
+        "createdAt": datetime.utcnow()
+    }
+
+    await db.communities.insert_one(community)
+
+    # Varsayılan alt grupları oluştur
+    subgroup_ids = await create_default_subgroups(community_id, name, current_user['uid'])
+    await db.communities.update_one(
+        {"id": community_id},
+        {"$set": {"subGroups": subgroup_ids}}
+    )
+
+    if "_id" in community:
+        del community["_id"]
+    return community
+
+# Delete community (admin)
+@api_router.delete("/admin/communities/{community_id}")
+async def admin_delete_community(community_id: str, current_user: dict = Depends(get_current_user)):
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+
+    community = await db.communities.find_one({"id": community_id})
+    if not community:
+        raise HTTPException(status_code=404, detail="Topluluk bulunamadı")
+
+    # Topluluğa bağlı alt grupları ve mesajlarını da sil
+    subgroups = await db.subgroups.find({"communityId": community_id}).to_list(1000)
+    subgroup_ids = [sg["id"] for sg in subgroups]
+
+    if subgroup_ids:
+        await db.subgroups.delete_many({"communityId": community_id})
+        await db.messages.delete_many({"groupId": {"$in": subgroup_ids}})
+
+    # Duyuru kanalındaki mesajlar
+    announcement_id = community.get("announcementChannelId")
+    if announcement_id:
+        await db.messages.delete_many({"groupId": announcement_id})
+
+    await db.communities.delete_one({"id": community_id})
+
+    # Kullanıcı profillerinden bu topluluğu kaldır
+    await db.users.update_many(
+        {},
+        {"$pull": {"communities": community_id}}
+    )
+
+    return {"message": "Topluluk ve ilişkili alt gruplar ve mesajlar silindi"}
+
+# Update subgroup (admin)
+@api_router.put("/admin/subgroups/{subgroup_id}")
+async def admin_update_subgroup(subgroup_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+
+    allowed_fields = ["name", "description", "imageUrl"]
+    updates = {k: v for k, v in data.items() if k in allowed_fields}
+
+    if updates:
+        await db.subgroups.update_one({"id": subgroup_id}, {"$set": updates})
+
+    return {"message": "Alt grup güncellendi"}
+
+# Delete subgroup (admin)
+@api_router.delete("/admin/subgroups/{subgroup_id}")
+async def admin_delete_subgroup(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+
+    community_id = subgroup.get("communityId")
+
+    # Alt grup mesajlarını sil
+    await db.messages.delete_many({"groupId": subgroup_id})
+
+    # Alt grubun kendisini sil
+    await db.subgroups.delete_one({"id": subgroup_id})
+
+    # Topluluk dokümanından referansı kaldır
+    if community_id:
+        await db.communities.update_one(
+            {"id": community_id},
+            {"$pull": {"subGroups": subgroup_id}}
+        )
+
+    return {"message": "Alt grup ve mesajları silindi"}
+
         {"$set": {"isAdmin": False}}
     )
 
