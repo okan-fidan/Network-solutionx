@@ -182,82 +182,10 @@ export default function ServicesScreen() {
           <View style={styles.emptyState}>
             <Ionicons name="briefcase-outline" size={64} color="#374151" />
             <Text style={styles.emptyText}>Henüz hizmet yok</Text>
-            <Text style={styles.emptySubtext}>Hizmetinizi ekleyerek başlayın!</Text>
+            <Text style={styles.emptySubtext}>Profil sayfanızdan hizmet ekleyebilirsiniz</Text>
           </View>
         }
       />
-
-      {/* Create Service Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Yeni Hizmet Ekle</Text>
-              <TouchableOpacity onPress={() => setModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <TextInput
-              style={styles.modalInput}
-              placeholder="Hizmet Başlığı"
-              placeholderTextColor="#6b7280"
-              value={title}
-              onChangeText={setTitle}
-            />
-
-            <TextInput
-              style={[styles.modalInput, styles.textArea]}
-              placeholder="Hizmet Açıklaması"
-              placeholderTextColor="#6b7280"
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-            />
-
-            <Text style={styles.categoryLabel}>Kategori Seçin</Text>
-            <View style={styles.categoryGrid}>
-              {CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryOption,
-                    category === cat && styles.categoryOptionSelected,
-                  ]}
-                  onPress={() => setCategory(cat)}
-                >
-                  <Text
-                    style={[
-                      styles.categoryOptionText,
-                      category === cat && styles.categoryOptionTextSelected,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            <TouchableOpacity
-              style={[styles.submitButton, creating && styles.submitButtonDisabled]}
-              onPress={handleCreateService}
-              disabled={creating}
-            >
-              {creating ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.submitButtonText}>Hizmet Ekle</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
