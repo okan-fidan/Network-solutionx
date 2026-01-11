@@ -101,12 +101,14 @@ export default function SettingsScreen() {
 
   const toggle2FA = async () => {
     if (!twoFactorEnabled) {
-      // Enable 2FA - İlk adım: Kod gönder
+      // Enable 2FA - QR kod ile kurulum
       try {
-        const response = await api.post('/auth/2fa/enable', { method: 'email' });
-        setPendingCode(response.data.demo_code || ''); // Demo için
+        const response = await api.post('/api/security/2fa/setup');
+        setPendingCode(response.data.secret || '');
+        // QR kod URL'sini sakla
+        AsyncStorage.setItem('2fa_qr', response.data.qrCode || '');
         setShow2FAModal(true);
-        Alert.alert('Kod Gönderildi', 'Doğrulama kodu bildirimlerinize gönderildi.');
+        Alert.alert('2FA Kurulumu', 'Authenticator uygulamanızla QR kodu tarayın veya kodu manuel girin.');
       } catch (error: any) {
         Alert.alert('Hata', error?.response?.data?.detail || '2FA etkinleştirilemedi');
       }
@@ -121,13 +123,7 @@ export default function SettingsScreen() {
             text: 'Devre Dışı Bırak',
             style: 'destructive',
             onPress: async () => {
-              try {
-                await api.post('/auth/2fa/disable', { code: '000000' });
-                setTwoFactorEnabled(false);
-                Alert.alert('Başarılı', '2FA devre dışı bırakıldı');
-              } catch (error: any) {
-                Alert.alert('Hata', error?.response?.data?.detail || 'İşlem başarısız');
-              }
+              setShow2FAModal(true);
             },
           },
         ]
@@ -143,11 +139,19 @@ export default function SettingsScreen() {
 
     setVerifying2FA(true);
     try {
-      await api.post('/auth/2fa/verify', { code: verificationCode });
-      setTwoFactorEnabled(true);
+      if (!twoFactorEnabled) {
+        // Enable 2FA
+        await api.post('/api/security/2fa/verify', { code: verificationCode });
+        setTwoFactorEnabled(true);
+        Alert.alert('Başarılı', 'İki faktörlü doğrulama etkinleştirildi!');
+      } else {
+        // Disable 2FA
+        await api.post('/api/security/2fa/disable', { code: verificationCode });
+        setTwoFactorEnabled(false);
+        Alert.alert('Başarılı', '2FA devre dışı bırakıldı');
+      }
       setShow2FAModal(false);
       setVerificationCode('');
-      Alert.alert('Başarılı', 'İki faktörlü doğrulama etkinleştirildi!');
     } catch (error: any) {
       Alert.alert('Hata', error?.response?.data?.detail || 'Kod doğrulanamadı');
     } finally {
