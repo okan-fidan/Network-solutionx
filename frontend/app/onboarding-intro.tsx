@@ -3,17 +3,13 @@ import {
   View,
   Text,
   StyleSheet,
-  Dimensions,
   TouchableOpacity,
-  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const { width } = Dimensions.get('window');
 
 interface OnboardingSlide {
   id: string;
@@ -57,13 +53,10 @@ const slides: OnboardingSlide[] = [
 export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
-  const flatListRef = React.useRef<FlatList>(null);
 
   const handleNext = () => {
     if (currentIndex < slides.length - 1) {
-      const nextIndex = currentIndex + 1;
-      flatListRef.current?.scrollToIndex({ index: nextIndex, animated: true });
-      setCurrentIndex(nextIndex);
+      setCurrentIndex(currentIndex + 1);
     } else {
       completeOnboarding();
     }
@@ -83,25 +76,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const onViewableItemsChanged = React.useCallback(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index);
-    }
-  }, []);
-
-  const viewabilityConfig = {
-    itemVisiblePercentThreshold: 50,
-  };
-
-  const renderSlide = ({ item }: { item: OnboardingSlide }) => (
-    <View style={styles.slide}>
-      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-        <Ionicons name={item.icon} size={80} color="#fff" />
-      </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  );
+  const currentSlide = slides[currentIndex];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,24 +85,13 @@ export default function OnboardingScreen() {
         <Text style={styles.skipText}>Geç</Text>
       </TouchableOpacity>
 
-      {/* Slides */}
-      <View style={styles.slidesContainer}>
-        <FlatList
-          ref={flatListRef}
-          data={slides}
-          renderItem={renderSlide}
-          keyExtractor={(item) => item.id}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onViewableItemsChanged={onViewableItemsChanged}
-          viewabilityConfig={viewabilityConfig}
-          getItemLayout={(data, index) => ({
-            length: width,
-            offset: width * index,
-            index,
-          })}
-        />
+      {/* Content */}
+      <View style={styles.content}>
+        <View style={[styles.iconContainer, { backgroundColor: currentSlide.color }]}>
+          <Ionicons name={currentSlide.icon} size={80} color="#fff" />
+        </View>
+        <Text style={styles.title}>{currentSlide.title}</Text>
+        <Text style={styles.description}>{currentSlide.description}</Text>
       </View>
 
       {/* Bottom Section */}
@@ -135,12 +99,13 @@ export default function OnboardingScreen() {
         {/* Dots */}
         <View style={styles.dotsContainer}>
           {slides.map((_, index) => (
-            <View
+            <TouchableOpacity
               key={index}
               style={[
                 styles.dot,
                 currentIndex === index && styles.dotActive,
               ]}
+              onPress={() => setCurrentIndex(index)}
             />
           ))}
         </View>
@@ -185,11 +150,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  slidesContainer: {
-    flex: 1,
-  },
-  slide: {
-    width: width,
+  content: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
