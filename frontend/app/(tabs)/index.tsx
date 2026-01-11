@@ -406,7 +406,7 @@ export default function HomeScreen() {
 
         <TouchableOpacity 
           style={styles.actionButton}
-          onPress={() => Alert.alert('Yorumlar', `${item.commentCount} yorum bulunuyor. Yorum özelliği yakında aktif olacak.`)}
+          onPress={() => router.push(`/post/${item.id}`)}
         >
           <Ionicons name="chatbubble-outline" size={22} color="#6b7280" />
           <Text style={styles.actionText}>{item.commentCount}</Text>
