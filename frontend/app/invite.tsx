@@ -36,13 +36,13 @@ export default function InviteScreen() {
   const loadData = async () => {
     try {
       if (communityId) {
-        const res = await api.get(`/api/communities/${communityId}`);
+        const res = await api.get(`/communities/${communityId}`);
         setCommunity(res.data);
         // Davet linki oluştur
         setInviteLink(`https://networksolution.app/join/community/${communityId}`);
       }
       if (groupId) {
-        const res = await api.get(`/api/subgroups/${groupId}`);
+        const res = await api.get(`/subgroups/${groupId}`);
         setGroup(res.data);
         setInviteLink(`https://networksolution.app/join/group/${groupId}`);
       }
