@@ -79,7 +79,9 @@ export default function OnboardingScreen() {
   const currentSlide = slides[currentIndex];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      
       {/* Skip Button */}
       <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
         <Text style={styles.skipText}>Geç</Text>
