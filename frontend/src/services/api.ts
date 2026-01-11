@@ -1,10 +1,10 @@
 import axios from 'axios';
 import { auth } from '../config/firebase';
 
-const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+const BASE_URL = '';
 
 const api = axios.create({
-  baseURL: `${API_URL}/api`,
+  baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -12,134 +12,102 @@ const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use(async (config) => {
-  const user = auth.currentUser;
-  if (user) {
-    const token = await user.getIdToken();
-    config.headers.Authorization = `Bearer ${token}`;
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  } catch (error) {
+    console.error('Error getting auth token:', error);
   }
   return config;
 });
 
-export const userApi = {
-  register: (data: any) => api.post('/user/register', data),
-  getProfile: () => api.get('/user/profile'),
-  updateProfile: (data: any) => api.put('/user/profile', data),
-  isAdmin: () => api.get('/user/is-admin'),
+export const postApi = {
+  getAll: () => api.get('/api/posts'),
+  getOne: (id: string) => api.get(`/api/posts/${id}`),
+  create: (data: any) => api.post('/api/posts', data),
+  like: (id: string) => api.post(`/api/posts/${id}/like`),
+  delete: (id: string) => api.delete(`/api/posts/${id}`),
+  getComments: (id: string) => api.get(`/api/posts/${id}/comments`),
+  addComment: (id: string, data: any) => api.post(`/api/posts/${id}/comments`, data),
+  share: (id: string) => api.post(`/api/posts/${id}/share`),
 };
 
 export const communityApi = {
-  getAll: () => api.get('/communities'),
-  getOne: (id: string) => api.get(`/communities/${id}`),
-  join: (id: string) => api.post(`/communities/${id}/join`),
-  leave: (id: string) => api.post(`/communities/${id}/leave`),
-  createSubgroup: (communityId: string, data: any) => api.post(`/communities/${communityId}/subgroups`, data),
-  // Announcements
-  getAnnouncements: (id: string) => api.get(`/communities/${id}/announcements`),
-  sendAnnouncement: (id: string, data: any) => api.post(`/communities/${id}/announcements`, data),
-  deleteAnnouncement: (communityId: string, announcementId: string) => api.delete(`/communities/${communityId}/announcements/${announcementId}`),
+  getAll: () => api.get('/api/communities'),
+  getOne: (id: string) => api.get(`/api/communities/${id}`),
+  join: (id: string) => api.post(`/api/communities/${id}/join`),
+  leave: (id: string) => api.post(`/api/communities/${id}/leave`),
+  getAnnouncements: (id: string) => api.get(`/api/communities/${id}/announcements`),
+  createAnnouncement: (id: string, data: any) => api.post(`/api/communities/${id}/announcements`, data),
+  deleteAnnouncement: (communityId: string, announcementId: string) => api.delete(`/api/communities/${communityId}/announcements/${announcementId}`),
+  getSubgroups: (id: string) => api.get(`/api/communities/${id}/subgroups`),
 };
 
 export const subgroupApi = {
-  getOne: (id: string) => api.get(`/subgroups/${id}`),
-  join: (id: string) => api.post(`/subgroups/${id}/join`),
-  leave: (id: string) => api.post(`/subgroups/${id}/leave`),
-  getMessages: (id: string) => api.get(`/subgroups/${id}/messages`),
-  sendMessage: (id: string, data: any) => api.post(`/subgroups/${id}/messages`, data),
-  deleteMessage: (groupId: string, messageId: string) => api.delete(`/subgroups/${groupId}/messages/${messageId}`),
-  editMessage: (groupId: string, messageId: string, content: string) => api.put(`/subgroups/${groupId}/messages/${messageId}`, { content }),
-  // Pinned Messages
-  pinMessage: (groupId: string, messageId: string) => api.post(`/subgroups/${groupId}/messages/${messageId}/pin`),
-  unpinMessage: (groupId: string, messageId: string) => api.delete(`/subgroups/${groupId}/messages/${messageId}/pin`),
-  getPinnedMessages: (groupId: string) => api.get(`/subgroups/${groupId}/pinned-messages`),
-  // Polls
-  createPoll: (groupId: string, data: any) => api.post(`/subgroups/${groupId}/polls`, data),
-  getPolls: (groupId: string) => api.get(`/subgroups/${groupId}/polls`),
-  votePoll: (groupId: string, pollId: string, optionIds: string[]) => api.post(`/subgroups/${groupId}/polls/${pollId}/vote`, { optionIds }),
-  deletePoll: (groupId: string, pollId: string) => api.delete(`/subgroups/${groupId}/polls/${pollId}`),
-  // Search
-  searchMessages: (groupId: string, query: string) => api.get(`/subgroups/${groupId}/messages/search?q=${encodeURIComponent(query)}`),
-  // Members
-  getMembers: (groupId: string) => api.get(`/subgroups/${groupId}/members`),
-  // Moderation
-  muteMember: (groupId: string, userId: string, duration: number) => api.post(`/subgroups/${groupId}/members/${userId}/mute`, { duration }),
-  unmuteMember: (groupId: string, userId: string) => api.delete(`/subgroups/${groupId}/members/${userId}/mute`),
-  kickMember: (groupId: string, userId: string) => api.post(`/subgroups/${groupId}/members/${userId}/kick`),
+  getOne: (id: string) => api.get(`/api/subgroups/${id}`),
+  join: (id: string) => api.post(`/api/subgroups/${id}/join`),
+  requestJoin: (id: string) => api.post(`/api/subgroups/${id}/request-join`),
+  leave: (id: string) => api.post(`/api/subgroups/${id}/leave`),
+  getMessages: (id: string) => api.get(`/api/subgroups/${id}/messages`),
+  sendMessage: (id: string, data: any) => api.post(`/api/subgroups/${id}/messages`, data),
+  getPendingRequests: (id: string) => api.get(`/api/subgroups/${id}/pending-requests`),
+  approveRequest: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/approve/${userId}`),
+  rejectRequest: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/reject/${userId}`),
 };
 
-export const messageApi = {
-  delete: (id: string) => api.delete(`/messages/${id}`),
-  getPrivate: (userId: string) => api.get(`/private-messages/${userId}`),
-  sendPrivate: (data: any) => api.post('/private-messages', data),
-  report: (messageId: string, reason: string, description?: string) => api.post(`/messages/${messageId}/report`, { reason, description }),
-};
-
-export const userListApi = {
-  getAll: () => api.get('/users'),
-  getOne: (id: string) => api.get(`/users/${id}`),
-  getProfile: (id: string) => api.get(`/users/${id}/profile`),
-};
-
-export const postApi = {
-  getAll: () => api.get('/posts'),
-  create: (data: any) => api.post('/posts', data),
-  like: (id: string) => api.post(`/posts/${id}/like`),
-  getComments: (id: string) => api.get(`/posts/${id}/comments`),
-  addComment: (id: string, data: any) => api.post(`/posts/${id}/comments`, data),
-  delete: (id: string) => api.delete(`/posts/${id}`),
-  getMy: () => api.get('/my-posts'),
+export const subgroupRequestApi = {
+  request: (subgroupId: string) => api.post(`/api/subgroups/${subgroupId}/request-join`),
+  approve: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/approve/${userId}`),
+  reject: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/reject/${userId}`),
 };
 
 export const serviceApi = {
-  getAll: () => api.get('/services'),
-  create: (data: any) => api.post('/services', data),
-  delete: (id: string) => api.delete(`/services/${id}`),
+  getAll: (communityId?: string) => api.get(`/api/services${communityId ? `?community_id=${communityId}` : ''}`),
+  getOne: (id: string) => api.get(`/api/services/${id}`),
+  create: (data: any) => api.post('/api/services', data),
+  update: (id: string, data: any) => api.put(`/api/services/${id}`, data),
+  delete: (id: string) => api.delete(`/api/services/${id}`),
+  getReviews: (id: string) => api.get(`/api/services/${id}/reviews`),
+  addReview: (id: string, data: any) => api.post(`/api/services/${id}/reviews`, data),
 };
 
-export const generalApi = {
-  getCities: () => api.get('/cities'),
+export const userApi = {
+  getProfile: () => api.get('/api/user/profile'),
+  updateProfile: (data: any) => api.put('/api/user/profile', data),
+  updateLocation: (data: any) => api.put('/api/user/location', data),
+  getPrivacySettings: () => api.get('/api/user/privacy-settings'),
+  updatePrivacySettings: (data: any) => api.put('/api/user/privacy-settings', data),
+  savePushToken: (token: string) => api.post('/api/user/push-token', { token }),
 };
 
-// Subgroup request-join API
-export const subgroupRequestApi = {
-  requestJoin: (subgroupId: string) => api.post(`/subgroups/${subgroupId}/request-join`),
-  approve: (subgroupId: string, userId: string) => api.post(`/subgroups/${subgroupId}/approve/${userId}`),
-  reject: (subgroupId: string, userId: string) => api.post(`/subgroups/${subgroupId}/reject/${userId}`),
-  getPendingRequests: (subgroupId: string) => api.get(`/subgroups/${subgroupId}/pending-requests`),
+export const userListApi = {
+  getAll: () => api.get('/api/users'),
+  getOne: (uid: string) => api.get(`/api/users/${uid}`),
+  search: (query: string) => api.get(`/api/users/search?q=${query}`),
 };
 
-// Admin API
-export const adminApi = {
-  // Dashboard
-  getDashboard: () => api.get('/admin/dashboard'),
-  
-  // Users
-  getUsers: (search?: string) => api.get(`/admin/users${search ? `?search=${search}` : ''}`),
-  banUser: (userId: string) => api.post(`/admin/users/${userId}/ban`),
-  unbanUser: (userId: string) => api.post(`/admin/users/${userId}/unban`),
-  restrictUser: (userId: string, data: { hours: number; reason?: string }) => api.post(`/admin/users/${userId}/restrict`, data),
-  unrestrictUser: (userId: string) => api.post(`/admin/users/${userId}/unrestrict`),
-  makeAdmin: (userId: string) => api.post(`/admin/users/${userId}/make-admin`),
-  removeAdmin: (userId: string) => api.post(`/admin/users/${userId}/remove-admin`),
-  deleteUserMessages: (userId: string, data: { hours: number }) => api.delete(`/admin/users/${userId}/messages`, { data }),
-  
-  // Communities
-  getCommunities: () => api.get('/admin/communities'),
-  createCommunity: (data: { name: string; city: string; description?: string }) => api.post('/admin/communities', data),
-  updateCommunity: (communityId: string, data: { name?: string; description?: string; imageUrl?: string }) => api.put(`/admin/communities/${communityId}`, data),
-  deleteCommunity: (communityId: string) => api.delete(`/admin/communities/${communityId}`),
-  getCommunityMembers: (communityId: string) => api.get(`/admin/communities/${communityId}/members`),
-  banFromCommunity: (communityId: string, userId: string) => api.post(`/admin/communities/${communityId}/ban/${userId}`),
-  kickFromCommunity: (communityId: string, userId: string) => api.post(`/admin/communities/${communityId}/kick/${userId}`),
-  addSuperAdmin: (communityId: string, userId: string) => api.post(`/admin/communities/${communityId}/super-admin/${userId}`),
-  removeSuperAdmin: (communityId: string, userId: string) => api.delete(`/admin/communities/${communityId}/super-admin/${userId}`),
-  
-  // Subgroups
-  updateSubgroup: (subgroupId: string, data: { name?: string; description?: string; imageUrl?: string }) => api.put(`/admin/subgroups/${subgroupId}`, data),
-  deleteSubgroup: (subgroupId: string) => api.delete(`/admin/subgroups/${subgroupId}`),
-  getSubgroupMembers: (subgroupId: string) => api.get(`/admin/subgroups/${subgroupId}/members`),
-  
-  // Join Requests
-  getAllJoinRequests: (communityId?: string) => api.get(`/admin/subgroup-join-requests${communityId ? `?community_id=${communityId}` : ''}`),
+export const notificationApi = {
+  getAll: () => api.get('/api/notifications'),
+  markAsRead: (id: string) => api.put(`/api/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/api/notifications/read-all'),
+  send: (data: any) => api.post('/api/notifications/send', data),
+};
+
+export const badgeApi = {
+  getMyBadges: () => api.get('/api/badges/my-badges'),
+  getDefinitions: () => api.get('/api/badges/definitions'),
+  getLeaderboard: () => api.get('/api/badges/leaderboard'),
+};
+
+export const eventApi = {
+  getAll: (params?: string) => api.get(`/api/events${params || ''}`),
+  getOne: (id: string) => api.get(`/api/events/${id}`),
+  create: (data: any) => api.post('/api/events', data),
+  attend: (id: string) => api.post(`/api/events/${id}/attend`),
+  unattend: (id: string) => api.post(`/api/events/${id}/unattend`),
 };
 
 export default api;
