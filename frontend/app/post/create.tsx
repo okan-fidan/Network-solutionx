@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,20 +11,55 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { postApi } from '../../src/services/api';
+import * as Location from 'expo-location';
+import { postApi, userListApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
+
+interface User {
+  uid: string;
+  firstName: string;
+  lastName: string;
+  profileImageUrl?: string;
+}
 
 export default function CreatePostScreen() {
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [location, setLocation] = useState<string | null>(null);
+  const [loadingLocation, setLoadingLocation] = useState(false);
+  
+  // Mention state
+  const [showMentionModal, setShowMentionModal] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [mentions, setMentions] = useState<string[]>([]);
+  const [mentionedUsers, setMentionedUsers] = useState<User[]>([]);
+  
   const { userProfile } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const loadUsers = async () => {
+    try {
+      const response = await userListApi.getAll();
+      setUsers(response.data || []);
+      setFilteredUsers(response.data || []);
+    } catch (error) {
+      console.error('Error loading users:', error);
+    }
+  };
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -45,6 +80,64 @@ export default function CreatePostScreen() {
     }
   };
 
+  const getLocation = async () => {
+    setLoadingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('İzin Gerekli', 'Konum için izin gerekiyor.');
+        return;
+      }
+
+      const loc = await Location.getCurrentPositionAsync({});
+      const [address] = await Location.reverseGeocodeAsync({
+        latitude: loc.coords.latitude,
+        longitude: loc.coords.longitude,
+      });
+
+      if (address) {
+        const locationString = [address.district, address.city, address.country]
+          .filter(Boolean)
+          .join(', ');
+        setLocation(locationString);
+      }
+    } catch (error) {
+      console.error('Error getting location:', error);
+      Alert.alert('Hata', 'Konum alınamadı');
+    } finally {
+      setLoadingLocation(false);
+    }
+  };
+
+  const handleMentionSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      const filtered = users.filter(
+        (u) =>
+          `${u.firstName} ${u.lastName}`.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredUsers(filtered);
+    } else {
+      setFilteredUsers(users);
+    }
+  };
+
+  const handleSelectUser = (user: User) => {
+    if (!mentions.includes(user.uid)) {
+      setMentions([...mentions, user.uid]);
+      setMentionedUsers([...mentionedUsers, user]);
+      setContent(content + `@${user.firstName} `);
+    }
+    setShowMentionModal(false);
+    setSearchQuery('');
+    setFilteredUsers(users);
+  };
+
+  const removeMention = (uid: string) => {
+    setMentions(mentions.filter((m) => m !== uid));
+    setMentionedUsers(mentionedUsers.filter((u) => u.uid !== uid));
+  };
+
   const handlePost = async () => {
     if (!content.trim()) {
       Alert.alert('Hata', 'Lütfen bir şeyler yazın');
@@ -56,6 +149,8 @@ export default function CreatePostScreen() {
       await postApi.create({
         content: content.trim(),
         imageUrl: selectedImage,
+        location: location,
+        mentions: mentions,
       });
       Alert.alert('Başarılı', 'Gönderiniz paylaşıldı!', [
         { text: 'Tamam', onPress: () => router.back() }
@@ -106,6 +201,34 @@ export default function CreatePostScreen() {
             </View>
           </View>
 
+          {/* Mentioned Users */}
+          {mentionedUsers.length > 0 && (
+            <View style={styles.mentionedContainer}>
+              <Text style={styles.mentionedLabel}>Etiketlenen:</Text>
+              <View style={styles.mentionedList}>
+                {mentionedUsers.map((user) => (
+                  <View key={user.uid} style={styles.mentionedChip}>
+                    <Text style={styles.mentionedName}>@{user.firstName}</Text>
+                    <TouchableOpacity onPress={() => removeMention(user.uid)}>
+                      <Ionicons name="close-circle" size={18} color="#6b7280" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Location Tag */}
+          {location && (
+            <View style={styles.locationContainer}>
+              <Ionicons name="location" size={16} color="#6366f1" />
+              <Text style={styles.locationText}>{location}</Text>
+              <TouchableOpacity onPress={() => setLocation(null)}>
+                <Ionicons name="close-circle" size={18} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+          )}
+
           <TextInput
             style={styles.input}
             placeholder="Ne düşünüyorsun?"
@@ -135,22 +258,91 @@ export default function CreatePostScreen() {
             <Ionicons name="image" size={24} color="#10b981" />
             <Text style={styles.toolbarText}>Fotoğraf</Text>
           </TouchableOpacity>
+          
           <TouchableOpacity 
             style={styles.toolbarButton}
-            onPress={() => Alert.alert('Konum', 'Konum ekleme özelliği yakında aktif olacak')}
+            onPress={getLocation}
+            disabled={loadingLocation}
           >
-            <Ionicons name="location" size={24} color="#f59e0b" />
-            <Text style={styles.toolbarText}>Konum</Text>
+            {loadingLocation ? (
+              <ActivityIndicator size="small" color="#f59e0b" />
+            ) : (
+              <Ionicons name="location" size={24} color={location ? '#6366f1' : '#f59e0b'} />
+            )}
+            <Text style={[styles.toolbarText, location && { color: '#6366f1' }]}>
+              {location ? 'Konum Eklendi' : 'Konum'}
+            </Text>
           </TouchableOpacity>
+          
           <TouchableOpacity 
             style={styles.toolbarButton}
-            onPress={() => Alert.alert('Etiketle', 'Kişi etiketleme özelliği yakında aktif olacak')}
+            onPress={() => setShowMentionModal(true)}
           >
-            <Ionicons name="pricetag" size={24} color="#6366f1" />
-            <Text style={styles.toolbarText}>Etiketle</Text>
+            <Ionicons name="at" size={24} color={mentions.length > 0 ? '#6366f1' : '#6366f1'} />
+            <Text style={styles.toolbarText}>
+              {mentions.length > 0 ? `${mentions.length} Etiket` : 'Etiketle'}
+            </Text>
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Mention Modal */}
+      <Modal visible={showMentionModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kişi Etiketle</Text>
+              <TouchableOpacity onPress={() => setShowMentionModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.searchContainer}>
+              <Ionicons name="search" size={20} color="#6b7280" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="İsim ara..."
+                placeholderTextColor="#6b7280"
+                value={searchQuery}
+                onChangeText={handleMentionSearch}
+              />
+            </View>
+
+            <FlatList
+              data={filteredUsers}
+              keyExtractor={(item) => item.uid}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={[
+                    styles.userItem,
+                    mentions.includes(item.uid) && styles.userItemSelected,
+                  ]}
+                  onPress={() => handleSelectUser(item)}
+                >
+                  <View style={styles.userItemAvatar}>
+                    {item.profileImageUrl ? (
+                      <Image source={{ uri: item.profileImageUrl }} style={styles.avatarImage} />
+                    ) : (
+                      <Ionicons name="person" size={18} color="#9ca3af" />
+                    )}
+                  </View>
+                  <Text style={styles.userItemName}>
+                    {item.firstName} {item.lastName}
+                  </Text>
+                  {mentions.includes(item.uid) && (
+                    <Ionicons name="checkmark-circle" size={20} color="#6366f1" />
+                  )}
+                </TouchableOpacity>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyList}>
+                  <Text style={styles.emptyText}>Kullanıcı bulunamadı</Text>
+                </View>
+              }
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -170,6 +362,13 @@ const styles = StyleSheet.create({
   userInfo: { marginLeft: 12 },
   userName: { color: '#fff', fontSize: 16, fontWeight: '600' },
   visibility: { color: '#6b7280', fontSize: 13, marginTop: 2 },
+  mentionedContainer: { marginBottom: 12 },
+  mentionedLabel: { color: '#9ca3af', fontSize: 13, marginBottom: 8 },
+  mentionedList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  mentionedChip: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 6 },
+  mentionedName: { color: '#6366f1', fontSize: 14 },
+  locationContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, marginBottom: 12, gap: 8 },
+  locationText: { color: '#6366f1', fontSize: 14, flex: 1 },
   input: { color: '#fff', fontSize: 18, lineHeight: 26, minHeight: 120 },
   imagePreview: { marginTop: 16, borderRadius: 16, overflow: 'hidden', position: 'relative' },
   selectedImage: { width: '100%', height: 250, borderRadius: 16 },
@@ -177,4 +376,17 @@ const styles = StyleSheet.create({
   toolbar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 16, borderTopWidth: 1, borderTopColor: '#1f2937' },
   toolbarButton: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   toolbarText: { color: '#9ca3af', fontSize: 14 },
+  // Modal styles
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalContent: { backgroundColor: '#111827', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
+  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  searchContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', margin: 16, borderRadius: 12, paddingHorizontal: 12, height: 44, gap: 8 },
+  searchInput: { flex: 1, color: '#fff', fontSize: 16 },
+  userItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
+  userItemSelected: { backgroundColor: 'rgba(99, 102, 241, 0.1)' },
+  userItemAvatar: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', marginRight: 12 },
+  userItemName: { flex: 1, color: '#fff', fontSize: 15 },
+  emptyList: { padding: 32, alignItems: 'center' },
+  emptyText: { color: '#6b7280', fontSize: 15 },
 });
