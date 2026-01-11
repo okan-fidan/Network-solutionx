@@ -939,7 +939,7 @@ export default function GroupChatScreen() {
 
         {/* Reply indicator */}
         {replyingTo && (
-          <View style={styles.replyBar}>
+          <View style={styles.replyBarContainer}>
             <View style={styles.replyBarContent}>
               <Ionicons name="arrow-undo" size={18} color="#10b981" />
               <View style={styles.replyBarInfo}>
@@ -950,6 +950,27 @@ export default function GroupChatScreen() {
             <TouchableOpacity onPress={cancelReply}>
               <Ionicons name="close" size={22} color="#6b7280" />
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Smart Replies */}
+        {smartReplies.length > 0 && !editingMessage && !inputText && (
+          <View style={styles.smartRepliesContainer}>
+            <View style={styles.smartRepliesHeader}>
+              <Ionicons name="sparkles" size={14} color="#6366f1" />
+              <Text style={styles.smartRepliesTitle}>Akıllı Yanıtlar</Text>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.smartRepliesScroll}>
+              {smartReplies.map((reply, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.smartReplyChip}
+                  onPress={() => handleSelectSmartReply(reply)}
+                >
+                  <Text style={styles.smartReplyText}>{reply}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         )}
 
