@@ -79,7 +79,7 @@ export default function EventsScreen() {
   const loadEvents = async () => {
     try {
       const params = communityId ? `?community_id=${communityId}` : '';
-      const response = await api.get(`/api/events${params}`);
+      const response = await api.get(`/events${params}`);
       setEvents(response.data || []);
     } catch (error) {
       console.error('Error loading events:', error);
