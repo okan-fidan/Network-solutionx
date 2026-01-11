@@ -377,6 +377,53 @@ export default function GroupChatScreen() {
     }
   };
 
+  // Mesaj içeriğini @mention highlight'lı şekilde render et
+  const renderMessageContent = (content: string, isMe: boolean) => {
+    // @mention pattern: @Ad Soyad formatında
+    const mentionRegex = /@([A-Za-zÇçĞğİıÖöŞşÜü]+\s[A-Za-zÇçĞğİıÖöŞşÜü]+)/g;
+    const parts = content.split(mentionRegex);
+    
+    if (parts.length === 1) {
+      // Mention yok, normal render
+      return <Text style={[styles.messageText, isMe && styles.myMessageText]}>{content}</Text>;
+    }
+
+    // Mention'ları highlight et
+    const elements: React.ReactNode[] = [];
+    let match;
+    let lastIndex = 0;
+    const regex = new RegExp(mentionRegex);
+    
+    while ((match = regex.exec(content)) !== null) {
+      // Mention öncesi text
+      if (match.index > lastIndex) {
+        elements.push(
+          <Text key={`text-${lastIndex}`} style={[styles.messageText, isMe && styles.myMessageText]}>
+            {content.slice(lastIndex, match.index)}
+          </Text>
+        );
+      }
+      // Mention (highlight)
+      elements.push(
+        <Text key={`mention-${match.index}`} style={[styles.mentionHighlight, isMe && styles.myMentionHighlight]}>
+          {match[0]}
+        </Text>
+      );
+      lastIndex = match.index + match[0].length;
+    }
+    
+    // Kalan text
+    if (lastIndex < content.length) {
+      elements.push(
+        <Text key={`text-end`} style={[styles.messageText, isMe && styles.myMessageText]}>
+          {content.slice(lastIndex)}
+        </Text>
+      );
+    }
+
+    return <Text style={[styles.messageText, isMe && styles.myMessageText]}>{elements}</Text>;
+  };
+
   const renderMessage = ({ item }: { item: Message }) => {
     const isMe = item.senderId === user?.uid;
 
