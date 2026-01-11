@@ -5,120 +5,92 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
   Image,
   TextInput,
-  Modal,
   Alert,
-  ActivityIndicator,
-  FlatList,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import api from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { formatDistanceToNow } from 'date-fns';
+import { tr } from 'date-fns/locale';
+
+interface Service {
+  id: string;
+  userId: string;
+  userName: string;
+  title: string;
+  description: string;
+  category: string;
+  city: string;
+  contactPhone?: string;
+  averageRating?: number;
+  reviewCount?: number;
+  timestamp: string;
+}
 
 interface Review {
   id: string;
   userId: string;
   userName: string;
-  userImage?: string;
+  userProfileImage?: string;
   rating: number;
+  title?: string;
   comment: string;
+  helpful: string[];
+  helpfulCount: number;
+  isHelpful: boolean;
+  response?: {
+    text: string;
+    createdAt: string;
+  };
   createdAt: string;
 }
 
-interface TimeSlot {
-  time: string;
-  available: boolean;
-}
-
-interface Service {
-  id: string;
-  title: string;
-  description: string;
-  price?: string;
-  category: string;
-  userId: string;
-  userName: string;
-  userImage?: string;
-  userCity?: string;
-  rating: number;
-  reviewCount: number;
-  images?: string[];
+interface ReviewSummary {
+  total: number;
+  averageRating: number;
+  ratingDistribution: { [key: number]: number };
 }
 
 export default function ServiceDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   
   const [service, setService] = useState<Service | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [loading, setLoading] = useState(true);
   
-  // Review modal
+  // Review form
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewRating, setReviewRating] = useState(5);
+  const [rating, setRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
   const [reviewComment, setReviewComment] = useState('');
-  const [submittingReview, setSubmittingReview] = useState(false);
-  
-  // Appointment modal
-  const [showAppointmentModal, setShowAppointmentModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<string>('');
-  const [selectedTime, setSelectedTime] = useState<string>('');
-  const [appointmentNote, setAppointmentNote] = useState('');
-  const [bookingAppointment, setBookingAppointment] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    loadServiceData();
+    loadData();
   }, [id]);
 
-  const loadServiceData = async () => {
+  const loadData = async () => {
+    if (!id) return;
     try {
-      // Demo data
-      const demoService: Service = {
-        id: id || '1',
-        title: 'Web Sitesi Tasarımı',
-        description: 'Profesyonel ve modern web sitesi tasarımı hizmeti. SEO uyumlu, mobil responsive tasarımlar. WordPress, React veya özel çözümler.',
-        price: '5.000 ₺\'den başlayan',
-        category: 'Yazılım',
-        userId: 'user1',
-        userName: 'Ahmet Yılmaz',
-        userImage: undefined,
-        userCity: 'İstanbul',
-        rating: 4.8,
-        reviewCount: 24,
-      };
-      setService(demoService);
-
-      const demoReviews: Review[] = [
-        {
-          id: '1',
-          userId: 'user2',
-          userName: 'Mehmet Kaya',
-          rating: 5,
-          comment: 'Harika bir iş çıkardı, kesinlikle tavsiye ederim!',
-          createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: '2',
-          userId: 'user3',
-          userName: 'Ayşe Demir',
-          rating: 4,
-          comment: 'İyi çalışma, zamanında teslim etti.',
-          createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-        {
-          id: '3',
-          userId: 'user4',
-          userName: 'Can Öztürk',
-          rating: 5,
-          comment: 'Profesyonel yaklaşım, kaliteli iş.',
-          createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ];
-      setReviews(demoReviews);
+      const [servicesRes, reviewsRes] = await Promise.all([
+        api.get('/api/services'),
+        api.get(`/api/reviews/service/${id}`),
+      ]);
+      
+      const foundService = servicesRes.data.find((s: Service) => s.id === id);
+      setService(foundService || null);
+      setReviews(reviewsRes.data.reviews || []);
+      setSummary(reviewsRes.data.summary || null);
     } catch (error) {
       console.error('Error loading service:', error);
     } finally {
@@ -132,81 +104,54 @@ export default function ServiceDetailScreen() {
       return;
     }
 
-    setSubmittingReview(true);
+    setSubmitting(true);
     try {
-      const newReview: Review = {
-        id: Date.now().toString(),
-        userId: user?.uid || '',
-        userName: `${userProfile?.firstName || 'Kullanıcı'} ${userProfile?.lastName || ''}`,
-        rating: reviewRating,
-        comment: reviewComment,
-        createdAt: new Date().toISOString(),
-      };
-      setReviews([newReview, ...reviews]);
-      setShowReviewModal(false);
-      setReviewRating(5);
-      setReviewComment('');
-      Alert.alert('Başarılı', 'Değerlendirmeniz gönderildi');
-    } catch (error) {
-      Alert.alert('Hata', 'Değerlendirme gönderilemedi');
-    } finally {
-      setSubmittingReview(false);
-    }
-  };
-
-  const handleBookAppointment = async () => {
-    if (!selectedDate || !selectedTime) {
-      Alert.alert('Hata', 'Lütfen tarih ve saat seçin');
-      return;
-    }
-
-    setBookingAppointment(true);
-    try {
-      // API call would go here
-      Alert.alert(
-        'Randevu Talebi Gönderildi',
-        `${selectedDate} tarihinde saat ${selectedTime} için randevu talebiniz gönderildi. Hizmet sağlayıcı onayladığında bilgilendirileceksiniz.`,
-        [{ text: 'Tamam', onPress: () => setShowAppointmentModal(false) }]
-      );
-      setSelectedDate('');
-      setSelectedTime('');
-      setAppointmentNote('');
-    } catch (error) {
-      Alert.alert('Hata', 'Randevu talebi gönderilemedi');
-    } finally {
-      setBookingAppointment(false);
-    }
-  };
-
-  const getNextDays = () => {
-    const days = [];
-    const today = new Date();
-    for (let i = 1; i <= 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() + i);
-      days.push({
-        date: date.toISOString().split('T')[0],
-        label: date.toLocaleDateString('tr-TR', { weekday: 'short', day: 'numeric', month: 'short' }),
+      await api.post('/api/reviews', {
+        serviceId: id,
+        rating,
+        title: reviewTitle.trim() || undefined,
+        comment: reviewComment.trim(),
       });
+
+      Alert.alert('Başarılı', 'Değerlendirmeniz eklendi');
+      setShowReviewModal(false);
+      setRating(5);
+      setReviewTitle('');
+      setReviewComment('');
+      loadData();
+    } catch (error: any) {
+      Alert.alert('Hata', error?.response?.data?.detail || 'Değerlendirme eklenemedi');
+    } finally {
+      setSubmitting(false);
     }
-    return days;
   };
 
-  const timeSlots = ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
+  const handleToggleHelpful = async (reviewId: string) => {
+    try {
+      const res = await api.post(`/api/reviews/${reviewId}/helpful`);
+      setReviews(reviews.map(r =>
+        r.id === reviewId
+          ? { ...r, isHelpful: res.data.helpful, helpfulCount: res.data.count }
+          : r
+      ));
+    } catch (error) {
+      console.error('Error toggling helpful:', error);
+    }
+  };
 
-  const renderStars = (rating: number, size: number = 16, onPress?: (star: number) => void) => {
+  const renderStars = (count: number, size: number = 16, interactive: boolean = false) => {
     return (
       <View style={styles.starsContainer}>
         {[1, 2, 3, 4, 5].map((star) => (
           <TouchableOpacity
             key={star}
-            onPress={() => onPress && onPress(star)}
-            disabled={!onPress}
+            disabled={!interactive}
+            onPress={() => interactive && setRating(star)}
           >
             <Ionicons
-              name={star <= rating ? 'star' : 'star-outline'}
+              name={star <= count ? 'star' : 'star-outline'}
               size={size}
-              color="#f59e0b"
+              color={star <= count ? '#f59e0b' : '#6b7280'}
             />
           </TouchableOpacity>
         ))}
@@ -214,26 +159,37 @@ export default function ServiceDetailScreen() {
     );
   };
 
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', year: 'numeric' });
+  const renderRatingBar = (stars: number, count: number, total: number) => {
+    const percentage = total > 0 ? (count / total) * 100 : 0;
+    return (
+      <View key={stars} style={styles.ratingBarRow}>
+        <Text style={styles.ratingBarLabel}>{stars}</Text>
+        <Ionicons name="star" size={12} color="#f59e0b" />
+        <View style={styles.ratingBarContainer}>
+          <View style={[styles.ratingBarFill, { width: `${percentage}%` }]} />
+        </View>
+        <Text style={styles.ratingBarCount}>{count}</Text>
+      </View>
+    );
   };
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-        </View>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#6366f1" />
+      </View>
     );
   }
 
   if (!service) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Hizmet bulunamadı</Text>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color="#fff" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Hizmet Bulunamadı</Text>
+          <View style={{ width: 40 }} />
         </View>
       </SafeAreaView>
     );
@@ -247,9 +203,7 @@ export default function ServiceDetailScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Hizmet Detayı</Text>
-        <TouchableOpacity style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color="#fff" />
-        </TouchableOpacity>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.content}>
@@ -259,99 +213,110 @@ export default function ServiceDetailScreen() {
             <Text style={styles.categoryText}>{service.category}</Text>
           </View>
           <Text style={styles.serviceTitle}>{service.title}</Text>
+          <Text style={styles.serviceDescription}>{service.description}</Text>
           
-          {/* Rating */}
-          <View style={styles.ratingContainer}>
-            {renderStars(Math.round(service.rating))}
-            <Text style={styles.ratingText}>{service.rating}</Text>
-            <Text style={styles.reviewCountText}>({service.reviewCount} değerlendirme)</Text>
+          <View style={styles.serviceMeta}>
+            <View style={styles.metaItem}>
+              <Ionicons name="person" size={16} color="#6b7280" />
+              <Text style={styles.metaText}>{service.userName}</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="location" size={16} color="#6b7280" />
+              <Text style={styles.metaText}>{service.city}</Text>
+            </View>
           </View>
 
-          <Text style={styles.serviceDescription}>{service.description}</Text>
-
-          {service.price && (
-            <View style={styles.priceContainer}>
-              <Ionicons name="pricetag" size={20} color="#10b981" />
-              <Text style={styles.priceText}>{service.price}</Text>
-            </View>
+          {service.contactPhone && (
+            <TouchableOpacity style={styles.contactButton}>
+              <Ionicons name="call" size={20} color="#fff" />
+              <Text style={styles.contactButtonText}>İletişime Geç</Text>
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Provider Info */}
-        <TouchableOpacity 
-          style={styles.providerCard}
-          onPress={() => router.push(`/user/${service.userId}`)}
-        >
-          <View style={styles.providerAvatar}>
-            {service.userImage ? (
-              <Image source={{ uri: service.userImage }} style={styles.providerImage} />
-            ) : (
-              <Ionicons name="person" size={24} color="#9ca3af" />
-            )}
+        {/* Rating Summary */}
+        {summary && (
+          <View style={styles.ratingSummary}>
+            <View style={styles.ratingOverview}>
+              <Text style={styles.ratingBig}>{summary.averageRating.toFixed(1)}</Text>
+              {renderStars(Math.round(summary.averageRating), 20)}
+              <Text style={styles.ratingTotal}>{summary.total} değerlendirme</Text>
+            </View>
+            <View style={styles.ratingBars}>
+              {[5, 4, 3, 2, 1].map((stars) =>
+                renderRatingBar(stars, summary.ratingDistribution[stars] || 0, summary.total)
+              )}
+            </View>
           </View>
-          <View style={styles.providerInfo}>
-            <Text style={styles.providerName}>{service.userName}</Text>
-            {service.userCity && (
-              <View style={styles.providerLocation}>
-                <Ionicons name="location-outline" size={14} color="#6b7280" />
-                <Text style={styles.providerLocationText}>{service.userCity}</Text>
-              </View>
-            )}
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-        </TouchableOpacity>
+        )}
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={styles.contactButton}
-            onPress={() => router.push(`/chat/${service.userId}`)}
+        {/* Add Review Button */}
+        {service.userId !== user?.uid && (
+          <TouchableOpacity
+            style={styles.addReviewButton}
+            onPress={() => setShowReviewModal(true)}
           >
-            <Ionicons name="chatbubble" size={20} color="#fff" />
-            <Text style={styles.contactButtonText}>Mesaj Gönder</Text>
+            <Ionicons name="star" size={20} color="#fff" />
+            <Text style={styles.addReviewText}>Değerlendirme Yap</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.appointmentButton}
-            onPress={() => setShowAppointmentModal(true)}
-          >
-            <Ionicons name="calendar" size={20} color="#6366f1" />
-            <Text style={styles.appointmentButtonText}>Randevu Al</Text>
-          </TouchableOpacity>
-        </View>
+        )}
 
-        {/* Reviews Section */}
+        {/* Reviews */}
         <View style={styles.reviewsSection}>
-          <View style={styles.reviewsHeader}>
-            <Text style={styles.sectionTitle}>Değerlendirmeler</Text>
-            <TouchableOpacity 
-              style={styles.addReviewBtn}
-              onPress={() => setShowReviewModal(true)}
-            >
-              <Ionicons name="add" size={20} color="#6366f1" />
-              <Text style={styles.addReviewText}>Değerlendir</Text>
-            </TouchableOpacity>
-          </View>
-
+          <Text style={styles.sectionTitle}>Değerlendirmeler</Text>
+          
           {reviews.length > 0 ? (
             reviews.map((review) => (
               <View key={review.id} style={styles.reviewCard}>
                 <View style={styles.reviewHeader}>
-                  <View style={styles.reviewerAvatar}>
-                    <Ionicons name="person" size={18} color="#9ca3af" />
-                  </View>
                   <View style={styles.reviewerInfo}>
-                    <Text style={styles.reviewerName}>{review.userName}</Text>
-                    <Text style={styles.reviewDate}>{formatDate(review.createdAt)}</Text>
+                    <View style={styles.reviewerAvatar}>
+                      {review.userProfileImage ? (
+                        <Image source={{ uri: review.userProfileImage }} style={styles.avatarImage} />
+                      ) : (
+                        <Ionicons name="person" size={16} color="#6b7280" />
+                      )}
+                    </View>
+                    <View>
+                      <Text style={styles.reviewerName}>{review.userName}</Text>
+                      <Text style={styles.reviewDate}>
+                        {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: tr })}
+                      </Text>
+                    </View>
                   </View>
                   {renderStars(review.rating, 14)}
                 </View>
+                
+                {review.title && <Text style={styles.reviewTitle}>{review.title}</Text>}
                 <Text style={styles.reviewComment}>{review.comment}</Text>
+                
+                {/* Response */}
+                {review.response && (
+                  <View style={styles.responseBox}>
+                    <Text style={styles.responseLabel}>Hizmet sağlayıcı yanıtı:</Text>
+                    <Text style={styles.responseText}>{review.response.text}</Text>
+                  </View>
+                )}
+                
+                {/* Helpful */}
+                <TouchableOpacity
+                  style={[styles.helpfulButton, review.isHelpful && styles.helpfulButtonActive]}
+                  onPress={() => handleToggleHelpful(review.id)}
+                >
+                  <Ionicons
+                    name={review.isHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
+                    size={16}
+                    color={review.isHelpful ? '#6366f1' : '#6b7280'}
+                  />
+                  <Text style={[styles.helpfulText, review.isHelpful && styles.helpfulTextActive]}>
+                    Yararlı ({review.helpfulCount})
+                  </Text>
+                </TouchableOpacity>
               </View>
             ))
           ) : (
-            <View style={styles.emptyReviews}>
-              <Ionicons name="chatbubble-outline" size={40} color="#374151" />
+            <View style={styles.emptyState}>
+              <Ionicons name="chatbubbles-outline" size={48} color="#374151" />
               <Text style={styles.emptyText}>Henüz değerlendirme yok</Text>
             </View>
           )}
@@ -369,15 +334,27 @@ export default function ServiceDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.modalBody}>
-              <Text style={styles.ratingLabel}>Puanınız</Text>
+            <ScrollView style={styles.modalBody}>
+              {/* Rating */}
+              <Text style={styles.inputLabel}>Puanınız</Text>
               <View style={styles.ratingSelector}>
-                {renderStars(reviewRating, 32, setReviewRating)}
+                {renderStars(rating, 32, true)}
               </View>
 
+              {/* Title */}
+              <Text style={styles.inputLabel}>Başlık (Opsiyonel)</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Değerlendirme başlığı"
+                placeholderTextColor="#6b7280"
+                value={reviewTitle}
+                onChangeText={setReviewTitle}
+              />
+
+              {/* Comment */}
               <Text style={styles.inputLabel}>Yorumunuz</Text>
               <TextInput
-                style={styles.reviewInput}
+                style={[styles.input, styles.textArea]}
                 placeholder="Deneyiminizi paylaşın..."
                 placeholderTextColor="#6b7280"
                 value={reviewComment}
@@ -387,85 +364,14 @@ export default function ServiceDetailScreen() {
               />
 
               <TouchableOpacity
-                style={[styles.submitBtn, submittingReview && styles.disabledBtn]}
+                style={[styles.submitButton, submitting && styles.disabledButton]}
                 onPress={handleSubmitReview}
-                disabled={submittingReview}
+                disabled={submitting}
               >
-                {submittingReview ? (
+                {submitting ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.submitBtnText}>Gönder</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Appointment Modal */}
-      <Modal visible={showAppointmentModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Randevu Al</Text>
-              <TouchableOpacity onPress={() => setShowAppointmentModal(false)}>
-                <Ionicons name="close" size={24} color="#fff" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.inputLabel}>Tarih Seçin</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.dateSelector}>
-                {getNextDays().map((day) => (
-                  <TouchableOpacity
-                    key={day.date}
-                    style={[styles.dateOption, selectedDate === day.date && styles.dateOptionActive]}
-                    onPress={() => setSelectedDate(day.date)}
-                  >
-                    <Text style={[styles.dateOptionText, selectedDate === day.date && styles.dateOptionTextActive]}>
-                      {day.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-
-              <Text style={styles.inputLabel}>Saat Seçin</Text>
-              <View style={styles.timeGrid}>
-                {timeSlots.map((time) => (
-                  <TouchableOpacity
-                    key={time}
-                    style={[styles.timeOption, selectedTime === time && styles.timeOptionActive]}
-                    onPress={() => setSelectedTime(time)}
-                  >
-                    <Text style={[styles.timeOptionText, selectedTime === time && styles.timeOptionTextActive]}>
-                      {time}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <Text style={styles.inputLabel}>Not (opsiyonel)</Text>
-              <TextInput
-                style={styles.noteInput}
-                placeholder="Randevu hakkında not ekleyin..."
-                placeholderTextColor="#6b7280"
-                value={appointmentNote}
-                onChangeText={setAppointmentNote}
-                multiline
-              />
-
-              <TouchableOpacity
-                style={[styles.submitBtn, bookingAppointment && styles.disabledBtn]}
-                onPress={handleBookAppointment}
-                disabled={bookingAppointment}
-              >
-                {bookingAppointment ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <>
-                    <Ionicons name="calendar-outline" size={20} color="#fff" />
-                    <Text style={styles.submitBtnText}>Randevu Talebi Gönder</Text>
-                  </>
+                  <Text style={styles.submitButtonText}>Değerlendirmeyi Gönder</Text>
                 )}
               </TouchableOpacity>
             </ScrollView>
@@ -478,72 +384,64 @@ export default function ServiceDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  errorText: { color: '#6b7280', fontSize: 16 },
+  loadingContainer: { flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
   backButton: { width: 40, height: 40, justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
-  shareButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
   content: { flex: 1 },
   serviceCard: { backgroundColor: '#111827', margin: 16, borderRadius: 16, padding: 20 },
-  categoryBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(99, 102, 241, 0.2)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 12 },
+  categoryBadge: { backgroundColor: 'rgba(99, 102, 241, 0.1)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, alignSelf: 'flex-start', marginBottom: 12 },
   categoryText: { color: '#6366f1', fontSize: 12, fontWeight: '600' },
-  serviceTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 12 },
-  ratingContainer: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 },
-  starsContainer: { flexDirection: 'row', gap: 2 },
-  ratingText: { color: '#f59e0b', fontSize: 16, fontWeight: '600' },
-  reviewCountText: { color: '#6b7280', fontSize: 14 },
+  serviceTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
   serviceDescription: { color: '#9ca3af', fontSize: 15, lineHeight: 22, marginBottom: 16 },
-  priceContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: 12, borderRadius: 10 },
-  priceText: { color: '#10b981', fontSize: 16, fontWeight: '600' },
-  providerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111827', marginHorizontal: 16, borderRadius: 12, padding: 16 },
-  providerAvatar: { width: 50, height: 50, borderRadius: 25, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
-  providerImage: { width: '100%', height: '100%' },
-  providerInfo: { flex: 1, marginLeft: 12 },
-  providerName: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  providerLocation: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
-  providerLocationText: { color: '#6b7280', fontSize: 13 },
-  actionButtons: { flexDirection: 'row', gap: 12, margin: 16 },
-  contactButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#6366f1', paddingVertical: 14, borderRadius: 12, gap: 8 },
-  contactButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  appointmentButton: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937', borderWidth: 1, borderColor: '#6366f1', paddingVertical: 14, borderRadius: 12, gap: 8 },
-  appointmentButtonText: { color: '#6366f1', fontSize: 15, fontWeight: '600' },
-  reviewsSection: { marginHorizontal: 16, marginBottom: 24 },
-  reviewsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  sectionTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  addReviewBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, padding: 8 },
-  addReviewText: { color: '#6366f1', fontSize: 14, fontWeight: '500' },
+  serviceMeta: { flexDirection: 'row', gap: 16, marginBottom: 16 },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { color: '#9ca3af', fontSize: 14 },
+  contactButton: { backgroundColor: '#6366f1', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, gap: 8 },
+  contactButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  ratingSummary: { flexDirection: 'row', backgroundColor: '#111827', marginHorizontal: 16, borderRadius: 16, padding: 16, marginBottom: 16 },
+  ratingOverview: { alignItems: 'center', paddingRight: 16, borderRightWidth: 1, borderRightColor: '#374151' },
+  ratingBig: { color: '#fff', fontSize: 48, fontWeight: 'bold' },
+  starsContainer: { flexDirection: 'row', gap: 2, marginVertical: 4 },
+  ratingTotal: { color: '#6b7280', fontSize: 12, marginTop: 4 },
+  ratingBars: { flex: 1, paddingLeft: 16, justifyContent: 'center' },
+  ratingBarRow: { flexDirection: 'row', alignItems: 'center', marginVertical: 2, gap: 4 },
+  ratingBarLabel: { color: '#9ca3af', fontSize: 12, width: 12 },
+  ratingBarContainer: { flex: 1, height: 6, backgroundColor: '#374151', borderRadius: 3, marginHorizontal: 4 },
+  ratingBarFill: { height: '100%', backgroundColor: '#f59e0b', borderRadius: 3 },
+  ratingBarCount: { color: '#6b7280', fontSize: 12, width: 20 },
+  addReviewButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#6366f1', marginHorizontal: 16, paddingVertical: 14, borderRadius: 12, gap: 8, marginBottom: 16 },
+  addReviewText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  reviewsSection: { padding: 16 },
+  sectionTitle: { color: '#fff', fontSize: 18, fontWeight: '600', marginBottom: 16 },
   reviewCard: { backgroundColor: '#111827', borderRadius: 12, padding: 16, marginBottom: 12 },
-  reviewHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  reviewerAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center' },
-  reviewerInfo: { flex: 1, marginLeft: 10 },
-  reviewerName: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  reviewHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
+  reviewerInfo: { flexDirection: 'row', alignItems: 'center' },
+  reviewerAvatar: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center', marginRight: 10, overflow: 'hidden' },
+  avatarImage: { width: '100%', height: '100%' },
+  reviewerName: { color: '#fff', fontSize: 14, fontWeight: '500' },
   reviewDate: { color: '#6b7280', fontSize: 12, marginTop: 2 },
+  reviewTitle: { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 8 },
   reviewComment: { color: '#9ca3af', fontSize: 14, lineHeight: 20 },
-  emptyReviews: { alignItems: 'center', paddingVertical: 40 },
-  emptyText: { color: '#6b7280', marginTop: 12, fontSize: 15 },
+  responseBox: { backgroundColor: 'rgba(99, 102, 241, 0.1)', borderRadius: 8, padding: 12, marginTop: 12 },
+  responseLabel: { color: '#6366f1', fontSize: 12, fontWeight: '600', marginBottom: 4 },
+  responseText: { color: '#9ca3af', fontSize: 14 },
+  helpfulButton: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, backgroundColor: '#1f2937' },
+  helpfulButtonActive: { backgroundColor: 'rgba(99, 102, 241, 0.1)' },
+  helpfulText: { color: '#6b7280', fontSize: 13 },
+  helpfulTextActive: { color: '#6366f1' },
+  emptyState: { alignItems: 'center', paddingVertical: 32 },
+  emptyText: { color: '#6b7280', fontSize: 15, marginTop: 12 },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#1f2937', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#374151' },
   modalTitle: { color: '#fff', fontSize: 20, fontWeight: '600' },
   modalBody: { padding: 20 },
-  ratingLabel: { color: '#fff', fontSize: 16, textAlign: 'center', marginBottom: 12 },
-  ratingSelector: { alignItems: 'center', marginBottom: 24 },
   inputLabel: { color: '#9ca3af', fontSize: 14, marginBottom: 8 },
-  reviewInput: { backgroundColor: '#374151', borderRadius: 12, padding: 14, color: '#fff', fontSize: 16, minHeight: 100, textAlignVertical: 'top', marginBottom: 20 },
-  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#6366f1', padding: 16, borderRadius: 12, gap: 8 },
-  disabledBtn: { opacity: 0.6 },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  dateSelector: { marginBottom: 20 },
-  dateOption: { paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#374151', borderRadius: 10, marginRight: 8 },
-  dateOptionActive: { backgroundColor: '#6366f1' },
-  dateOptionText: { color: '#9ca3af', fontSize: 13 },
-  dateOptionTextActive: { color: '#fff', fontWeight: '600' },
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20 },
-  timeOption: { paddingHorizontal: 16, paddingVertical: 10, backgroundColor: '#374151', borderRadius: 8 },
-  timeOptionActive: { backgroundColor: '#6366f1' },
-  timeOptionText: { color: '#9ca3af', fontSize: 14 },
-  timeOptionTextActive: { color: '#fff', fontWeight: '600' },
-  noteInput: { backgroundColor: '#374151', borderRadius: 12, padding: 14, color: '#fff', fontSize: 16, minHeight: 80, textAlignVertical: 'top', marginBottom: 20 },
+  ratingSelector: { alignItems: 'center', marginBottom: 24 },
+  input: { backgroundColor: '#374151', borderRadius: 12, padding: 14, color: '#fff', fontSize: 16, marginBottom: 16 },
+  textArea: { minHeight: 100, textAlignVertical: 'top' },
+  submitButton: { backgroundColor: '#6366f1', paddingVertical: 16, borderRadius: 12, alignItems: 'center', marginTop: 8, marginBottom: 20 },
+  disabledButton: { opacity: 0.6 },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });
