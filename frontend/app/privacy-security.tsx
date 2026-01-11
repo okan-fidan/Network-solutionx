@@ -157,7 +157,7 @@ export default function PrivacySecurityScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     try {
-                      await api.delete('/user/account');
+                      await api.delete('/api/user/account');
                       Alert.alert('Hesap Silindi', 'Hesabınız başarıyla silindi.');
                       router.replace('/(auth)/login');
                     } catch (error) {
