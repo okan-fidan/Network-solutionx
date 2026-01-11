@@ -388,6 +388,58 @@ export default function SettingsScreen() {
           <Text style={styles.versionText}>Network Solution v1.0.0</Text>
         </View>
       </ScrollView>
+
+      {/* 2FA Verification Modal */}
+      <Modal visible={show2FAModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Doğrulama Kodu</Text>
+              <TouchableOpacity onPress={() => setShow2FAModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <Ionicons name="shield-checkmark" size={64} color="#10b981" style={{ alignSelf: 'center', marginBottom: 20 }} />
+              
+              <Text style={styles.modalDescription}>
+                Bildirimlerinize gönderilen 6 haneli doğrulama kodunu girin.
+              </Text>
+
+              {pendingCode && (
+                <View style={styles.demoCodeBox}>
+                  <Text style={styles.demoCodeLabel}>Demo Kod:</Text>
+                  <Text style={styles.demoCodeValue}>{pendingCode}</Text>
+                </View>
+              )}
+
+              <TextInput
+                style={styles.codeInput}
+                placeholder="000000"
+                placeholderTextColor="#6b7280"
+                value={verificationCode}
+                onChangeText={setVerificationCode}
+                keyboardType="number-pad"
+                maxLength={6}
+                textAlign="center"
+              />
+
+              <TouchableOpacity
+                style={[styles.verifyButton, verifying2FA && styles.disabledButton]}
+                onPress={verify2FACode}
+                disabled={verifying2FA}
+              >
+                {verifying2FA ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.verifyButtonText}>Doğrula ve Etkinleştir</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
