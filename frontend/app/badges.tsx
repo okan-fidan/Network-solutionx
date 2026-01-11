@@ -60,9 +60,9 @@ export default function BadgesScreen() {
   const loadData = async () => {
     try {
       const [myBadgesRes, allBadgesRes, leaderboardRes] = await Promise.all([
-        api.get('/api/badges/my-badges'),
-        api.get('/api/badges/definitions'),
-        api.get('/api/badges/leaderboard'),
+        api.get('/badges/my-badges'),
+        api.get('/badges/definitions'),
+        api.get('/badges/leaderboard'),
       ]);
       
       setMyBadges(myBadgesRes.data.badges || []);
