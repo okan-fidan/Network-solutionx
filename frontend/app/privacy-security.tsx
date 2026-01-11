@@ -47,7 +47,7 @@ export default function PrivacySecurityScreen() {
 
   const load2FAStatus = async () => {
     try {
-      const response = await api.get('/auth/2fa/status');
+      const response = await api.get('/api/security/2fa/status');
       setTwoFactorEnabled(response.data.enabled || false);
     } catch (error) {
       console.error('Error loading 2FA status:', error);
@@ -58,7 +58,7 @@ export default function PrivacySecurityScreen() {
 
   const loadPrivacySettings = async () => {
     try {
-      const response = await api.get('/user/privacy-settings');
+      const response = await api.get('/api/user/privacy-settings');
       if (response.data) {
         setShowOnlineStatus(response.data.showOnlineStatus ?? true);
         setShowLastSeen(response.data.showLastSeen ?? true);
@@ -73,7 +73,7 @@ export default function PrivacySecurityScreen() {
 
   const savePrivacySetting = async (key: string, value: any) => {
     try {
-      await api.put('/user/privacy-settings', { [key]: value });
+      await api.put('/api/user/privacy-settings', { [key]: value });
     } catch (error) {
       console.error('Error saving privacy setting:', error);
     }
