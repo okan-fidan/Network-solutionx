@@ -59,15 +59,27 @@ export default function MessagesScreen() {
   const router = useRouter();
 
   const loadData = useCallback(async () => {
-    // Kullanıcı giriş yapmamışsa veri yükleme
-    if (!user) {
-      setLoading(false);
-      setRefreshing(false);
-      return;
-    }
-
     try {
       setError(null);
+      
+      // Kullanıcı giriş yapmamışsa demo veri göster
+      if (!user) {
+        // Demo topluluklar
+        setCommunities([
+          { id: 'demo-1', name: 'İstanbul Girişimciler', city: 'İstanbul', memberCount: 1250, imageUrl: undefined },
+          { id: 'demo-2', name: 'Ankara Tech', city: 'Ankara', memberCount: 890, imageUrl: undefined },
+          { id: 'demo-3', name: 'İzmir Startup', city: 'İzmir', memberCount: 650, imageUrl: undefined },
+        ]);
+        // Demo gruplar
+        setGroupChats([
+          { id: 'demo-g1', name: 'Genel Sohbet', communityId: 'demo-1', communityName: 'İstanbul Girişimciler', memberCount: 450 },
+          { id: 'demo-g2', name: 'Yatırımcılar', communityId: 'demo-1', communityName: 'İstanbul Girişimciler', memberCount: 120 },
+        ]);
+        setLoading(false);
+        setRefreshing(false);
+        return;
+      }
+
       const communitiesRes = await api.get('/communities');
       
       // Üye olunan topluluklar
