@@ -171,10 +171,7 @@ export default function RegisterProfileScreen() {
                   marginTop: 16,
                   opacity: loading ? 0.7 : 1,
                 }}
-                onClick={() => {
-                  console.log('Web button clicked!');
-                  handleSubmit();
-                }}
+                onClick={handleSubmit}
                 disabled={loading}
               >
                 {loading ? (
@@ -186,10 +183,7 @@ export default function RegisterProfileScreen() {
             ) : (
               <TouchableOpacity
                 style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={() => {
-                  console.log('Button pressed!');
-                  handleSubmit();
-                }}
+                onPress={handleSubmit}
                 disabled={loading}
                 activeOpacity={0.8}
               >
