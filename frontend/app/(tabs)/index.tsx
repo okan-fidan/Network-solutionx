@@ -366,7 +366,18 @@ export default function HomeScreen() {
           <Text style={styles.userName}>{item.userName}</Text>
           <Text style={styles.postTime}>{formatTime(item.timestamp)}</Text>
         </View>
-        <TouchableOpacity style={styles.moreButton}>
+        <TouchableOpacity 
+          style={styles.moreButton}
+          onPress={() => Alert.alert(
+            'Gönderi Seçenekleri',
+            '',
+            [
+              { text: 'Bildir', onPress: () => Alert.alert('Bilgi', 'Gönderi bildirildi') },
+              { text: 'Gizle', onPress: () => Alert.alert('Bilgi', 'Gönderi gizlendi') },
+              { text: 'İptal', style: 'cancel' },
+            ]
+          )}
+        >
           <Ionicons name="ellipsis-horizontal" size={20} color="#6b7280" />
         </TouchableOpacity>
       </TouchableOpacity>
@@ -392,12 +403,21 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => Alert.alert('Yorumlar', `${item.commentCount} yorum bulunuyor. Yorum özelliği yakında aktif olacak.`)}
+        >
           <Ionicons name="chatbubble-outline" size={22} color="#6b7280" />
           <Text style={styles.actionText}>{item.commentCount}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionButton}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => Alert.alert('Paylaş', 'Bu gönderiyi paylaşmak istiyor musunuz?', [
+            { text: 'İptal', style: 'cancel' },
+            { text: 'Paylaş', onPress: () => Alert.alert('Başarılı', 'Gönderi paylaşıldı') },
+          ])}
+        >
           <Ionicons name="share-outline" size={22} color="#6b7280" />
         </TouchableOpacity>
       </View>
