@@ -427,6 +427,15 @@ export default function GroupChatScreen() {
                 <Text style={styles.actionText}>Düzenle</Text>
               </TouchableOpacity>
             )}
+            {isGroupAdmin && (
+              <TouchableOpacity 
+                style={styles.actionItem}
+                onPress={() => selectedMessage && handlePinMessage(selectedMessage)}
+              >
+                <Ionicons name="pin" size={22} color="#f59e0b" />
+                <Text style={styles.actionText}>Sabitle</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity 
               style={[styles.actionItem, styles.deleteAction]}
               onPress={() => selectedMessage && handleDeleteMessage(selectedMessage.id)}
