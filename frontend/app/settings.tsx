@@ -553,4 +553,83 @@ const styles = StyleSheet.create({
     color: '#4b5563',
     fontSize: 13,
   },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#1f2937',
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: 24,
+  },
+  modalDescription: {
+    color: '#9ca3af',
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  demoCodeBox: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  demoCodeLabel: {
+    color: '#10b981',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  demoCodeValue: {
+    color: '#10b981',
+    fontSize: 28,
+    fontWeight: 'bold',
+    letterSpacing: 8,
+  },
+  codeInput: {
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    padding: 16,
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    letterSpacing: 8,
+    marginBottom: 20,
+  },
+  verifyButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  verifyButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
