@@ -353,6 +353,12 @@ export default function GroupChatScreen() {
           </TouchableOpacity>
         )}
         <View style={[styles.messageBubble, isMe ? styles.myBubble : styles.otherBubble]}>
+          {item.isPinned && (
+            <View style={styles.pinnedBadge}>
+              <Ionicons name="pin" size={12} color="#f59e0b" />
+              <Text style={styles.pinnedText}>Sabitlendi</Text>
+            </View>
+          )}
           {!isMe && <Text style={styles.senderName}>{item.senderName}</Text>}
           
           {item.type === 'image' && item.mediaUrl && (
