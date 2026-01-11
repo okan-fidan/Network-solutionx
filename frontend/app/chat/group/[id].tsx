@@ -531,6 +531,33 @@ export default function GroupChatScreen() {
         >
           <View style={styles.actionsModal}>
             <Text style={styles.actionsTitle}>Mesaj İşlemleri</Text>
+            {/* Yanıtla */}
+            <TouchableOpacity 
+              style={styles.actionItem}
+              onPress={() => {
+                if (selectedMessage) {
+                  setReplyingTo(selectedMessage);
+                  setShowMessageActions(false);
+                }
+              }}
+            >
+              <Ionicons name="arrow-undo" size={22} color="#10b981" />
+              <Text style={styles.actionText}>Yanıtla</Text>
+            </TouchableOpacity>
+            {/* İlet */}
+            <TouchableOpacity 
+              style={styles.actionItem}
+              onPress={() => {
+                if (selectedMessage) {
+                  setForwardingMessage(selectedMessage);
+                  setShowForwardModal(true);
+                  setShowMessageActions(false);
+                }
+              }}
+            >
+              <Ionicons name="arrow-redo" size={22} color="#8b5cf6" />
+              <Text style={styles.actionText}>İlet</Text>
+            </TouchableOpacity>
             {selectedMessage?.type === 'text' && (
               <TouchableOpacity 
                 style={styles.actionItem}
