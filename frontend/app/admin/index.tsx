@@ -199,7 +199,13 @@ export default function AdminDashboard() {
             <TouchableOpacity
               key={index}
               style={styles.menuCard}
-              onPress={() => router.push(item.route as any)}
+              onPress={() => {
+                if ((item as any).external) {
+                  Linking.openURL(item.route);
+                } else {
+                  router.push(item.route as any);
+                }
+              }}
             >
               <View style={[styles.menuIcon, { backgroundColor: `${item.color}15` }]}>
                 <Ionicons name={item.icon as any} size={24} color={item.color} />
@@ -208,7 +214,7 @@ export default function AdminDashboard() {
                 <Text style={styles.menuTitle}>{item.title}</Text>
                 <Text style={styles.menuSubtitle}>{item.subtitle}</Text>
               </View>
-              <Ionicons name="chevron-forward" size={22} color="#6b7280" />
+              <Ionicons name={(item as any).external ? "open-outline" : "chevron-forward"} size={22} color="#6b7280" />
             </TouchableOpacity>
           ))}
         </View>
