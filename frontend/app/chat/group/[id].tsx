@@ -230,6 +230,23 @@ export default function GroupChatScreen() {
     setInputText('');
   };
 
+  const handlePinMessage = async (message: Message) => {
+    if (!groupId) return;
+    
+    try {
+      await subgroupApi.pinMessage(groupId, message.id);
+      Alert.alert('Başarılı', 'Mesaj sabitlendi');
+      // Mesajı pinned olarak işaretle
+      setMessages(messages.map(m => 
+        m.id === message.id ? { ...m, isPinned: true } : m
+      ));
+    } catch (error: any) {
+      console.error('Error pinning message:', error);
+      Alert.alert('Hata', error?.response?.data?.detail || 'Mesaj sabitlenemedi');
+    }
+    setShowMessageActions(false);
+  };
+
   const handleLongPressMessage = (message: Message) => {
     if (message.senderId === user?.uid) {
       setSelectedMessage(message);
