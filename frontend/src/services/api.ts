@@ -13,9 +13,17 @@ const api = axios.create({
 // Add auth token to requests
 api.interceptors.request.use(async (config) => {
   const user = auth.currentUser;
+  console.log('API Request interceptor - currentUser:', user?.uid || 'null');
   if (user) {
-    const token = await user.getIdToken();
-    config.headers.Authorization = `Bearer ${token}`;
+    try {
+      const token = await user.getIdToken();
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token added to request');
+    } catch (error) {
+      console.error('Error getting token:', error);
+    }
+  } else {
+    console.log('No user found in auth.currentUser');
   }
   return config;
 });
