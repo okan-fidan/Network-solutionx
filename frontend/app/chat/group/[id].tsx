@@ -82,9 +82,20 @@ export default function GroupChatScreen() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showMessageActions, setShowMessageActions] = useState(false);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  // Yeni özellikler için state'ler
+  const [polls, setPolls] = useState<Poll[]>([]);
+  const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
+  const [showPollModal, setShowPollModal] = useState(false);
+  const [showPinnedModal, setShowPinnedModal] = useState(false);
+  const [showGroupMenu, setShowGroupMenu] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [isMultipleChoice, setIsMultipleChoice] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const { user, userProfile } = useAuth();
   const router = useRouter();
+
+  const isGroupAdmin = subgroup?.groupAdmins?.includes(user?.uid || '') || false;
 
   const loadData = useCallback(async () => {
     if (!groupId) return;
