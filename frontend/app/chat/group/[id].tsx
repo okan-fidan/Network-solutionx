@@ -751,6 +751,8 @@ const styles = StyleSheet.create({
   pinnedText: { color: '#f59e0b', fontSize: 11, fontWeight: '600' },
   messageText: { color: '#e5e7eb', fontSize: 15, lineHeight: 20 },
   myMessageText: { color: '#fff' },
+  mentionHighlight: { color: '#60a5fa', fontWeight: '600', backgroundColor: 'rgba(96, 165, 250, 0.15)', borderRadius: 4, paddingHorizontal: 2 },
+  myMentionHighlight: { color: '#93c5fd', backgroundColor: 'rgba(147, 197, 253, 0.2)' },
   messageFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
   messageTime: { color: '#9ca3af', fontSize: 11 },
   myMessageTime: { color: 'rgba(255, 255, 255, 0.7)' },
