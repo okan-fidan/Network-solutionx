@@ -1,0 +1,259 @@
+import React, { useState, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+  FlatList,
+  Animated,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const { width, height } = Dimensions.get('window');
+
+interface OnboardingSlide {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  gradient: string[];
+}
+
+const slides: OnboardingSlide[] = [
+  {
+    id: '1',
+    icon: 'people',
+    title: 'Topluluklara Katıl',
+    description: 'Şehrindeki girişimcilerle tanış, deneyimlerini paylaş ve yeni bağlantılar kur.',
+    gradient: ['#6366f1', '#8b5cf6'],
+  },
+  {
+    id: '2',
+    icon: 'chatbubbles',
+    title: 'Anlık Mesajlaşma',
+    description: 'Grup sohbetleri ve özel mesajlarla iletişimde kal. Fotoğraf, video ve dosya paylaş.',
+    gradient: ['#10b981', '#059669'],
+  },
+  {
+    id: '3',
+    icon: 'briefcase',
+    title: 'Hizmetlerini Tanıt',
+    description: 'Sunduğun hizmetleri paylaş, değerlendirmeler al ve müşteri portföyünü genişlet.',
+    gradient: ['#f59e0b', '#d97706'],
+  },
+  {
+    id: '4',
+    icon: 'calendar',
+    title: 'Etkinliklere Katıl',
+    description: 'Topluluk etkinliklerini takip et, networking fırsatlarını kaçırma.',
+    gradient: ['#ec4899', '#db2777'],
+  },
+];
+
+export default function OnboardingScreen() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const router = useRouter();
+
+  const handleNext = () => {
+    if (currentIndex < slides.length - 1) {
+      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      setCurrentIndex(currentIndex + 1);
+    } else {
+      completeOnboarding();
+    }
+  };
+
+  const handleSkip = () => {
+    completeOnboarding();
+  };
+
+  const completeOnboarding = async () => {
+    try {
+      await AsyncStorage.setItem('onboarding_completed', 'true');
+      router.replace('/(auth)/login');
+    } catch (error) {
+      console.error('Error saving onboarding status:', error);
+      router.replace('/(auth)/login');
+    }
+  };
+
+  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => (
+    <View style={styles.slide}>
+      <LinearGradient
+        colors={item.gradient}
+        style={styles.iconContainer}
+      >
+        <Ionicons name={item.icon as any} size={80} color="#fff" />
+      </LinearGradient>
+      <Text style={styles.title}>{item.title}</Text>
+      <Text style={styles.description}>{item.description}</Text>
+    </View>
+  );
+
+  const renderDots = () => (
+    <View style={styles.dotsContainer}>
+      {slides.map((_, index) => {
+        const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
+        const dotWidth = scrollX.interpolate({
+          inputRange,
+          outputRange: [8, 24, 8],
+          extrapolate: 'clamp',
+        });
+        const opacity = scrollX.interpolate({
+          inputRange,
+          outputRange: [0.4, 1, 0.4],
+          extrapolate: 'clamp',
+        });
+
+        return (
+          <Animated.View
+            key={index}
+            style={[styles.dot, { width: dotWidth, opacity }]}
+          />
+        );
+      })}
+    </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* Skip Button */}
+      <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+        <Text style={styles.skipText}>Geç</Text>
+      </TouchableOpacity>
+
+      {/* Slides */}
+      <Animated.FlatList
+        ref={flatListRef}
+        data={slides}
+        renderItem={renderSlide}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false }
+        )}
+        onMomentumScrollEnd={(event) => {
+          const index = Math.round(event.nativeEvent.contentOffset.x / width);
+          setCurrentIndex(index);
+        }}
+        scrollEventThrottle={16}
+      />
+
+      {/* Bottom Section */}
+      <View style={styles.bottomSection}>
+        {renderDots()}
+
+        <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
+          <LinearGradient
+            colors={['#6366f1', '#8b5cf6']}
+            style={styles.nextButtonGradient}
+          >
+            {currentIndex === slides.length - 1 ? (
+              <Text style={styles.nextButtonText}>Başla</Text>
+            ) : (
+              <>
+                <Text style={styles.nextButtonText}>İleri</Text>
+                <Ionicons name="arrow-forward" size={20} color="#fff" />
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  skipButton: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    padding: 8,
+  },
+  skipText: {
+    color: '#9ca3af',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  slide: {
+    width,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 80,
+  },
+  iconContainer: {
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 48,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  description: {
+    fontSize: 16,
+    color: '#9ca3af',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  bottomSection: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+    alignItems: 'center',
+  },
+  dotsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  dot: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6366f1',
+    marginHorizontal: 4,
+  },
+  nextButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  nextButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    gap: 8,
+  },
+  nextButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
