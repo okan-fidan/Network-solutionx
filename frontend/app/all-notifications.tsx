@@ -1,20 +1,34 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
+  ActivityIndicator,
   Alert,
+  AppState,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../src/services/api';
+import { useAuth } from '../src/contexts/AuthContext';
+
+// Bildirim handler ayarları
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+  }),
+});
 
 interface Notification {
   id: string;
@@ -26,36 +40,104 @@ interface Notification {
   timestamp: string;
 }
 
-const NOTIFICATION_ICONS: { [key: string]: { icon: string; color: string } } = {
-  message: { icon: 'chatbubble', color: '#6366f1' },
-  group_message: { icon: 'chatbubbles', color: '#8b5cf6' },
-  mention: { icon: 'at', color: '#f59e0b' },
-  event: { icon: 'calendar', color: '#10b981' },
-  event_join: { icon: 'person-add', color: '#10b981' },
-  event_cancelled: { icon: 'calendar-outline', color: '#ef4444' },
-  badge_earned: { icon: 'ribbon', color: '#f59e0b' },
-  new_review: { icon: 'star', color: '#f59e0b' },
-  '2fa_code': { icon: 'shield-checkmark', color: '#10b981' },
-  '2fa_login_code': { icon: 'key', color: '#6366f1' },
-  announcement: { icon: 'megaphone', color: '#ec4899' },
-  community_invite: { icon: 'people', color: '#8b5cf6' },
-  default: { icon: 'notifications', color: '#6b7280' },
-};
-
-export default function NotificationsScreen() {
+export default function AllNotificationsScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const notificationListener = useRef<any>();
+  const responseListener = useRef<any>();
 
   useEffect(() => {
+    registerForPushNotifications();
     loadNotifications();
+
+    // Bildirim dinleyicileri
+    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
+      console.log('Notification received:', notification);
+      loadNotifications();
+    });
+
+    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      handleNotificationNavigation(data);
+    });
+
+    // Uygulama aktif olduğunda yenile
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (nextAppState === 'active') {
+        loadNotifications();
+      }
+    });
+
+    return () => {
+      Notifications.removeNotificationSubscription(notificationListener.current);
+      Notifications.removeNotificationSubscription(responseListener.current);
+      subscription.remove();
+    };
   }, []);
+
+  const registerForPushNotifications = async () => {
+    try {
+      if (!Device.isDevice) {
+        console.log('Push notifications need a physical device');
+        return;
+      }
+
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        console.log('Push notification permission denied');
+        return;
+      }
+
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: 'your-project-id', // Expo project ID
+      });
+
+      setPushEnabled(true);
+
+      // Token'ı backend'e kaydet
+      if (token?.data) {
+        await api.post('/api/user/push-token', { token: token.data });
+      }
+
+      // Android için kanal ayarı
+      if (Platform.OS === 'android') {
+        Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#6366f1',
+        });
+      }
+    } catch (error) {
+      console.error('Push notification registration error:', error);
+    }
+  };
+
+  const handleNotificationNavigation = (data: any) => {
+    if (data?.type === 'message' && data?.groupId) {
+      router.push(`/chat/group/${data.groupId}`);
+    } else if (data?.type === 'post' && data?.postId) {
+      router.push(`/post/${data.postId}`);
+    } else if (data?.type === 'community' && data?.communityId) {
+      router.push(`/community/${data.communityId}`);
+    }
+  };
 
   const loadNotifications = async () => {
     try {
-      const response = await api.get('/notifications');
+      const response = await api.get('/api/notifications');
       setNotifications(response.data.notifications || []);
       setUnreadCount(response.data.unreadCount || 0);
     } catch (error) {
@@ -66,26 +148,32 @@ export default function NotificationsScreen() {
     }
   };
 
-  const onRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setRefreshing(true);
     loadNotifications();
-  };
+  }, []);
 
-  const handleMarkAsRead = async (notificationId: string) => {
+  const handleMarkAsRead = async (notification: Notification) => {
+    if (notification.isRead) {
+      handleNotificationNavigation(notification.data);
+      return;
+    }
+
     try {
-      await api.post(`/notifications/mark-read/${notificationId}`);
+      await api.post(`/api/notifications/mark-read/${notification.id}`);
       setNotifications(notifications.map(n => 
-        n.id === notificationId ? { ...n, isRead: true } : n
+        n.id === notification.id ? { ...n, isRead: true } : n
       ));
       setUnreadCount(Math.max(0, unreadCount - 1));
+      handleNotificationNavigation(notification.data);
     } catch (error) {
       console.error('Error marking as read:', error);
     }
   };
 
-  const handleMarkAllAsRead = async () => {
+  const handleMarkAllRead = async () => {
     try {
-      await api.post('/notifications/mark-all-read');
+      await api.post('/api/notifications/mark-all-read');
       setNotifications(notifications.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
       Alert.alert('Başarılı', 'Tüm bildirimler okundu işaretlendi');
@@ -94,10 +182,10 @@ export default function NotificationsScreen() {
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     Alert.alert(
       'Tüm Bildirimleri Sil',
-      'Tüm bildirimleri silmek istediğinize emin misiniz?',
+      'Tüm bildirimler silinecek. Emin misiniz?',
       [
         { text: 'İptal', style: 'cancel' },
         {
@@ -105,80 +193,68 @@ export default function NotificationsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.delete('/notifications');
+              await api.delete('/api/notifications');
               setNotifications([]);
               setUnreadCount(0);
             } catch (error) {
               console.error('Error clearing notifications:', error);
             }
-          },
-        },
+          }
+        }
       ]
     );
   };
 
-  const handleNotificationPress = async (notification: Notification) => {
-    // Okundu işaretle
-    if (!notification.isRead) {
-      await handleMarkAsRead(notification.id);
-    }
-
-    // İlgili sayfaya yönlendir
-    const data = notification.data || {};
-    switch (notification.type) {
-      case 'message':
-        if (data.chatId) router.push(`/chat/${data.chatId}`);
-        break;
-      case 'group_message':
-        if (data.groupId) router.push(`/chat/group/${data.groupId}`);
-        break;
-      case 'event':
-      case 'event_join':
-      case 'event_cancelled':
-        router.push('/events');
-        break;
-      case 'badge_earned':
-        router.push('/badges');
-        break;
-      case 'new_review':
-        if (data.serviceId) router.push(`/service/${data.serviceId}`);
-        break;
-      case 'community_invite':
-        if (data.communityId) router.push(`/community/${data.communityId}`);
-        break;
-      default:
-        // Genel bildirimler için bir şey yapma
-        break;
-    }
-  };
-
   const getNotificationIcon = (type: string) => {
-    const config = NOTIFICATION_ICONS[type] || NOTIFICATION_ICONS.default;
-    return config;
+    switch (type) {
+      case 'message': return 'chatbubble';
+      case 'mention': return 'at';
+      case 'like': return 'heart';
+      case 'comment': return 'chatbubble-outline';
+      case 'follow': return 'person-add';
+      case 'announcement': return 'megaphone';
+      case 'event': return 'calendar';
+      default: return 'notifications';
+    }
   };
 
-  const renderNotification = ({ item }: { item: Notification }) => {
-    const iconConfig = getNotificationIcon(item.type);
-    
-    return (
-      <TouchableOpacity 
-        style={[styles.notificationItem, !item.isRead && styles.unreadItem]}
-        onPress={() => handleNotificationPress(item)}
-      >
-        <View style={[styles.iconContainer, { backgroundColor: iconConfig.color + '20' }]}>
-          <Ionicons name={iconConfig.icon as any} size={22} color={iconConfig.color} />
-        </View>
-        <View style={styles.notificationContent}>
-          <Text style={styles.notificationTitle}>{item.title}</Text>
-          <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
-          <Text style={styles.notificationTime}>
-            {formatDistanceToNow(new Date(item.timestamp), { addSuffix: true, locale: tr })}
-          </Text>
-        </View>
-        {!item.isRead && <View style={styles.unreadDot} />}
-      </TouchableOpacity>
-    );
+  const getNotificationColor = (type: string) => {
+    switch (type) {
+      case 'message': return '#6366f1';
+      case 'mention': return '#f59e0b';
+      case 'like': return '#ef4444';
+      case 'comment': return '#10b981';
+      case 'follow': return '#3b82f6';
+      case 'announcement': return '#8b5cf6';
+      case 'event': return '#ec4899';
+      default: return '#6b7280';
+    }
   };
+
+  const formatTime = (timestamp: string) => {
+    try {
+      return formatDistanceToNow(new Date(timestamp), { addSuffix: true, locale: tr });
+    } catch {
+      return '';
+    }
+  };
+
+  const renderNotification = ({ item }: { item: Notification }) => (
+    <TouchableOpacity
+      style={[styles.notificationCard, !item.isRead && styles.unreadCard]}
+      onPress={() => handleMarkAsRead(item)}
+    >
+      <View style={[styles.iconContainer, { backgroundColor: getNotificationColor(item.type) + '20' }]}>
+        <Ionicons name={getNotificationIcon(item.type) as any} size={22} color={getNotificationColor(item.type)} />
+      </View>
+      <View style={styles.notificationContent}>
+        <Text style={styles.notificationTitle}>{item.title}</Text>
+        <Text style={styles.notificationMessage} numberOfLines={2}>{item.message}</Text>
+        <Text style={styles.notificationTime}>{formatTime(item.timestamp)}</Text>
+      </View>
+      {!item.isRead && <View style={styles.unreadDot} />}
+    </TouchableOpacity>
+  );
 
   if (loading) {
     return (
@@ -189,53 +265,61 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
+        <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>Bildirimler</Text>
           {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadCount}</Text>
             </View>
           )}
         </View>
-        <TouchableOpacity onPress={handleMarkAllAsRead} style={styles.headerAction}>
-          <Ionicons name="checkmark-done" size={24} color="#6366f1" />
+        <TouchableOpacity onPress={handleClearAll} style={styles.clearButton}>
+          <Ionicons name="trash-outline" size={22} color="#ef4444" />
         </TouchableOpacity>
       </View>
 
-      {/* Actions */}
-      {notifications.length > 0 && (
-        <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleMarkAllAsRead}>
-            <Ionicons name="checkmark-done-outline" size={18} color="#6366f1" />
-            <Text style={styles.actionText}>Tümünü Okundu İşaretle</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton} onPress={handleClearAll}>
-            <Ionicons name="trash-outline" size={18} color="#ef4444" />
-            <Text style={[styles.actionText, { color: '#ef4444' }]}>Tümünü Sil</Text>
+      {unreadCount > 0 && (
+        <TouchableOpacity style={styles.markAllButton} onPress={handleMarkAllRead}>
+          <Ionicons name="checkmark-done" size={18} color="#6366f1" />
+          <Text style={styles.markAllText}>Tümünü Okundu İşaretle</Text>
+        </TouchableOpacity>
+      )}
+
+      {!pushEnabled && (
+        <View style={styles.pushWarning}>
+          <Ionicons name="notifications-off" size={20} color="#f59e0b" />
+          <Text style={styles.pushWarningText}>Push bildirimleri kapalı</Text>
+          <TouchableOpacity onPress={registerForPushNotifications}>
+            <Text style={styles.enableText}>Etkinleştir</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      {/* Notifications List */}
       <FlatList
         data={notifications}
         renderItem={renderNotification}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#6366f1"
+            colors={['#6366f1']}
+          />
         }
+        contentContainerStyle={notifications.length === 0 ? styles.emptyContainer : styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="notifications-off-outline" size={64} color="#374151" />
+            <View style={styles.emptyIcon}>
+              <Ionicons name="notifications-outline" size={64} color="#374151" />
+            </View>
             <Text style={styles.emptyTitle}>Bildirim Yok</Text>
-            <Text style={styles.emptyText}>Yeni bildirimler burada görünecek</Text>
+            <Text style={styles.emptySubtitle}>Yeni bildirimler burada görünecek</Text>
           </View>
         }
       />
@@ -248,24 +332,28 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, backgroundColor: '#0a0a0a', justifyContent: 'center', alignItems: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
   backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitleContainer: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  headerCenter: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
-  unreadBadge: { backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  unreadBadgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
-  headerAction: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  actionsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
-  actionButton: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  actionText: { color: '#6366f1', fontSize: 13, fontWeight: '500' },
-  listContent: { padding: 16 },
-  notificationItem: { flexDirection: 'row', backgroundColor: '#111827', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'flex-start' },
-  unreadItem: { backgroundColor: 'rgba(99, 102, 241, 0.1)', borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.3)' },
-  iconContainer: { width: 44, height: 44, borderRadius: 12, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  badge: { backgroundColor: '#ef4444', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  badgeText: { color: '#fff', fontSize: 12, fontWeight: '600' },
+  clearButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'flex-end' },
+  markAllButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937', gap: 8 },
+  markAllText: { color: '#6366f1', fontSize: 14, fontWeight: '500' },
+  pushWarning: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937', paddingVertical: 10, paddingHorizontal: 16, gap: 8 },
+  pushWarningText: { color: '#f59e0b', fontSize: 13 },
+  enableText: { color: '#6366f1', fontSize: 13, fontWeight: '600' },
+  listContent: { paddingVertical: 8 },
+  notificationCard: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
+  unreadCard: { backgroundColor: 'rgba(99, 102, 241, 0.05)' },
+  iconContainer: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   notificationContent: { flex: 1 },
   notificationTitle: { color: '#fff', fontSize: 15, fontWeight: '600', marginBottom: 4 },
   notificationMessage: { color: '#9ca3af', fontSize: 14, lineHeight: 20, marginBottom: 6 },
   notificationTime: { color: '#6b7280', fontSize: 12 },
-  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366f1', marginLeft: 8, marginTop: 4 },
-  emptyState: { alignItems: 'center', paddingVertical: 64 },
-  emptyTitle: { color: '#9ca3af', fontSize: 18, fontWeight: '500', marginTop: 16 },
-  emptyText: { color: '#6b7280', fontSize: 14, marginTop: 8 },
+  unreadDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#6366f1', marginTop: 6 },
+  emptyContainer: { flex: 1, justifyContent: 'center' },
+  emptyState: { alignItems: 'center', paddingVertical: 60 },
+  emptyIcon: { width: 100, height: 100, borderRadius: 50, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
+  emptyTitle: { color: '#fff', fontSize: 20, fontWeight: '600', marginBottom: 8 },
+  emptySubtitle: { color: '#6b7280', fontSize: 15 },
 });
