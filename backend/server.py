@@ -297,6 +297,39 @@ async def check_user_admin(current_user: dict = Depends(get_current_user)):
         is_admin = True
     return {"isAdmin": is_admin}
 
+@api_router.get("/user/privacy-settings")
+async def get_privacy_settings(current_user: dict = Depends(get_current_user)):
+    """Kullanıcının gizlilik ayarlarını getir"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user:
+        return {
+            "showOnlineStatus": True,
+            "showLastSeen": True,
+            "profileVisibility": "public",
+            "showPhone": False,
+            "showEmail": True
+        }
+    return {
+        "showOnlineStatus": user.get("showOnlineStatus", True),
+        "showLastSeen": user.get("showLastSeen", True),
+        "profileVisibility": user.get("profileVisibility", "public"),
+        "showPhone": user.get("showPhone", False),
+        "showEmail": user.get("showEmail", True)
+    }
+
+@api_router.put("/user/privacy-settings")
+async def update_privacy_settings(settings: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının gizlilik ayarlarını güncelle"""
+    allowed_fields = ['showOnlineStatus', 'showLastSeen', 'profileVisibility', 'showPhone', 'showEmail']
+    filtered_updates = {k: v for k, v in settings.items() if k in allowed_fields}
+    
+    if filtered_updates:
+        await db.users.update_one(
+            {"uid": current_user['uid']},
+            {"$set": filtered_updates}
+        )
+    return {"message": "Gizlilik ayarları güncellendi"}
+
 @api_router.post("/user/push-token")
 async def save_push_token(data: dict, current_user: dict = Depends(get_current_user)):
     """Push notification token'ını kaydet"""
