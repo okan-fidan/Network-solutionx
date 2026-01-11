@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuth } from '../../src/contexts/AuthContext';
+import { useAuth } from '../src/contexts/AuthContext';
 
 interface NotificationSettings {
   messages: boolean;
