@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Clipboard from 'expo-clipboard';
+import QRCode from 'react-native-qrcode-svg';
 import api from '../src/services/api';
 import { useAuth } from '../src/contexts/AuthContext';
 
@@ -28,6 +29,7 @@ export default function InviteScreen() {
   const [group, setGroup] = useState<any>(null);
   const [inviteLink, setInviteLink] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showQR, setShowQR] = useState(true);
 
   useEffect(() => {
     loadData();
@@ -36,13 +38,12 @@ export default function InviteScreen() {
   const loadData = async () => {
     try {
       if (communityId) {
-        const res = await api.get(`/communities/${communityId}`);
+        const res = await api.get(`/api/communities/${communityId}`);
         setCommunity(res.data);
-        // Davet linki oluştur
         setInviteLink(`https://networksolution.app/join/community/${communityId}`);
       }
       if (groupId) {
-        const res = await api.get(`/subgroups/${groupId}`);
+        const res = await api.get(`/api/subgroups/${groupId}`);
         setGroup(res.data);
         setInviteLink(`https://networksolution.app/join/group/${groupId}`);
       }
@@ -53,49 +54,22 @@ export default function InviteScreen() {
     }
   };
 
-  const handleCopyLink = async () => {
+  const copyToClipboard = async () => {
     await Clipboard.setStringAsync(inviteLink);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    Alert.alert('Kopyalandı', 'Davet linki panoya kopyalandı');
+    Alert.alert('Başarılı', 'Link kopyalandı!');
   };
 
-  const handleShare = async () => {
+  const shareLink = async () => {
     try {
-      const target = community?.name || group?.name || 'Network Solution';
       await Share.share({
-        message: `${userProfile?.firstName || 'Bir arkadaşınız'} sizi ${target} topluluğuna davet ediyor! Katılmak için: ${inviteLink}`,
-        title: `${target} Daveti`,
+        message: `${community?.name || group?.name || 'Network Solution'}'a katılmak için: ${inviteLink}`,
+        url: inviteLink,
       });
     } catch (error) {
-      console.error('Error sharing:', error);
+      console.error('Share error:', error);
     }
-  };
-
-  const handleShareVia = (platform: string) => {
-    const target = community?.name || group?.name || 'Network Solution';
-    const message = encodeURIComponent(
-      `${userProfile?.firstName || 'Bir arkadaşınız'} sizi ${target} topluluğuna davet ediyor! Katılmak için: ${inviteLink}`
-    );
-
-    let url = '';
-    switch (platform) {
-      case 'whatsapp':
-        url = `whatsapp://send?text=${message}`;
-        break;
-      case 'telegram':
-        url = `tg://msg?text=${message}`;
-        break;
-      case 'twitter':
-        url = `twitter://post?message=${message}`;
-        break;
-      case 'email':
-        url = `mailto:?subject=${encodeURIComponent(`${target} Daveti`)}&body=${message}`;
-        break;
-    }
-
-    // Native sharing için Share.share kullanıyoruz
-    handleShare();
   };
 
   if (loading) {
@@ -107,11 +81,9 @@ export default function InviteScreen() {
   }
 
   const targetName = community?.name || group?.name || 'Network Solution';
-  const memberCount = community?.memberCount || group?.memberCount || 0;
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
@@ -120,23 +92,44 @@ export default function InviteScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Target Info Card */}
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
         <LinearGradient
-          colors={['#6366f1', '#8b5cf6']}
-          style={styles.targetCard}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
+          colors={['#4338ca', '#6366f1']}
+          style={styles.inviteCard}
         >
-          <View style={styles.targetIcon}>
-            <Ionicons name={community ? 'business' : 'people'} size={40} color="#fff" />
+          <View style={styles.iconContainer}>
+            <Ionicons name="people" size={40} color="#fff" />
           </View>
-          <Text style={styles.targetName}>{targetName}</Text>
-          <Text style={styles.targetMeta}>{memberCount} üye</Text>
+          <Text style={styles.inviteTitle}>{targetName}</Text>
+          <Text style={styles.inviteSubtitle}>Arkadaşlarını davet et!</Text>
+
+          {/* QR Code */}
+          {showQR && inviteLink && (
+            <View style={styles.qrContainer}>
+              <View style={styles.qrWrapper}>
+                <QRCode
+                  value={inviteLink}
+                  size={180}
+                  color="#1f2937"
+                  backgroundColor="#fff"
+                />
+              </View>
+              <Text style={styles.qrHint}>QR kodu taratarak katılın</Text>
+            </View>
+          )}
+
+          <TouchableOpacity 
+            style={styles.toggleQR}
+            onPress={() => setShowQR(!showQR)}
+          >
+            <Ionicons name={showQR ? "qr-code-outline" : "qr-code"} size={18} color="#e0e7ff" />
+            <Text style={styles.toggleQRText}>
+              {showQR ? 'QR Kodu Gizle' : 'QR Kodu Göster'}
+            </Text>
+          </TouchableOpacity>
         </LinearGradient>
 
-        {/* Invite Link */}
-        <View style={styles.section}>
+        <View style={styles.linkSection}>
           <Text style={styles.sectionTitle}>Davet Linki</Text>
           <View style={styles.linkContainer}>
             <TextInput
@@ -145,71 +138,49 @@ export default function InviteScreen() {
               editable={false}
               selectTextOnFocus
             />
-            <TouchableOpacity style={styles.copyButton} onPress={handleCopyLink}>
-              <Ionicons name={copied ? 'checkmark' : 'copy'} size={20} color="#fff" />
+            <TouchableOpacity 
+              style={[styles.copyButton, copied && styles.copyButtonCopied]}
+              onPress={copyToClipboard}
+            >
+              <Ionicons 
+                name={copied ? "checkmark" : "copy"} 
+                size={20} 
+                color="#fff" 
+              />
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Share Buttons */}
-        <View style={styles.section}>
+        <View style={styles.shareSection}>
           <Text style={styles.sectionTitle}>Paylaş</Text>
-          <View style={styles.shareGrid}>
-            <TouchableOpacity style={styles.shareButton} onPress={() => handleShareVia('whatsapp')}>
-              <View style={[styles.shareIcon, { backgroundColor: '#25D366' }]}>
-                <Ionicons name="logo-whatsapp" size={28} color="#fff" />
-              </View>
-              <Text style={styles.shareLabel}>WhatsApp</Text>
+          <View style={styles.shareButtons}>
+            <TouchableOpacity style={styles.shareButton} onPress={shareLink}>
+              <LinearGradient
+                colors={['#10b981', '#059669']}
+                style={styles.shareButtonGradient}
+              >
+                <Ionicons name="share-social" size={24} color="#fff" />
+                <Text style={styles.shareButtonText}>Paylaş</Text>
+              </LinearGradient>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.shareButton} onPress={() => handleShareVia('telegram')}>
-              <View style={[styles.shareIcon, { backgroundColor: '#0088cc' }]}>
-                <Ionicons name="paper-plane" size={28} color="#fff" />
-              </View>
-              <Text style={styles.shareLabel}>Telegram</Text>
+            
+            <TouchableOpacity style={styles.shareButton} onPress={copyToClipboard}>
+              <LinearGradient
+                colors={['#6366f1', '#4338ca']}
+                style={styles.shareButtonGradient}
+              >
+                <Ionicons name="copy" size={24} color="#fff" />
+                <Text style={styles.shareButtonText}>Kopyala</Text>
+              </LinearGradient>
             </TouchableOpacity>
-
-            <TouchableOpacity style={styles.shareButton} onPress={() => handleShareVia('twitter')}>
-              <View style={[styles.shareIcon, { backgroundColor: '#1DA1F2' }]}>
-                <Ionicons name="logo-twitter" size={28} color="#fff" />
-              </View>
-              <Text style={styles.shareLabel}>Twitter</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.shareButton} onPress={() => handleShareVia('email')}>
-              <View style={[styles.shareIcon, { backgroundColor: '#ea4335' }]}>
-                <Ionicons name="mail" size={28} color="#fff" />
-              </View>
-              <Text style={styles.shareLabel}>E-posta</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* General Share Button */}
-          <TouchableOpacity style={styles.generalShareButton} onPress={handleShare}>
-            <Ionicons name="share-social" size={22} color="#fff" />
-            <Text style={styles.generalShareText}>Diğer Uygulamalarla Paylaş</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* QR Code Section */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>QR Kod</Text>
-          <View style={styles.qrPlaceholder}>
-            <Ionicons name="qr-code" size={120} color="#374151" />
-            <Text style={styles.qrText}>QR kod yakında aktif olacak</Text>
           </View>
         </View>
 
-        {/* Tips */}
-        <View style={styles.tipsSection}>
-          <View style={styles.tipItem}>
-            <Ionicons name="information-circle" size={20} color="#6366f1" />
-            <Text style={styles.tipText}>Davet linki ile gelen kişiler otomatik olarak topluluğa katılır.</Text>
-          </View>
-          <View style={styles.tipItem}>
-            <Ionicons name="shield-checkmark" size={20} color="#10b981" />
-            <Text style={styles.tipText}>Alt gruplara katılım için yönetici onayı gerekebilir.</Text>
-          </View>
+        <View style={styles.infoSection}>
+          <Ionicons name="information-circle" size={20} color="#6b7280" />
+          <Text style={styles.infoText}>
+            Bu linki veya QR kodu paylaşarak arkadaşlarınızı {targetName}'a davet edebilirsiniz.
+          </Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -223,24 +194,27 @@ const styles = StyleSheet.create({
   backButton: { width: 40, height: 40, justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
   content: { flex: 1 },
-  targetCard: { margin: 16, borderRadius: 20, padding: 24, alignItems: 'center' },
-  targetIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
-  targetName: { color: '#fff', fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 8 },
-  targetMeta: { color: 'rgba(255,255,255,0.8)', fontSize: 14 },
-  section: { padding: 16 },
-  sectionTitle: { color: '#9ca3af', fontSize: 13, fontWeight: '600', textTransform: 'uppercase', marginBottom: 12 },
-  linkContainer: { flexDirection: 'row', backgroundColor: '#111827', borderRadius: 12, overflow: 'hidden' },
-  linkInput: { flex: 1, color: '#fff', paddingHorizontal: 16, paddingVertical: 14, fontSize: 14 },
-  copyButton: { backgroundColor: '#6366f1', paddingHorizontal: 16, justifyContent: 'center', alignItems: 'center' },
-  shareGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' },
-  shareButton: { width: '23%', alignItems: 'center', marginBottom: 16 },
-  shareIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  shareLabel: { color: '#9ca3af', fontSize: 12 },
-  generalShareButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: '#1f2937', paddingVertical: 14, borderRadius: 12, gap: 8, marginTop: 8 },
-  generalShareText: { color: '#fff', fontSize: 15, fontWeight: '500' },
-  qrPlaceholder: { backgroundColor: '#111827', borderRadius: 16, padding: 32, alignItems: 'center' },
-  qrText: { color: '#6b7280', fontSize: 14, marginTop: 16 },
-  tipsSection: { padding: 16, gap: 12 },
-  tipItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  tipText: { color: '#9ca3af', fontSize: 14, flex: 1, lineHeight: 20 },
+  contentContainer: { padding: 16 },
+  inviteCard: { borderRadius: 20, padding: 24, alignItems: 'center', marginBottom: 24 },
+  iconContainer: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', marginBottom: 16 },
+  inviteTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff', marginBottom: 8, textAlign: 'center' },
+  inviteSubtitle: { fontSize: 16, color: '#e0e7ff', marginBottom: 20 },
+  qrContainer: { alignItems: 'center', marginTop: 8 },
+  qrWrapper: { padding: 16, backgroundColor: '#fff', borderRadius: 16, marginBottom: 12 },
+  qrHint: { color: '#e0e7ff', fontSize: 13, marginTop: 8 },
+  toggleQR: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 16, paddingVertical: 8, paddingHorizontal: 16, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20 },
+  toggleQRText: { color: '#e0e7ff', fontSize: 14 },
+  linkSection: { marginBottom: 24 },
+  sectionTitle: { color: '#fff', fontSize: 16, fontWeight: '600', marginBottom: 12 },
+  linkContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', borderRadius: 12, overflow: 'hidden' },
+  linkInput: { flex: 1, color: '#9ca3af', fontSize: 14, padding: 14 },
+  copyButton: { backgroundColor: '#6366f1', padding: 14, justifyContent: 'center', alignItems: 'center' },
+  copyButtonCopied: { backgroundColor: '#10b981' },
+  shareSection: { marginBottom: 24 },
+  shareButtons: { flexDirection: 'row', gap: 12 },
+  shareButton: { flex: 1, borderRadius: 12, overflow: 'hidden' },
+  shareButtonGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, gap: 8 },
+  shareButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  infoSection: { flexDirection: 'row', alignItems: 'flex-start', backgroundColor: '#1f2937', padding: 16, borderRadius: 12, gap: 12 },
+  infoText: { flex: 1, color: '#9ca3af', fontSize: 14, lineHeight: 20 },
 });
