@@ -55,6 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const response = await userApi.getProfile();
           setUserProfile(response.data);
+          
+          // Push notification kaydı (sadece mobil cihazlarda)
+          if (Platform.OS !== 'web') {
+            const pushToken = await registerForPushNotificationsAsync();
+            if (pushToken) {
+              await savePushToken(pushToken);
+            }
+          }
         } catch (error) {
           console.error('Error fetching profile:', error);
         }
@@ -64,7 +72,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    // Notification listener'ları (sadece mobil cihazlarda)
+    let notificationListener: any;
+    let responseListener: any;
+    
+    if (Platform.OS !== 'web') {
+      notificationListener = addNotificationReceivedListener(notification => {
+        console.log('Bildirim alındı:', notification);
+      });
+
+      responseListener = addNotificationResponseReceivedListener(response => {
+        console.log('Bildirime tıklandı:', response);
+        // Burada bildirime tıklandığında yapılacak işlemler
+        // Örn: ilgili sohbete yönlendirme
+      });
+    }
+
+    return () => {
+      unsubscribe();
+      if (notificationListener) notificationListener.remove();
+      if (responseListener) responseListener.remove();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
