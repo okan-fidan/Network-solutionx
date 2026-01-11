@@ -116,6 +116,14 @@ export default function GroupChatScreen() {
       ]);
       setMessages(messagesRes.data.reverse());
       setSubgroup(groupRes.data);
+      
+      // Üyeleri yükle (@mention için)
+      try {
+        const membersRes = await subgroupApi.getMembers(groupId);
+        setGroupMembers(membersRes.data || []);
+      } catch (e) {
+        // Üye yükleme hatası sessizce geç
+      }
     } catch (error) {
       console.error('Error loading group chat:', error);
     } finally {
