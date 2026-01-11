@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface OnboardingSlide {
   id: string;
@@ -91,32 +91,7 @@ export default function OnboardingScreen() {
     }
   };
 
-  const renderSlide = (slide: OnboardingSlide, index: number) => (
-    <View key={slide.id} style={styles.slide}>
-      <LinearGradient
-        colors={slide.gradient as [string, string]}
-        style={styles.iconContainer}
-      >
-        <Ionicons name={slide.icon} size={80} color="#fff" />
-      </LinearGradient>
-      <Text style={styles.title}>{slide.title}</Text>
-      <Text style={styles.description}>{slide.description}</Text>
-    </View>
-  );
-
-  const renderDots = () => (
-    <View style={styles.dotsContainer}>
-      {slides.map((_, index) => (
-        <View
-          key={index}
-          style={[
-            styles.dot,
-            currentIndex === index && styles.dotActive,
-          ]}
-        />
-      ))}
-    </View>
-  );
+  const currentSlide = slides[currentIndex];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -125,23 +100,48 @@ export default function OnboardingScreen() {
         <Text style={styles.skipText}>Geç</Text>
       </TouchableOpacity>
 
-      {/* Slides */}
-      <ScrollView
-        ref={scrollViewRef}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        onMomentumScrollEnd={handleScroll}
-        scrollEventThrottle={16}
-        style={styles.scrollView}
-      >
-        {slides.map((slide, index) => renderSlide(slide, index))}
-      </ScrollView>
+      {/* Content */}
+      <View style={styles.contentContainer}>
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          scrollEventThrottle={16}
+          contentContainerStyle={styles.scrollContent}
+        >
+          {slides.map((slide) => (
+            <View key={slide.id} style={styles.slide}>
+              <LinearGradient
+                colors={slide.gradient as [string, string]}
+                style={styles.iconContainer}
+              >
+                <Ionicons name={slide.icon} size={80} color="#fff" />
+              </LinearGradient>
+              <Text style={styles.title}>{slide.title}</Text>
+              <Text style={styles.description}>{slide.description}</Text>
+            </View>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Bottom Section */}
       <View style={styles.bottomSection}>
-        {renderDots()}
+        {/* Dots */}
+        <View style={styles.dotsContainer}>
+          {slides.map((_, index) => (
+            <View
+              key={index}
+              style={[
+                styles.dot,
+                currentIndex === index && styles.dotActive,
+              ]}
+            />
+          ))}
+        </View>
 
+        {/* Next Button */}
         <TouchableOpacity style={styles.nextButton} onPress={handleNext}>
           <LinearGradient
             colors={['#6366f1', '#8b5cf6']}
@@ -179,15 +179,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
-  scrollView: {
+  contentContainer: {
     flex: 1,
+    justifyContent: 'center',
+  },
+  scrollContent: {
+    alignItems: 'center',
   },
   slide: {
     width: width,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 40,
-    paddingTop: 80,
   },
   iconContainer: {
     width: 160,
@@ -214,6 +217,7 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     textAlign: 'center',
     lineHeight: 24,
+    paddingHorizontal: 20,
   },
   bottomSection: {
     paddingHorizontal: 24,
