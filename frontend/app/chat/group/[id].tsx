@@ -90,6 +90,8 @@ export default function GroupChatScreen() {
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const [showMessageActions, setShowMessageActions] = useState(false);
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  // Yanıtlama (Reply) için state
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   // Yeni özellikler için state'ler
   const [polls, setPolls] = useState<Poll[]>([]);
   const [pinnedMessages, setPinnedMessages] = useState<Message[]>([]);
@@ -103,6 +105,9 @@ export default function GroupChatScreen() {
   const [showMentionList, setShowMentionList] = useState(false);
   const [mentionSearch, setMentionSearch] = useState('');
   const [groupMembers, setGroupMembers] = useState<{uid: string; firstName: string; lastName: string}[]>([]);
+  // İletme (Forward) için state
+  const [showForwardModal, setShowForwardModal] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState<Message | null>(null);
   const flatListRef = useRef<FlatList>(null);
   const { user, userProfile } = useAuth();
   const router = useRouter();
