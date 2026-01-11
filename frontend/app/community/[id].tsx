@@ -74,8 +74,14 @@ export default function CommunityDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joiningSubgroup, setJoiningSubgroup] = useState<string | null>(null);
+  // Duyuru modal state'leri
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [announcementText, setAnnouncementText] = useState('');
+  const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
   const { userProfile } = useAuth();
   const router = useRouter();
+
+  const isAdmin = community?.isSuperAdmin || userProfile?.isAdmin;
 
   const loadCommunity = useCallback(async () => {
     if (!id) return;
