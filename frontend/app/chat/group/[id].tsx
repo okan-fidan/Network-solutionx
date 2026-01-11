@@ -265,8 +265,37 @@ export default function GroupChatScreen() {
     setShowMessageActions(false);
   };
 
+  // @mention için text değişikliği
+  const handleTextChange = (text: string) => {
+    setInputText(text);
+    
+    // @ karakterinden sonra arama yap
+    const lastAtIndex = text.lastIndexOf('@');
+    if (lastAtIndex !== -1) {
+      const afterAt = text.slice(lastAtIndex + 1);
+      // Boşluk yoksa mention araması aktif
+      if (!afterAt.includes(' ')) {
+        setMentionSearch(afterAt);
+        setShowMentionList(true);
+        return;
+      }
+    }
+    setShowMentionList(false);
+    setMentionSearch('');
+  };
+
+  // Üye seçildiğinde mention ekle
+  const handleSelectMention = (member: {uid: string; firstName: string; lastName: string}) => {
+    const lastAtIndex = inputText.lastIndexOf('@');
+    const beforeAt = inputText.slice(0, lastAtIndex);
+    const newText = `${beforeAt}@${member.firstName} ${member.lastName} `;
+    setInputText(newText);
+    setShowMentionList(false);
+    setMentionSearch('');
+  };
+
   const handleLongPressMessage = (message: Message) => {
-    if (message.senderId === user?.uid) {
+    if (message.senderId === user?.uid || isGroupAdmin) {
       setSelectedMessage(message);
       setShowMessageActions(true);
     }
