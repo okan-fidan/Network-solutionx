@@ -630,6 +630,8 @@ const styles = StyleSheet.create({
   myBubble: { backgroundColor: '#6366f1', borderBottomRightRadius: 4 },
   otherBubble: { backgroundColor: '#1f2937', borderBottomLeftRadius: 4 },
   senderName: { color: '#6366f1', fontSize: 13, fontWeight: '600', marginBottom: 4 },
+  pinnedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.15)', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, marginBottom: 6, gap: 4, alignSelf: 'flex-start' },
+  pinnedText: { color: '#f59e0b', fontSize: 11, fontWeight: '600' },
   messageText: { color: '#e5e7eb', fontSize: 15, lineHeight: 20 },
   myMessageText: { color: '#fff' },
   messageFooter: { flexDirection: 'row', alignItems: 'center', marginTop: 4 },
