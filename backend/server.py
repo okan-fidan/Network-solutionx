@@ -297,6 +297,28 @@ async def check_user_admin(current_user: dict = Depends(get_current_user)):
         is_admin = True
     return {"isAdmin": is_admin}
 
+@api_router.post("/user/push-token")
+async def save_push_token(data: dict, current_user: dict = Depends(get_current_user)):
+    """Push notification token'ını kaydet"""
+    token = data.get('token')
+    if not token:
+        raise HTTPException(status_code=400, detail="Token gerekli")
+    
+    await db.users.update_one(
+        {"uid": current_user['uid']},
+        {"$set": {"pushToken": token, "pushTokenUpdatedAt": datetime.utcnow()}}
+    )
+    return {"message": "Push token kaydedildi"}
+
+@api_router.delete("/user/push-token")
+async def remove_push_token(current_user: dict = Depends(get_current_user)):
+    """Push notification token'ını sil"""
+    await db.users.update_one(
+        {"uid": current_user['uid']},
+        {"$unset": {"pushToken": "", "pushTokenUpdatedAt": ""}}
+    )
+    return {"message": "Push token silindi"}
+
 # ==================== COMMUNITIES ====================
 
 @api_router.get("/communities")
