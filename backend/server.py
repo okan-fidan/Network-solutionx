@@ -2332,6 +2332,23 @@ async def typing(sid, data):
 # Include the router in the main app
 app.include_router(api_router)
 
+# Import and setup additional routes
+from routes.badges import setup_badges_routes, badges_router
+from routes.reviews import setup_reviews_routes, reviews_router
+from routes.events import setup_events_routes, events_router
+
+# Setup badges routes
+badges_router = setup_badges_routes(db, get_current_user, check_global_admin)
+api_router.include_router(badges_router)
+
+# Setup reviews routes  
+reviews_router = setup_reviews_routes(db, get_current_user)
+api_router.include_router(reviews_router)
+
+# Setup events routes
+events_router = setup_events_routes(db, get_current_user, check_global_admin)
+api_router.include_router(events_router)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
