@@ -106,7 +106,7 @@ export default function ServiceDetailScreen() {
 
     setSubmitting(true);
     try {
-      await api.post('/api/reviews', {
+      await api.post('/reviews', {
         serviceId: id,
         rating,
         title: reviewTitle.trim() || undefined,
