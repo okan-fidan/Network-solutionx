@@ -762,4 +762,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 32,
   },
+  addAnnouncementBtn: {
+    marginLeft: 'auto',
+  },
+  announcementActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  deleteAnnouncementBtn: {
+    padding: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: 20,
+  },
+  announcementInput: {
+    backgroundColor: '#374151',
+    borderRadius: 12,
+    padding: 16,
+    color: '#fff',
+    fontSize: 16,
+    minHeight: 120,
+    textAlignVertical: 'top',
+  },
+  sendAnnouncementBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    padding: 16,
+    borderRadius: 12,
+    marginTop: 16,
+    gap: 8,
+  },
+  disabledBtn: {
+    opacity: 0.6,
+  },
+  sendAnnouncementText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });
