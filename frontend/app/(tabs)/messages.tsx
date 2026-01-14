@@ -95,7 +95,7 @@ export default function MessagesScreen() {
       setCommunities(myCommunities);
 
       // Gruplar
-98|      const myGroups: GroupChat[] = [];
+      const myGroups: GroupChat[] = [];
       for (const community of communitiesRes.data.filter((c: any) => c.isMember)) {
         try {
           const communityDetails = await api.get(`/api/communities/${community.id}`);
