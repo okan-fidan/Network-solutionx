@@ -60,14 +60,14 @@ export default function PostDetailScreen() {
   const loadData = useCallback(async () => {
     try {
       // Post'u yükle
-      const postsRes = await api.get('/posts');
+      const postsRes = await api.get('/api/posts');
       const foundPost = postsRes.data.find((p: Post) => p.id === postId);
       if (foundPost) {
         setPost(foundPost);
       }
       
       // Yorumları yükle
-      const commentsRes = await api.get(`/posts/${postId}/comments`);
+      const commentsRes = await api.get(`/api/posts/${postId}/comments`);
       setComments(commentsRes.data || []);
     } catch (error) {
       console.error('Error loading post:', error);
