@@ -72,13 +72,13 @@ export default function HelpScreen() {
   const handleContact = (method: string) => {
     switch (method) {
       case 'email':
-        Linking.openURL('mailto:destek@networksolution.com');
+        Linking.openURL('mailto:destek@networksolution.com.tr');
         break;
       case 'phone':
         Linking.openURL('tel:+905551234567');
         break;
       case 'web':
-        Linking.openURL('https://networksolution.com/destek');
+        Linking.openURL('https://networksolution.com.tr/');
         break;
     }
   };
