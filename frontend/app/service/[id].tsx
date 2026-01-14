@@ -83,8 +83,8 @@ export default function ServiceDetailScreen() {
     if (!id) return;
     try {
       const [servicesRes, reviewsRes] = await Promise.all([
-        api.get('/services'),
-        api.get(`/reviews/service/${id}`),
+        api.get('/api/services'),
+        api.get(`/api/reviews/service/${id}`),
       ]);
       
       const foundService = servicesRes.data.find((s: Service) => s.id === id);
@@ -106,7 +106,7 @@ export default function ServiceDetailScreen() {
 
     setSubmitting(true);
     try {
-      await api.post('/reviews', {
+      await api.post('/api/reviews', {
         serviceId: id,
         rating,
         title: reviewTitle.trim() || undefined,
