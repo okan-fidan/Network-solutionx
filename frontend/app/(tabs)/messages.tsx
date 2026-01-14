@@ -80,7 +80,7 @@ export default function MessagesScreen() {
         return;
       }
 
-      const communitiesRes = await api.get('/communities');
+      const communitiesRes = await api.get('/api/communities');
       
       // Üye olunan topluluklar
       const myCommunities: Community[] = communitiesRes.data
