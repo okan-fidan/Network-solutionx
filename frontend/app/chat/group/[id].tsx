@@ -795,10 +795,68 @@ export default function GroupChatScreen() {
               <Text style={styles.fileName} numberOfLines={1}>{item.fileName || 'Dosya'}</Text>
             </TouchableOpacity>
           )}
+
+          {/* Konum mesajı */}
+          {item.type === 'location' && item.location && (
+            <TouchableOpacity 
+              style={styles.locationMessage}
+              onPress={() => openLocationInMaps(item.location!.latitude, item.location!.longitude)}
+            >
+              <View style={styles.locationIcon}>
+                <Ionicons 
+                  name={item.location.isLive ? 'navigate' : 'location'} 
+                  size={24} 
+                  color={item.location.isLive ? '#10b981' : '#6366f1'} 
+                />
+                {item.location.isLive && (
+                  <View style={styles.liveBadge}>
+                    <Text style={styles.liveText}>CANLI</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.locationInfo}>
+                <Text style={styles.locationTitle}>
+                  {item.location.isLive ? 'Canlı Konum' : 'Konum'}
+                </Text>
+                {item.location.address && (
+                  <Text style={styles.locationAddress} numberOfLines={2}>
+                    {item.location.address}
+                  </Text>
+                )}
+                <Text style={styles.locationCoords}>
+                  {item.location.latitude.toFixed(5)}, {item.location.longitude.toFixed(5)}
+                </Text>
+              </View>
+              <Ionicons name="open-outline" size={18} color="#6b7280" />
+            </TouchableOpacity>
+          )}
           
-          {item.content ? (
+          {item.content && item.type !== 'location' ? (
             renderMessageContent(item.content, isMe)
           ) : null}
+
+          {/* Tepkiler (Reactions) */}
+          {item.reactions && item.reactions.length > 0 && (
+            <View style={styles.reactionsContainer}>
+              {Object.entries(
+                item.reactions.reduce((acc: {[key: string]: number}, r) => {
+                  acc[r.emoji] = (acc[r.emoji] || 0) + 1;
+                  return acc;
+                }, {})
+              ).map(([emoji, count]) => (
+                <TouchableOpacity 
+                  key={emoji} 
+                  style={styles.reactionBubble}
+                  onPress={() => handleReaction(item, emoji)}
+                >
+                  <Text style={styles.reactionEmoji}>{emoji}</Text>
+                  {(count as number) > 1 && (
+                    <Text style={styles.reactionCount}>{count}</Text>
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
           
           <View style={styles.messageFooter}>
             <Text style={[styles.messageTime, isMe && styles.myMessageTime]}>
