@@ -307,6 +307,37 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Feature Buttons */}
+        <View style={styles.featureButtons}>
+          <TouchableOpacity 
+            style={styles.featureButton}
+            onPress={() => router.push('/appointments')}
+          >
+            <View style={[styles.featureButtonIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+              <Ionicons name="calendar" size={24} color="#10b981" />
+            </View>
+            <View style={styles.featureButtonInfo}>
+              <Text style={styles.featureButtonTitle}>Randevularım</Text>
+              <Text style={styles.featureButtonSubtitle}>Görüşme ve toplantılar</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.featureButton}
+            onPress={() => router.push('/projects')}
+          >
+            <View style={[styles.featureButtonIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+              <Ionicons name="folder" size={24} color="#6366f1" />
+            </View>
+            <View style={styles.featureButtonInfo}>
+              <Text style={styles.featureButtonTitle}>Projelerim</Text>
+              <Text style={styles.featureButtonSubtitle}>İşbirliği ve görev takibi</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+          </TouchableOpacity>
+        </View>
+
         {/* Quick Actions */}
         <View style={styles.quickActionsContainer}>
           <Text style={styles.sectionTitle}>Hızlı İşlemler</Text>
