@@ -43,7 +43,7 @@ export default function CreateServiceScreen() {
 
     setLoading(true);
     try {
-      await api.post('/services', {
+      await api.post('/api/services', {
         title: title.trim(),
         description: description.trim(),
         category,
