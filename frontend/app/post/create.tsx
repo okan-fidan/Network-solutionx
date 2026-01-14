@@ -153,8 +153,24 @@ export default function CreatePostScreen() {
         location: location,
         mentions: mentions,
       });
+      
+      // Rating sayacını artır ve kontrol et
+      await incrementPostCount();
+      const shouldShow = await shouldShowRatingPrompt();
+      
       Alert.alert('Başarılı', 'Gönderiniz paylaşıldı!', [
-        { text: 'Tamam', onPress: () => router.back() }
+        { 
+          text: 'Tamam', 
+          onPress: async () => {
+            // Gönderi sonrası rating istemi göster
+            if (shouldShow) {
+              setTimeout(async () => {
+                await requestReview();
+              }, 500);
+            }
+            router.back();
+          }
+        }
       ]);
     } catch (error) {
       console.error('Error creating post:', error);
