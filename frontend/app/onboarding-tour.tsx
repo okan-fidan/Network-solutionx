@@ -5,8 +5,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  FlatList,
-  Animated,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,7 +20,6 @@ interface TourStep {
   title: string;
   description: string;
   color: string;
-  gradient: string[];
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -31,7 +29,6 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Topluluğa Katıl',
     description: '81 ilin girişimci topluluğuna katılın, aynı şehirdeki girişimcilerle tanışın ve networking yapın.',
     color: '#6366f1',
-    gradient: ['#4338ca', '#6366f1'],
   },
   {
     id: '2',
@@ -39,7 +36,6 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Sohbet Et',
     description: 'Gruplarda mesajlaşın, alt gruplara katılın ve diğer girişimcilerle fikirlerinizi paylaşın.',
     color: '#10b981',
-    gradient: ['#059669', '#10b981'],
   },
   {
     id: '3',
@@ -47,7 +43,6 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Hizmet Paylaş',
     description: 'Sunduğunuz hizmetleri yayınlayın, diğer girişimcilerin hizmetlerinden yararlanın.',
     color: '#f59e0b',
-    gradient: ['#d97706', '#f59e0b'],
   },
   {
     id: '4',
@@ -55,7 +50,6 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Rozet Kazan',
     description: 'Aktif olun, rozetler kazanın ve liderlik tablosunda yerinizi alın!',
     color: '#ec4899',
-    gradient: ['#db2777', '#ec4899'],
   },
   {
     id: '5',
@@ -63,20 +57,19 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Etkinliklere Katıl',
     description: 'Girişimcilik etkinliklerine katılın, workshoplara kayıt olun ve bilginizi artırın.',
     color: '#8b5cf6',
-    gradient: ['#7c3aed', '#8b5cf6'],
   },
 ];
 
 export default function OnboardingTourScreen() {
   const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollRef = useRef<ScrollView>(null);
 
   const handleNext = () => {
     if (currentIndex < TOUR_STEPS.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
-      setCurrentIndex(currentIndex + 1);
+      const nextIndex = currentIndex + 1;
+      scrollRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+      setCurrentIndex(nextIndex);
     } else {
       completeTour();
     }
@@ -95,49 +88,15 @@ export default function OnboardingTourScreen() {
     router.replace('/(tabs)');
   };
 
-  const renderStep = ({ item, index }: { item: TourStep; index: number }) => (
-    <View style={[styles.slide, { width }]}>
-      <View style={[styles.iconContainer, { backgroundColor: item.color }]}>
-        <Ionicons name={item.icon as any} size={80} color="#fff" />
-      </View>
-      <Text style={styles.title}>{item.title}</Text>
-      <Text style={styles.description}>{item.description}</Text>
-    </View>
-  );
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const newIndex = Math.round(offsetX / width);
+    if (newIndex !== currentIndex) {
+      setCurrentIndex(newIndex);
+    }
+  };
 
-  const renderDots = () => (
-    <View style={styles.dotsContainer}>
-      {TOUR_STEPS.map((_, index) => {
-        const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-        
-        const dotWidth = scrollX.interpolate({
-          inputRange,
-          outputRange: [8, 24, 8],
-          extrapolate: 'clamp',
-        });
-        
-        const opacity = scrollX.interpolate({
-          inputRange,
-          outputRange: [0.3, 1, 0.3],
-          extrapolate: 'clamp',
-        });
-        
-        return (
-          <Animated.View
-            key={index}
-            style={[
-              styles.dot,
-              {
-                width: dotWidth,
-                opacity,
-                backgroundColor: TOUR_STEPS[currentIndex].color,
-              },
-            ]}
-          />
-        );
-      })}
-    </View>
-  );
+  const currentStep = TOUR_STEPS[currentIndex];
 
   return (
     <SafeAreaView style={styles.container}>
@@ -147,30 +106,45 @@ export default function OnboardingTourScreen() {
         </TouchableOpacity>
       </View>
 
-      <Animated.FlatList
-        ref={flatListRef}
-        data={TOUR_STEPS}
-        renderItem={renderStep}
-        keyExtractor={(item) => item.id}
+      <ScrollView
+        ref={scrollRef}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: false }
-        )}
-        onMomentumScrollEnd={(e) => {
-          const newIndex = Math.round(e.nativeEvent.contentOffset.x / width);
-          setCurrentIndex(newIndex);
-        }}
+        onMomentumScrollEnd={handleScroll}
         scrollEventThrottle={16}
-      />
+      >
+        {TOUR_STEPS.map((step) => (
+          <View key={step.id} style={[styles.slide, { width }]}>
+            <View style={[styles.iconContainer, { backgroundColor: step.color }]}>
+              <Ionicons name={step.icon as any} size={80} color="#fff" />
+            </View>
+            <Text style={styles.title}>{step.title}</Text>
+            <Text style={styles.description}>{step.description}</Text>
+          </View>
+        ))}
+      </ScrollView>
 
-      {renderDots()}
+      {/* Dots */}
+      <View style={styles.dotsContainer}>
+        {TOUR_STEPS.map((_, index) => (
+          <View
+            key={index}
+            style={[
+              styles.dot,
+              {
+                width: index === currentIndex ? 24 : 8,
+                backgroundColor: index === currentIndex ? currentStep.color : '#374151',
+                opacity: index === currentIndex ? 1 : 0.5,
+              },
+            ]}
+          />
+        ))}
+      </View>
 
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.nextButton, { backgroundColor: TOUR_STEPS[currentIndex].color }]}
+          style={[styles.nextButton, { backgroundColor: currentStep.color }]}
           onPress={handleNext}
         >
           <Text style={styles.nextButtonText}>
