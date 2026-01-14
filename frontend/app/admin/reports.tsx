@@ -81,7 +81,7 @@ export default function AdminReportsScreen() {
 
   const handleUpdateStatus = async (reportId: string, newStatus: string) => {
     try {
-      await api.put(`/api/security/reports/${reportId}`, { status: newStatus });
+      await api.put(`/security/reports/${reportId}`, { status: newStatus });
       setReports(reports.map(r => r.id === reportId ? { ...r, status: newStatus } : r));
       Alert.alert('Başarılı', 'Rapor durumu güncellendi');
     } catch (error) {
