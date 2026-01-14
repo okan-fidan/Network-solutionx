@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../src/contexts/AuthContext';
+import { useTheme } from '../src/contexts/ThemeContext';
 import api from '../src/services/api';
 
 interface NotificationSettings {
@@ -30,9 +31,7 @@ interface NotificationSettings {
 export default function SettingsScreen() {
   const router = useRouter();
   const { signOut, userProfile } = useAuth();
-  
-  // Theme state
-  const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('dark');
+  const { theme, setTheme, isDark, colors } = useTheme();
   
   // Notification settings
   const [notifications, setNotifications] = useState<NotificationSettings>({
