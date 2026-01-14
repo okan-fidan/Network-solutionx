@@ -242,9 +242,28 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Sohbet Ayarları */}
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Sohbet Ayarları</Text>
+          
+          <SettingItem
+            icon="eye-off"
+            title="Gizlilik Ayarları"
+            subtitle="Son görülme, okundu bilgisi"
+            onPress={() => router.push('/chat-privacy')}
+          />
+          
+          <SettingItem
+            icon="archive"
+            title="Arşivlenmiş Sohbetler"
+            subtitle="Gizlediğiniz sohbetler"
+            onPress={() => router.push('/archived-chats')}
+          />
+        </View>
+
         {/* Bildirimler */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bildirimler</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Bildirimler</Text>
           
           <SettingItem
             icon="chatbubble"
