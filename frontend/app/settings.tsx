@@ -368,9 +368,27 @@ export default function SettingsScreen() {
           />
           
           <SettingItem
+            icon="notifications"
+            title="Bildirim Ayarları"
+            onPress={() => router.push('/notification-settings')}
+          />
+          
+          <SettingItem
+            icon="chatbubble-ellipses"
+            title="Geri Bildirim Gönder"
+            onPress={() => router.push('/feedback')}
+          />
+          
+          <SettingItem
             icon="help-circle"
             title="Yardım ve Destek"
             onPress={() => router.push('/help')}
+          />
+          
+          <SettingItem
+            icon="book"
+            title="Uygulama Turu"
+            onPress={() => router.push('/onboarding-tour')}
           />
           
           <SettingItem
