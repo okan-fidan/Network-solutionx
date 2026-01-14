@@ -1350,6 +1350,24 @@ const styles = StyleSheet.create({
   actionText: { color: '#e5e7eb', fontSize: 16 },
   deleteAction: { borderTopWidth: 1, borderTopColor: '#374151', marginTop: 8, paddingTop: 16 },
   deleteText: { color: '#ef4444' },
+  // Quick Reactions
+  quickReactionsRow: { flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: '#374151' },
+  quickReactionButton: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#374151', justifyContent: 'center', alignItems: 'center' },
+  quickReactionEmoji: { fontSize: 22 },
+  // Reactions on messages
+  reactionsContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 6 },
+  reactionBubble: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(99, 102, 241, 0.2)', borderRadius: 12, paddingHorizontal: 6, paddingVertical: 2 },
+  reactionEmoji: { fontSize: 14 },
+  reactionCount: { fontSize: 11, color: '#9ca3af', marginLeft: 2 },
+  // Location message
+  locationMessage: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', borderRadius: 12, padding: 12, gap: 10, marginBottom: 4 },
+  locationIcon: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#111827', justifyContent: 'center', alignItems: 'center' },
+  liveBadge: { position: 'absolute', bottom: -4, backgroundColor: '#10b981', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 },
+  liveText: { fontSize: 8, fontWeight: '700', color: '#fff' },
+  locationInfo: { flex: 1 },
+  locationTitle: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  locationAddress: { color: '#9ca3af', fontSize: 12, marginTop: 2 },
+  locationCoords: { color: '#6b7280', fontSize: 10, marginTop: 2, fontFamily: 'monospace' },
   // Forward Modal
   forwardModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
   forwardModalContent: { backgroundColor: '#1f2937', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '80%', paddingBottom: 40 },
