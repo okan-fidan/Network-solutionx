@@ -13,12 +13,14 @@ import {
   Alert,
   ScrollView,
   Modal,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import * as Location from 'expo-location';
 import { Video, ResizeMode } from 'expo-av';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../src/config/firebase';
@@ -28,7 +30,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../../../src/services/api';
 
-// Emoji listesi
+// Tepki emoji listesi
+const REACTION_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '😡'];
 const EMOJI_LIST = [
   '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂',
   '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛',
