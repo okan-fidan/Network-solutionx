@@ -103,7 +103,7 @@ export default function SettingsScreen() {
     if (!twoFactorEnabled) {
       // Enable 2FA - QR kod ile kurulum
       try {
-        const response = await api.post('/api/security/2fa/setup');
+        const response = await api.post('/security/2fa/setup');
         setPendingCode(response.data.secret || '');
         // QR kod URL'sini sakla
         AsyncStorage.setItem('2fa_qr', response.data.qrCode || '');
