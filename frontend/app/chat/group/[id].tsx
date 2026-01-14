@@ -1111,6 +1111,18 @@ export default function GroupChatScreen() {
               </View>
               <Text style={styles.attachText}>Dosya</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.attachOption} onPress={() => shareLocation(false)}>
+              <View style={[styles.attachIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                <Ionicons name="location" size={24} color="#3b82f6" />
+              </View>
+              <Text style={styles.attachText}>Konum</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.attachOption} onPress={() => setShowPollModal(true)}>
+              <View style={[styles.attachIcon, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <Ionicons name="bar-chart" size={24} color="#f59e0b" />
+              </View>
+              <Text style={styles.attachText}>Anket</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -1119,6 +1131,14 @@ export default function GroupChatScreen() {
           <View style={styles.uploadingBar}>
             <ActivityIndicator size="small" color="#6366f1" />
             <Text style={styles.uploadingText}>Yükleniyor...</Text>
+          </View>
+        )}
+
+        {/* Location loading indicator */}
+        {loadingLocation && (
+          <View style={styles.uploadingBar}>
+            <ActivityIndicator size="small" color="#3b82f6" />
+            <Text style={styles.uploadingText}>Konum alınıyor...</Text>
           </View>
         )}
 
