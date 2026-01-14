@@ -122,7 +122,7 @@ export default function EventsScreen() {
 
     setCreating(true);
     try {
-      await api.post('/events', {
+      await api.post('/api/events', {
         title: newEvent.title,
         description: newEvent.description,
         date: newEvent.date,
