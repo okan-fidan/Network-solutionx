@@ -200,24 +200,24 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#fff" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Ayarlar</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Ayarlar</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.content}>
         {/* Görünüm */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Görünüm</Text>
+        <View style={[styles.section, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Görünüm</Text>
           
           <View style={styles.themeSelector}>
             <TouchableOpacity 
-              style={[styles.themeOption, theme === 'light' && styles.themeOptionActive]}
+              style={[styles.themeOption, { backgroundColor: colors.surfaceSecondary }, theme === 'light' && styles.themeOptionActive]}
               onPress={() => handleThemeChange('light')}
             >
               <Ionicons name="sunny" size={24} color={theme === 'light' ? '#6366f1' : '#6b7280'} />
