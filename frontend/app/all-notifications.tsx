@@ -74,8 +74,16 @@ export default function AllNotificationsScreen() {
     });
 
     return () => {
-      Notifications.removeNotificationSubscription(notificationListener.current);
-      Notifications.removeNotificationSubscription(responseListener.current);
+      try {
+        if (notificationListener.current) {
+          notificationListener.current.remove();
+        }
+        if (responseListener.current) {
+          responseListener.current.remove();
+        }
+      } catch (error) {
+        // Web'de desteklenmiyor, hata yoksay
+      }
       subscription.remove();
     };
   }, []);
