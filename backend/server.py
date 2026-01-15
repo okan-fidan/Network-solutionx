@@ -2280,7 +2280,7 @@ async def admin_get_broadcast_history(current_user: dict = Depends(get_current_u
     if not await check_global_admin(current_user):
         raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
     
-    broadcasts = await db.broadcasts.find().sort("sentAt", -1).limit(50).to_list(50)
+    broadcasts = await db.broadcasts.find({"scheduledAt": {"$exists": False}}).sort("sentAt", -1).limit(50).to_list(50)
     
     for b in broadcasts:
         if '_id' in b:
@@ -2288,7 +2288,84 @@ async def admin_get_broadcast_history(current_user: dict = Depends(get_current_u
     
     return broadcasts
 
-    return {"message": "Yönetici yetkisi kaldırıldı"}
+# Schedule broadcast for later
+@api_router.post("/admin/schedule-broadcast")
+async def admin_schedule_broadcast(data: dict, current_user: dict = Depends(get_current_user)):
+    """İleri tarihli duyuru zamanla"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    target_groups = data.get('targetGroups', [])
+    content = data.get('content', '').strip()
+    title = data.get('title', '').strip()
+    scheduled_at = data.get('scheduledAt')
+    send_as_announcement = data.get('sendAsAnnouncement', True)
+    send_as_message = data.get('sendAsMessage', False)
+    send_push_notification = data.get('sendPushNotification', False)
+    
+    if not content:
+        raise HTTPException(status_code=400, detail="Mesaj içeriği gerekli")
+    
+    if not target_groups:
+        raise HTTPException(status_code=400, detail="En az bir grup seçmelisiniz")
+    
+    if not scheduled_at:
+        raise HTTPException(status_code=400, detail="Zamanlama tarihi gerekli")
+    
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() or "Yönetici"
+    broadcast_id = str(uuid.uuid4())
+    
+    scheduled_broadcast = {
+        "id": broadcast_id,
+        "title": title,
+        "content": content,
+        "targetGroups": target_groups,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "scheduledAt": scheduled_at,
+        "sendAsAnnouncement": send_as_announcement,
+        "sendAsMessage": send_as_message,
+        "sendPushNotification": send_push_notification,
+        "status": "pending",
+        "createdAt": datetime.utcnow().isoformat(),
+    }
+    
+    await db.scheduled_broadcasts.insert_one(scheduled_broadcast)
+    
+    return {"message": "Duyuru zamanlandı", "broadcastId": broadcast_id, "scheduledAt": scheduled_at}
+
+# Get scheduled broadcasts
+@api_router.get("/admin/scheduled-broadcasts")
+async def admin_get_scheduled_broadcasts(current_user: dict = Depends(get_current_user)):
+    """Zamanlanmış duyuruları getir"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    broadcasts = await db.scheduled_broadcasts.find({"status": "pending"}).sort("scheduledAt", 1).to_list(50)
+    
+    for b in broadcasts:
+        if '_id' in b:
+            del b['_id']
+    
+    return broadcasts
+
+# Cancel scheduled broadcast
+@api_router.delete("/admin/scheduled-broadcasts/{broadcast_id}")
+async def admin_cancel_scheduled_broadcast(broadcast_id: str, current_user: dict = Depends(get_current_user)):
+    """Zamanlanmış duyuruyu iptal et"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    result = await db.scheduled_broadcasts.delete_one({"id": broadcast_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Zamanlanmış duyuru bulunamadı")
+    
+    return {"message": "Zamanlanmış duyuru iptal edildi"}
 
 # Create new community (admin)
 @api_router.post("/admin/communities")
