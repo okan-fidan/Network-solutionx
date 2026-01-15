@@ -8,7 +8,7 @@ import {
   onAuthStateChanged,
   User
 } from 'firebase/auth';
-import { userApi } from '../services/api';
+import api, { userApi } from '../services/api';
 import { 
   registerForPushNotificationsAsync, 
   savePushToken,
