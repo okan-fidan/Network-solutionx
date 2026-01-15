@@ -493,6 +493,37 @@ async def leave_community(community_id: str, current_user: dict = Depends(get_cu
     
     return {"message": "Topluluktan ayrıldınız"}
 
+# Topluluk profil resmi güncelle
+@api_router.put("/communities/{community_id}/image")
+async def update_community_image(community_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    community = await db.communities.find_one({"id": community_id})
+    if not community:
+        raise HTTPException(status_code=404, detail="Topluluk bulunamadı")
+    
+    # Check if user is admin or super admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_super_admin = current_user['uid'] in community.get('superAdmins', [])
+    
+    if not is_global_admin and not is_super_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    body = await request.json()
+    image_data = body.get('imageData')
+    
+    if not image_data:
+        raise HTTPException(status_code=400, detail="Resim verisi gerekli")
+    
+    # Store as data URL
+    image_url = f"data:image/jpeg;base64,{image_data}"
+    
+    await db.communities.update_one(
+        {"id": community_id},
+        {"$set": {"imageUrl": image_url}}
+    )
+    
+    return {"message": "Topluluk resmi güncellendi", "imageUrl": image_url}
+
 # ==================== SUBGROUPS ====================
 
 # Subgroup katılım istekleri için ayrı koleksiyon şeması (bilgi amaçlı)
