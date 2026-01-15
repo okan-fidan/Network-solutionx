@@ -49,6 +49,7 @@ ADMIN_EMAIL = "metaticaretim@gmail.com"
 
 # Default subgroups for each community
 DEFAULT_SUBGROUPS = [
+    {"name": "Duyurular", "description": "Topluluk duyuruları ve önemli bilgiler", "isPublic": True, "requiresApproval": False},
     {"name": "Start", "description": "Yeni başlayanlar için başlangıç grubu", "isPublic": False},
     {"name": "Gelişim", "description": "Gelişim odaklı girişimciler grubu", "isPublic": False},
     {"name": "Değerlendirme", "description": "Performans ve ilerleme değerlendirme grubu", "isPublic": False},
