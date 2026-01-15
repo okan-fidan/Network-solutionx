@@ -462,6 +462,19 @@ async def join_community(community_id: str, current_user: dict = Depends(get_cur
         {"uid": current_user['uid']},
         {"$addToSet": {"communities": community_id}}
     )
+    
+    # Kullanıcıyı otomatik olarak "Duyurular" grubuna ekle
+    announcements_subgroup = await db.subgroups.find_one({
+        "communityId": community_id,
+        "name": {"$regex": "^Duyurular?$", "$options": "i"}
+    })
+    
+    if announcements_subgroup:
+        await db.subgroups.update_one(
+            {"id": announcements_subgroup['id']},
+            {"$addToSet": {"members": current_user['uid']}}
+        )
+    
     return {"message": "Topluluğa katıldınız. Duyuru kanalına otomatik eklendiniz."}
 
 @api_router.post("/communities/{community_id}/leave")
