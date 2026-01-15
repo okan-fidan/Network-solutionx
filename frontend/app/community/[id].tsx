@@ -518,6 +518,89 @@ export default function CommunityDetailScreen() {
         <View style={{ height: 40 }} />
       </ScrollView>
 
+      {/* Ayarlar Modal */}
+      <Modal visible={showSettingsModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.settingsModalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Topluluk Ayarları</Text>
+              <TouchableOpacity onPress={() => setShowSettingsModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.settingsModalBody}>
+              {/* Profil Resmi Değiştir - Sadece admin için */}
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={styles.settingsOption}
+                  onPress={() => {
+                    setShowSettingsModal(false);
+                    handleChangeCommunityImage();
+                  }}
+                >
+                  <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                    <Ionicons name="camera" size={24} color="#6366f1" />
+                  </View>
+                  <View style={styles.settingsOptionInfo}>
+                    <Text style={styles.settingsOptionTitle}>Profil Fotoğrafı Değiştir</Text>
+                    <Text style={styles.settingsOptionSubtitle}>Topluluk resmini güncelle</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </TouchableOpacity>
+              )}
+
+              {/* Duyuru Gönder - Sadece admin için */}
+              {isAdmin && (
+                <TouchableOpacity 
+                  style={styles.settingsOption}
+                  onPress={() => {
+                    setShowSettingsModal(false);
+                    setShowAnnouncementModal(true);
+                  }}
+                >
+                  <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                    <Ionicons name="megaphone" size={24} color="#f59e0b" />
+                  </View>
+                  <View style={styles.settingsOptionInfo}>
+                    <Text style={styles.settingsOptionTitle}>Duyuru Gönder</Text>
+                    <Text style={styles.settingsOptionSubtitle}>Tüm üyelere bildirim gönder</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </TouchableOpacity>
+              )}
+
+              {/* Bildirimler */}
+              <TouchableOpacity style={styles.settingsOption}>
+                <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                  <Ionicons name="notifications" size={24} color="#10b981" />
+                </View>
+                <View style={styles.settingsOptionInfo}>
+                  <Text style={styles.settingsOptionTitle}>Bildirimler</Text>
+                  <Text style={styles.settingsOptionSubtitle}>Bildirimleri yönet</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              {/* Topluluktan Ayrıl */}
+              <TouchableOpacity 
+                style={[styles.settingsOption, styles.dangerOption]}
+                onPress={handleLeaveCommunity}
+              >
+                <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+                  <Ionicons name="exit" size={24} color="#ef4444" />
+                </View>
+                <View style={styles.settingsOptionInfo}>
+                  <Text style={[styles.settingsOptionTitle, styles.dangerText]}>Topluluktan Ayrıl</Text>
+                  <Text style={styles.settingsOptionSubtitle}>Bu topluluktan çık</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#ef4444" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Duyuru Gönderme Modal */}
       <Modal visible={showAnnouncementModal} animationType="slide" transparent>
         <KeyboardAvoidingView 
