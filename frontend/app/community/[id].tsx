@@ -132,10 +132,10 @@ export default function CommunityDetailScreen() {
     try {
       if (community.isMember) {
         await communityApi.leave(community.id);
-        Alert.alert('Başarılı', 'Topluluktan ayrıldınız');
+        showToast.success('Başarılı', 'Topluluktan ayrıldınız');
       } else {
         await communityApi.join(community.id);
-        Alert.alert('Başarılı', 'Topluluğa katıldınız!');
+        showToast.success('Başarılı', 'Topluluğa katıldınız!');
       }
       loadCommunity();
       loadAnnouncements();
