@@ -20,6 +20,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
+import { AdBanner } from '../../src/components/ads';
 
 const { width } = Dimensions.get('window');
 
