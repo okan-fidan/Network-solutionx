@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  ActivityIndicator,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +17,7 @@ import { useAuth } from '../../src/contexts/AuthContext';
 import api from '../../src/services/api';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { SkeletonCard, FadeInView, AnimatedPressable } from '../../src/components/ui';
 
 type TabType = 'all' | 'communities' | 'groups' | 'private';
 
