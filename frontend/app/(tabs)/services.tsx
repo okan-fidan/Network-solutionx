@@ -16,6 +16,7 @@ import { serviceApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { AdBanner } from '../../src/components/ads';
 
 const CATEGORIES = [
   'Teknoloji',
