@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any
 
 # Backend URL from frontend environment
-BACKEND_URL = "https://social-launch-3.preview.emergentagent.com"
+BACKEND_URL = "https://founder-connect-28.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 class NetworkSolutionAPITester:
