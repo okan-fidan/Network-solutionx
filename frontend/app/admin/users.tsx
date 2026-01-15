@@ -83,31 +83,31 @@ export default function AdminUsersScreen() {
     try {
       switch (action) {
         case 'ban':
-          await api.post(`/admin/users/${userId}/ban`);
+          await api.post(`/api/admin/users/${userId}/ban`);
           Alert.alert('Başarılı', 'Kullanıcı yasaklandı');
           break;
         case 'unban':
-          await api.post(`/admin/users/${userId}/unban`);
+          await api.post(`/api/admin/users/${userId}/unban`);
           Alert.alert('Başarılı', 'Yasağı kaldırıldı');
           break;
         case 'restrict':
-          await api.post(`/admin/users/${userId}/restrict`, { hours: 24 });
+          await api.post(`/api/admin/users/${userId}/restrict`, { hours: 24 });
           Alert.alert('Başarılı', 'Kullanıcı 24 saat kısıtlandı');
           break;
         case 'unrestrict':
-          await api.post(`/admin/users/${userId}/unrestrict`);
+          await api.post(`/api/admin/users/${userId}/unrestrict`);
           Alert.alert('Başarılı', 'Kısıtlama kaldırıldı');
           break;
         case 'makeAdmin':
-          await api.post(`/admin/users/${userId}/make-admin`);
+          await api.post(`/api/admin/users/${userId}/make-admin`);
           Alert.alert('Başarılı', 'Yönetici yapıldı');
           break;
         case 'removeAdmin':
-          await api.post(`/admin/users/${userId}/remove-admin`);
+          await api.post(`/api/admin/users/${userId}/remove-admin`);
           Alert.alert('Başarılı', 'Yönetici yetkisi kaldırıldı');
           break;
         case 'deleteMessages':
-          await api.delete(`/admin/users/${userId}/messages`, { data: { hours: 24 } });
+          await api.delete(`/api/admin/users/${userId}/messages`, { data: { hours: 24 } });
           Alert.alert('Başarılı', 'Son 24 saatteki mesajlar silindi');
           break;
       }

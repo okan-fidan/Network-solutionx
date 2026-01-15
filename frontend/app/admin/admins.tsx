@@ -66,7 +66,7 @@ export default function AdminAdminsScreen() {
           text: 'Evet, Yönetici Yap',
           onPress: async () => {
             try {
-              await api.post(`/admin/users/${userId}/make-admin`);
+              await api.post(`/api/admin/users/${userId}/make-admin`);
               Alert.alert('Başarılı', 'Kullanıcı yönetici yapıldı');
               loadData();
             } catch (error: any) {
@@ -94,7 +94,7 @@ export default function AdminAdminsScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.post(`/admin/users/${userId}/remove-admin`);
+              await api.post(`/api/admin/users/${userId}/remove-admin`);
               Alert.alert('Başarılı', 'Yönetici yetkisi kaldırıldı');
               loadData();
             } catch (error: any) {

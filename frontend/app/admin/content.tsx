@@ -104,7 +104,7 @@ export default function AdminContentScreen() {
 
   const handlePinMessage = async (messageId: string) => {
     try {
-      const response = await api.post(`/admin/messages/${messageId}/pin`);
+      const response = await api.post(`/api/admin/messages/${messageId}/pin`);
       Alert.alert('Başarılı', response.data.message);
       // Refresh messages
       if (selectedSubgroup) {
@@ -127,7 +127,7 @@ export default function AdminContentScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await api.delete(`/admin/messages/${messageId}`);
+              await api.delete(`/api/admin/messages/${messageId}`);
               Alert.alert('Başarılı', 'Mesaj silindi');
               if (selectedSubgroup) {
                 const messagesRes = await api.get(`/api/subgroups/${selectedSubgroup.id}/messages`);
