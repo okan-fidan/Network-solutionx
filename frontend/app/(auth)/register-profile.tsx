@@ -4,20 +4,32 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Pressable,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
   ActivityIndicator,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
-import { generalApi } from '../../src/services/api';
-import { Picker } from '@react-native-picker/picker';
+import api from '../../src/services/api';
+import { showToast } from '../../src/components/ui';
+
+// Türkiye şehirleri
+const TURKISH_CITIES = [
+  'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya', 'Ardahan', 'Artvin',
+  'Aydın', 'Balıkesir', 'Bartın', 'Batman', 'Bayburt', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur',
+  'Bursa', 'Çanakkale', 'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Düzce', 'Edirne', 'Elazığ', 'Erzincan',
+  'Erzurum', 'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Iğdır', 'Isparta', 'İstanbul',
+  'İzmir', 'Kahramanmaraş', 'Karabük', 'Karaman', 'Kars', 'Kastamonu', 'Kayseri', 'Kırıkkale', 'Kırklareli', 'Kırşehir',
+  'Kilis', 'Kocaeli', 'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Mardin', 'Mersin', 'Muğla', 'Muş',
+  'Nevşehir', 'Niğde', 'Ordu', 'Osmaniye', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas',
+  'Şanlıurfa', 'Şırnak', 'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Uşak', 'Van', 'Yalova', 'Yozgat', 'Zonguldak'
+];
 
 export default function RegisterProfileScreen() {
   const [firstName, setFirstName] = useState('');
@@ -25,32 +37,29 @@ export default function RegisterProfileScreen() {
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [occupation, setOccupation] = useState('');
-  const [cities, setCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadingCities, setLoadingCities] = useState(true);
+  const [showCityPicker, setShowCityPicker] = useState(false);
+  const [citySearch, setCitySearch] = useState('');
   const { user, registerProfile } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    loadCities();
-  }, []);
-
-  const loadCities = async () => {
-    try {
-      const response = await generalApi.getCities();
-      setCities(response.data.cities);
-    } catch (error) {
-      console.error('Error loading cities:', error);
-      // Fallback cities
-      setCities(['İstanbul', 'Ankara', 'İzmir', 'Bursa', 'Antalya']);
-    } finally {
-      setLoadingCities(false);
-    }
-  };
+  const filteredCities = citySearch
+    ? TURKISH_CITIES.filter(c => 
+        c.toLowerCase().includes(citySearch.toLowerCase())
+      )
+    : TURKISH_CITIES;
 
   const handleSubmit = async () => {
-    if (!firstName || !lastName || !city) {
-      Alert.alert('Hata', 'Lütfen zorunlu alanları doldurun');
+    if (!firstName.trim()) {
+      showToast.error('Hata', 'Lütfen adınızı girin');
+      return;
+    }
+    if (!lastName.trim()) {
+      showToast.error('Hata', 'Lütfen soyadınızı girin');
+      return;
+    }
+    if (!city) {
+      showToast.error('Hata', 'Lütfen şehrinizi seçin');
       return;
     }
 
@@ -58,20 +67,100 @@ export default function RegisterProfileScreen() {
     try {
       await registerProfile({
         email: user?.email || '',
-        firstName,
-        lastName,
-        phone,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        phone: phone.trim(),
         city,
-        occupation,
+        occupation: occupation.trim(),
       });
+      showToast.success('Başarılı', 'Profiliniz oluşturuldu');
       router.replace('/(tabs)');
     } catch (error) {
       console.error('Error registering profile:', error);
-      Alert.alert('Hata', 'Profil oluşturulamadı');
+      showToast.error('Hata', 'Profil oluşturulamadı');
     } finally {
       setLoading(false);
     }
   };
+
+  const CityPickerModal = () => (
+    <Modal
+      visible={showCityPicker}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setShowCityPicker(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Şehir Seçin</Text>
+            <TouchableOpacity onPress={() => setShowCityPicker(false)}>
+              <Ionicons name="close" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Arama */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color="#9ca3af" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Şehir ara..."
+              placeholderTextColor="#6b7280"
+              value={citySearch}
+              onChangeText={setCitySearch}
+              autoFocus
+            />
+            {citySearch.length > 0 && (
+              <TouchableOpacity onPress={() => setCitySearch('')}>
+                <Ionicons name="close-circle" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Şehir Listesi */}
+          <FlatList
+            data={filteredCities}
+            keyExtractor={(item) => item}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.cityItem,
+                  city === item && styles.cityItemSelected
+                ]}
+                onPress={() => {
+                  setCity(item);
+                  setShowCityPicker(false);
+                  setCitySearch('');
+                }}
+              >
+                <Ionicons 
+                  name="location" 
+                  size={20} 
+                  color={city === item ? '#6366f1' : '#6b7280'} 
+                />
+                <Text style={[
+                  styles.cityItemText,
+                  city === item && styles.cityItemTextSelected
+                ]}>
+                  {item}
+                </Text>
+                {city === item && (
+                  <Ionicons name="checkmark-circle" size={22} color="#6366f1" />
+                )}
+              </TouchableOpacity>
+            )}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.emptyList}>
+                <Ionicons name="search-outline" size={40} color="#374151" />
+                <Text style={styles.emptyText}>Şehir bulunamadı</Text>
+              </View>
+            }
+          />
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -82,14 +171,18 @@ export default function RegisterProfileScreen() {
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           <View style={styles.header}>
-            <Ionicons name="person-circle" size={80} color="#6366f1" />
+            <View style={styles.iconContainer}>
+              <Ionicons name="person-circle" size={80} color="#6366f1" />
+            </View>
             <Text style={styles.title}>Profil Bilgileri</Text>
-            <Text style={styles.subtitle}>Bilgilerinizi tamamlayın</Text>
+            <Text style={styles.subtitle}>Son bir adım kaldı!</Text>
           </View>
 
           <View style={styles.form}>
+            {/* Ad */}
             <View style={styles.inputContainer}>
               <Ionicons name="person-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
@@ -98,9 +191,11 @@ export default function RegisterProfileScreen() {
                 placeholderTextColor="#6b7280"
                 value={firstName}
                 onChangeText={setFirstName}
+                autoCapitalize="words"
               />
             </View>
 
+            {/* Soyad */}
             <View style={styles.inputContainer}>
               <Ionicons name="person-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
@@ -109,14 +204,16 @@ export default function RegisterProfileScreen() {
                 placeholderTextColor="#6b7280"
                 value={lastName}
                 onChangeText={setLastName}
+                autoCapitalize="words"
               />
             </View>
 
+            {/* Telefon */}
             <View style={styles.inputContainer}>
               <Ionicons name="call-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Telefon"
+                placeholder="Telefon (isteğe bağlı)"
                 placeholderTextColor="#6b7280"
                 value={phone}
                 onChangeText={setPhone}
@@ -124,79 +221,54 @@ export default function RegisterProfileScreen() {
               />
             </View>
 
-            <View style={styles.pickerContainer}>
+            {/* Şehir Seçici */}
+            <TouchableOpacity
+              style={styles.inputContainer}
+              onPress={() => setShowCityPicker(true)}
+              activeOpacity={0.7}
+            >
               <Ionicons name="location-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
-              {loadingCities ? (
-                <ActivityIndicator size="small" color="#6366f1" />
-              ) : (
-                <View style={styles.pickerWrapper}>
-                  <Text style={[styles.pickerLabel, city ? styles.pickerLabelSelected : {}]}>
-                    {city || 'Şehir Seçin *'}
-                  </Text>
-                  <Picker
-                    selectedValue={city}
-                    onValueChange={(itemValue) => setCity(itemValue)}
-                    style={styles.picker}
-                    dropdownIconColor="#9ca3af"
-                  >
-                    <Picker.Item label="Şehir Seçin" value="" color="#6b7280" />
-                    {cities.map((c) => (
-                      <Picker.Item key={c} label={c} value={c} color="#000" />
-                    ))}
-                  </Picker>
-                </View>
-              )}
-            </View>
+              <Text style={[styles.inputText, !city && styles.placeholder]}>
+                {city || 'Şehir Seçin *'}
+              </Text>
+              <Ionicons name="chevron-down" size={20} color="#6b7280" />
+            </TouchableOpacity>
 
+            {/* Meslek */}
             <View style={styles.inputContainer}>
               <Ionicons name="briefcase-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Meslek"
+                placeholder="Meslek (isteğe bağlı)"
                 placeholderTextColor="#6b7280"
                 value={occupation}
                 onChangeText={setOccupation}
               />
             </View>
 
-            {Platform.OS === 'web' ? (
-              <button
-                style={{
-                  backgroundColor: '#6366f1',
-                  height: 56,
-                  borderRadius: 12,
-                  border: 'none',
-                  cursor: 'pointer',
-                  width: '100%',
-                  marginTop: 16,
-                  opacity: loading ? 0.7 : 1,
-                }}
-                onClick={handleSubmit}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
+            {/* Gönder Butonu */}
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
                   <Text style={styles.buttonText}>Tamamla</Text>
-                )}
-              </button>
-            ) : (
-              <TouchableOpacity
-                style={[styles.button, loading && styles.buttonDisabled]}
-                onPress={handleSubmit}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Tamamla</Text>
-                )}
-              </TouchableOpacity>
-            )}
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </>
+              )}
+            </TouchableOpacity>
           </View>
+
+          <Text style={styles.note}>* işaretli alanlar zorunludur</Text>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <CityPickerModal />
     </SafeAreaView>
   );
 }
@@ -216,7 +288,15 @@ const styles = StyleSheet.create({
   header: {
     alignItems: 'center',
     marginBottom: 32,
-    marginTop: 24,
+    marginTop: 16,
+  },
+  iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: 28,
@@ -242,41 +322,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#374151',
   },
-  pickerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1f2937',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    height: 56,
-    borderWidth: 1,
-    borderColor: '#374151',
-  },
-  pickerWrapper: {
-    flex: 1,
-    position: 'relative',
-  },
-  pickerLabel: {
-    color: '#6b7280',
-    fontSize: 16,
-    position: 'absolute',
-    left: 0,
-    top: 18,
-    zIndex: 1,
-  },
-  pickerLabelSelected: {
-    color: '#fff',
-  },
-  picker: {
-    flex: 1,
-    color: '#fff',
-    opacity: 0,
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
-  },
   inputIcon: {
     marginRight: 12,
   },
@@ -285,13 +330,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  inputText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+  },
+  placeholder: {
+    color: '#6b7280',
+  },
   button: {
     backgroundColor: '#6366f1',
     height: 56,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
+    marginTop: 8,
+    flexDirection: 'row',
+    gap: 8,
   },
   buttonDisabled: {
     opacity: 0.7,
@@ -300,5 +355,82 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  note: {
+    color: '#6b7280',
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 24,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    margin: 16,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 48,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+  },
+  cityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    gap: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  cityItemSelected: {
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+  },
+  cityItemText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 16,
+  },
+  cityItemTextSelected: {
+    color: '#6366f1',
+    fontWeight: '600',
+  },
+  emptyList: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyText: {
+    color: '#6b7280',
+    fontSize: 16,
+    marginTop: 12,
   },
 });
