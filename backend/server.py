@@ -300,6 +300,19 @@ async def update_user_profile(updates: dict, current_user: dict = Depends(get_cu
     )
     return {"message": "Profile updated"}
 
+@api_router.put("/user/profile-image")
+async def update_profile_image(data: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının profil resmini güncelle"""
+    image_url = data.get('profileImageUrl') or data.get('imageUrl')
+    if not image_url:
+        raise HTTPException(status_code=400, detail="Profil resmi URL'i gerekli")
+    
+    await db.users.update_one(
+        {"uid": current_user['uid']},
+        {"$set": {"profileImageUrl": image_url}}
+    )
+    return {"message": "Profil resmi güncellendi", "profileImageUrl": image_url}
+
 @api_router.get("/user/is-admin")
 async def check_user_admin(current_user: dict = Depends(get_current_user)):
     user = await db.users.find_one({"uid": current_user['uid']})
