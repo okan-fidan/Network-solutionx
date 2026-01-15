@@ -383,10 +383,26 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 16,
   },
+  menuTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   menuTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  newBadge: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  newBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   menuSubtitle: {
     fontSize: 13,
