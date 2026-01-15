@@ -120,6 +120,46 @@ export default function PostDetailScreen() {
     }
   };
 
+  const handleDeletePost = () => {
+    Alert.alert(
+      'Gönderiyi Sil',
+      'Bu gönderiyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.',
+      [
+        { text: 'İptal', style: 'cancel' },
+        { 
+          text: 'Sil', 
+          style: 'destructive',
+          onPress: confirmDeletePost 
+        },
+      ]
+    );
+  };
+
+  const confirmDeletePost = async () => {
+    if (!postId) return;
+    
+    setDeleting(true);
+    try {
+      await postApi.delete(postId);
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Gönderi silindi',
+      });
+      router.back();
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      const errorMsg = error.response?.data?.detail || 'Gönderi silinemedi';
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: errorMsg,
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const formatTime = (timestamp: string) => {
     try {
       return formatDistanceToNow(new Date(timestamp), { addSuffix: true, locale: tr });
