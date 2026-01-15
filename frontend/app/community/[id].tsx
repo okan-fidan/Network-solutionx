@@ -13,15 +13,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Dimensions,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 import { communityApi, subgroupRequestApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import api from '../../src/services/api';
-import { showToast, SkeletonCard, AnimatedPressable } from '../../src/components/ui';
+import { showToast } from '../../src/components/ui';
+
+const { width } = Dimensions.get('window');
 
 interface Announcement {
   id: string;
@@ -52,24 +57,23 @@ interface SubGroup {
   imageUrl?: string;
 }
 
-// Alt grup kartı için ikon belirleme
-const getSubgroupIcon = (name: string): string => {
-  const lowerName = name.toLowerCase();
-  if (lowerName.includes('start') || lowerName.includes('başla')) return 'rocket';
-  if (lowerName.includes('gelişim')) return 'trending-up';
-  if (lowerName.includes('değerlendirme')) return 'analytics';
-  if (lowerName.includes('mastermind')) return 'bulb';
-  return 'chatbubbles';
+// Alt grup için ikon ve renk belirleme
+const SUBGROUP_THEMES: { [key: string]: { icon: string; color: string; gradient: string[] } } = {
+  'duyuru': { icon: 'megaphone', color: '#f59e0b', gradient: ['#f59e0b', '#d97706'] },
+  'start': { icon: 'rocket', color: '#10b981', gradient: ['#10b981', '#059669'] },
+  'başla': { icon: 'rocket', color: '#10b981', gradient: ['#10b981', '#059669'] },
+  'gelişim': { icon: 'trending-up', color: '#3b82f6', gradient: ['#3b82f6', '#2563eb'] },
+  'değerlendirme': { icon: 'analytics', color: '#f59e0b', gradient: ['#f59e0b', '#d97706'] },
+  'mastermind': { icon: 'bulb', color: '#8b5cf6', gradient: ['#8b5cf6', '#7c3aed'] },
+  'default': { icon: 'chatbubbles', color: '#6366f1', gradient: ['#6366f1', '#4f46e5'] },
 };
 
-// Alt grup kartı için renk belirleme
-const getSubgroupColor = (name: string): string => {
+const getSubgroupTheme = (name: string) => {
   const lowerName = name.toLowerCase();
-  if (lowerName.includes('start') || lowerName.includes('başla')) return '#10b981';
-  if (lowerName.includes('gelişim')) return '#3b82f6';
-  if (lowerName.includes('değerlendirme')) return '#f59e0b';
-  if (lowerName.includes('mastermind')) return '#8b5cf6';
-  return '#6366f1';
+  for (const key of Object.keys(SUBGROUP_THEMES)) {
+    if (lowerName.includes(key)) return SUBGROUP_THEMES[key];
+  }
+  return SUBGROUP_THEMES['default'];
 };
 
 export default function CommunityDetailScreen() {
@@ -80,12 +84,12 @@ export default function CommunityDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [joining, setJoining] = useState(false);
   const [joiningSubgroup, setJoiningSubgroup] = useState<string | null>(null);
-  // Duyuru modal state'leri
   const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
   const [announcementText, setAnnouncementText] = useState('');
   const [sendingAnnouncement, setSendingAnnouncement] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
   const { userProfile, user } = useAuth();
   const router = useRouter();
 
@@ -149,20 +153,17 @@ export default function CommunityDetailScreen() {
 
   const handleSubgroupAction = async (subgroup: SubGroup) => {
     if (subgroup.isMember) {
-      // Üyeyse sohbete yönlendir
       router.push(`/chat/group/${subgroup.id}`);
     } else if (subgroup.hasPendingRequest) {
-      // Zaten istek varsa bilgi ver
       Alert.alert('Bilgi', 'Bu grup için zaten bir katılım isteğiniz var. Yönetici onayı bekleniyor.');
     } else {
-      // Katılım isteği gönder
       setJoiningSubgroup(subgroup.id);
       try {
         const response = await subgroupRequestApi.requestJoin(subgroup.id);
         if (response.data.status === 'joined') {
-          Alert.alert('Başarılı', 'Gruba katıldınız!');
+          showToast.success('Başarılı', 'Gruba katıldınız!');
         } else {
-          Alert.alert('İstek Gönderildi', 'Katılma isteğiniz gönderildi. Yönetici onayı bekleniyor.');
+          showToast.info('İstek Gönderildi', 'Yönetici onayı bekleniyor.');
         }
         loadCommunity();
       } catch (error: any) {
@@ -196,12 +197,11 @@ export default function CommunityDetailScreen() {
     setSendingAnnouncement(true);
     try {
       await communityApi.sendAnnouncement(id!, { content: announcementText.trim() });
-      Alert.alert('Başarılı', 'Duyuru gönderildi');
+      showToast.success('Başarılı', 'Duyuru gönderildi');
       setShowAnnouncementModal(false);
       setAnnouncementText('');
       loadAnnouncements();
     } catch (error: any) {
-      console.error('Error sending announcement:', error);
       Alert.alert('Hata', error?.response?.data?.detail || 'Duyuru gönderilemedi');
     } finally {
       setSendingAnnouncement(false);
@@ -209,28 +209,23 @@ export default function CommunityDetailScreen() {
   };
 
   const handleDeleteAnnouncement = async (announcementId: string) => {
-    Alert.alert(
-      'Duyuruyu Sil',
-      'Bu duyuruyu silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await communityApi.deleteAnnouncement(id!, announcementId);
-              loadAnnouncements();
-            } catch (error) {
-              Alert.alert('Hata', 'Duyuru silinemedi');
-            }
-          },
+    Alert.alert('Duyuruyu Sil', 'Bu duyuruyu silmek istediğinize emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Sil',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await communityApi.deleteAnnouncement(id!, announcementId);
+            loadAnnouncements();
+          } catch (error) {
+            Alert.alert('Hata', 'Duyuru silinemedi');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  // Topluluk fotoğrafı değiştir
   const handleChangeCommunityImage = async () => {
     if (!isAdmin) return;
     
@@ -254,7 +249,7 @@ export default function CommunityDetailScreen() {
         await api.put(`/api/communities/${id}/image`, {
           imageData: result.assets[0].base64,
         });
-        Alert.alert('Başarılı', 'Topluluk fotoğrafı güncellendi');
+        showToast.success('Başarılı', 'Topluluk fotoğrafı güncellendi');
         loadCommunity();
       } catch (error) {
         Alert.alert('Hata', 'Fotoğraf yüklenemedi');
@@ -264,59 +259,51 @@ export default function CommunityDetailScreen() {
     }
   };
 
-  // Topluluktan ayrıl
   const handleLeaveCommunity = async () => {
-    Alert.alert(
-      'Topluluktan Ayrıl',
-      'Bu topluluktan ayrılmak istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Ayrıl',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await communityApi.leave(community!.id);
-              Alert.alert('Başarılı', 'Topluluktan ayrıldınız');
-              setShowSettingsModal(false);
-              router.back();
-            } catch (error) {
-              Alert.alert('Hata', 'Ayrılma işlemi başarısız');
-            }
-          },
+    Alert.alert('Topluluktan Ayrıl', 'Bu topluluktan ayrılmak istediğinize emin misiniz?', [
+      { text: 'İptal', style: 'cancel' },
+      {
+        text: 'Ayrıl',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await communityApi.leave(community!.id);
+            showToast.success('Başarılı', 'Topluluktan ayrıldınız');
+            setShowSettingsModal(false);
+            router.back();
+          } catch (error) {
+            Alert.alert('Hata', 'Ayrılma işlemi başarısız');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  // Alt grup kart durumunu render et
-  const renderSubgroupStatus = (subgroup: SubGroup) => {
+  // Üyelik durumu badge'i
+  const renderMembershipBadge = (subgroup: SubGroup) => {
     if (joiningSubgroup === subgroup.id) {
-      return <ActivityIndicator size="small" color="#6366f1" />;
+      return <ActivityIndicator size="small" color="#10b981" />;
     }
 
     if (subgroup.isMember) {
       return (
-        <View style={styles.memberBadge}>
-          <Ionicons name="checkmark-circle" size={20} color="#10b981" />
-          <Text style={styles.memberText}>Üyesin</Text>
+        <View style={styles.membershipBadge}>
+          <Ionicons name="checkmark-circle" size={22} color="#10b981" />
         </View>
       );
     }
 
     if (subgroup.hasPendingRequest) {
       return (
-        <View style={styles.pendingBadge}>
-          <Ionicons name="time" size={20} color="#f59e0b" />
-          <Text style={styles.pendingText}>Beklemede</Text>
+        <View style={[styles.membershipBadge, styles.pendingBadge]}>
+          <Ionicons name="time" size={22} color="#f59e0b" />
         </View>
       );
     }
 
     return (
-      <View style={styles.joinBadge}>
-        <Ionicons name="add-circle" size={20} color="#6366f1" />
-        <Text style={styles.joinText}>Katıl</Text>
+      <View style={[styles.membershipBadge, styles.joinableBadge]}>
+        <Ionicons name="add" size={22} color="#6b7280" />
       </View>
     );
   };
@@ -338,18 +325,22 @@ export default function CommunityDetailScreen() {
     );
   }
 
+  const description = community.description || `${community.city} ilindeki girişimcilerin buluşma noktası`;
+  const shouldTruncateDescription = description.length > 100;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Modern Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.headerButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>{community.name}</Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle} numberOfLines={1}>{community.name}</Text>
+          <Text style={styles.headerSubtitle}>{community.memberCount} üye</Text>
+        </View>
         {community.isMember && (
-          <TouchableOpacity 
-            style={styles.settingsButton}
-            onPress={() => setShowSettingsModal(true)}
-          >
+          <TouchableOpacity style={styles.headerButton} onPress={() => setShowSettingsModal(true)}>
             <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
           </TouchableOpacity>
         )}
@@ -358,45 +349,58 @@ export default function CommunityDetailScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
-        }
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />}
       >
-        {/* Community Info with Image */}
-        <View style={styles.communityHeader}>
-          <TouchableOpacity 
-            style={styles.communityImageWrapper}
+        {/* Profile Section - WhatsApp Style */}
+        <View style={styles.profileSection}>
+          <TouchableOpacity
+            style={styles.avatarWrapper}
             onPress={isAdmin ? handleChangeCommunityImage : undefined}
             disabled={!isAdmin || uploadingImage}
           >
             {community.imageUrl ? (
-              <Image source={{ uri: community.imageUrl }} style={styles.communityImage} />
+              <Image source={{ uri: community.imageUrl }} style={styles.avatar} />
             ) : (
-              <View style={styles.communityIcon}>
-                <Ionicons name="people" size={48} color="#6366f1" />
-              </View>
+              <LinearGradient colors={['#6366f1', '#4f46e5']} style={styles.avatarPlaceholder}>
+                <Ionicons name="people" size={56} color="#fff" />
+              </LinearGradient>
             )}
             {isAdmin && (
-              <View style={styles.editImageBadge}>
+              <View style={styles.cameraButton}>
                 {uploadingImage ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Ionicons name="camera" size={16} color="#fff" />
+                  <Ionicons name="camera" size={18} color="#fff" />
                 )}
               </View>
             )}
           </TouchableOpacity>
-          <Text style={styles.communityName}>{community.name}</Text>
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={18} color="#6366f1" />
-            <Text style={styles.locationText}>{community.city}</Text>
-          </View>
-          <Text style={styles.memberCount}>{community.memberCount} üye</Text>
-          {community.description && (
-            <Text style={styles.description}>{community.description}</Text>
-          )}
 
-          {/* Katıl butonu - sadece üye değilse göster */}
+          <Text style={styles.communityName}>{community.name}</Text>
+          
+          <View style={styles.locationRow}>
+            <Ionicons name="location" size={16} color="#6366f1" />
+            <Text style={styles.locationText}>{community.city}</Text>
+            <View style={styles.dotSeparator} />
+            <Text style={styles.memberCountText}>{community.memberCount} üye</Text>
+          </View>
+
+          {/* Açıklama - Devamını Oku */}
+          <View style={styles.descriptionContainer}>
+            <Text style={styles.descriptionText} numberOfLines={showFullDescription ? undefined : 3}>
+              {description}
+            </Text>
+            {shouldTruncateDescription && (
+              <TouchableOpacity onPress={() => setShowFullDescription(!showFullDescription)}>
+                <Text style={styles.readMoreText}>
+                  {showFullDescription ? 'Daha az göster' : 'Devamını oku'}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* Katıl Butonu */}
           {!community.isMember && (
             <TouchableOpacity
               style={styles.joinButton}
@@ -408,114 +412,173 @@ export default function CommunityDetailScreen() {
               ) : (
                 <>
                   <Ionicons name="enter-outline" size={20} color="#fff" />
-                  <Text style={styles.joinButtonText}>Katıl</Text>
+                  <Text style={styles.joinButtonText}>Topluluğa Katıl</Text>
                 </>
               )}
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Announcements Section - EN ÜSTTE */}
-        <View style={styles.announcementsSection}>
-          <View style={styles.announcementHeader}>
-            <Ionicons name="megaphone" size={24} color="#f59e0b" />
-            <Text style={styles.sectionTitle}>Duyurular</Text>
+        {/* Duyurular Section - WhatsApp Style */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionIcon, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                <Ionicons name="megaphone" size={20} color="#f59e0b" />
+              </View>
+              <Text style={styles.sectionTitle}>Duyurular</Text>
+            </View>
             {isAdmin && (
-              <TouchableOpacity 
-                style={styles.addAnnouncementBtn}
-                onPress={() => setShowAnnouncementModal(true)}
-              >
-                <Ionicons name="add-circle" size={28} color="#f59e0b" />
+              <TouchableOpacity style={styles.addButton} onPress={() => setShowAnnouncementModal(true)}>
+                <Ionicons name="add" size={24} color="#f59e0b" />
               </TouchableOpacity>
             )}
           </View>
-          
-          {!community.isMember && (
-            <View style={styles.guestNotice}>
-              <Ionicons name="information-circle" size={18} color="#6b7280" />
-              <Text style={styles.guestNoticeText}>
-                Sadece son 5 duyuruyu görüntülüyorsunuz. Tümünü görmek için topluluğa katılın.
-              </Text>
-            </View>
-          )}
 
           {announcements.length > 0 ? (
-            announcements.map((announcement) => (
-              <View key={announcement.id} style={styles.announcementCard}>
-                <View style={styles.announcementMeta}>
-                  <Text style={styles.announcementSender}>{announcement.senderName}</Text>
-                  <View style={styles.announcementActions}>
-                    <Text style={styles.announcementTime}>
-                      {formatDate(announcement.timestamp)}
-                    </Text>
-                    {isAdmin && (
-                      <TouchableOpacity 
-                        onPress={() => handleDeleteAnnouncement(announcement.id)}
-                        style={styles.deleteAnnouncementBtn}
-                      >
-                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
-                      </TouchableOpacity>
-                    )}
+            <View style={styles.announcementList}>
+              {announcements.slice(0, 3).map((announcement) => (
+                <View key={announcement.id} style={styles.announcementCard}>
+                  <View style={styles.announcementHeader}>
+                    <Text style={styles.announcementSender}>{announcement.senderName}</Text>
+                    <View style={styles.announcementMeta}>
+                      <Text style={styles.announcementTime}>{formatDate(announcement.timestamp)}</Text>
+                      {isAdmin && (
+                        <TouchableOpacity onPress={() => handleDeleteAnnouncement(announcement.id)}>
+                          <Ionicons name="trash-outline" size={16} color="#ef4444" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
                   </View>
+                  <Text style={styles.announcementContent}>{announcement.content}</Text>
                 </View>
-                <Text style={styles.announcementContent}>{announcement.content}</Text>
-              </View>
-            ))
+              ))}
+            </View>
           ) : (
-            <View style={styles.emptyAnnouncements}>
-              <Ionicons name="megaphone-outline" size={40} color="#374151" />
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrapper}>
+                <Ionicons name="megaphone-outline" size={48} color="#374151" />
+              </View>
               <Text style={styles.emptyText}>Henüz duyuru yok</Text>
+              <Text style={styles.emptySubtext}>Topluluk duyuruları burada görünecek</Text>
             </View>
           )}
         </View>
 
-        {/* Subgroups Section */}
-        <View style={styles.subgroupsSection}>
-          <Text style={styles.sectionTitle}>Alt Gruplar</Text>
+        {/* Alt Gruplar Section - WhatsApp Style */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionTitleRow}>
+              <View style={[styles.sectionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                <Ionicons name="chatbubbles" size={20} color="#6366f1" />
+              </View>
+              <Text style={styles.sectionTitle}>Alt Gruplar</Text>
+            </View>
+          </View>
+          
           <Text style={styles.sectionSubtitle}>
             Gruplara katılmak için yönetici onayı gereklidir
           </Text>
-          
+
           {community.subGroupsList && community.subGroupsList.length > 0 ? (
-            <View style={styles.subgroupGrid}>
+            <View style={styles.subgroupList}>
               {community.subGroupsList.map((subgroup) => {
-                const iconName = getSubgroupIcon(subgroup.name);
-                const color = getSubgroupColor(subgroup.name);
+                const theme = getSubgroupTheme(subgroup.name);
                 const displayName = subgroup.name.replace(`${community.name} - `, '');
                 
                 return (
                   <TouchableOpacity
                     key={subgroup.id}
-                    style={[styles.subgroupCard, { borderLeftColor: color }]}
+                    style={styles.subgroupCard}
                     onPress={() => handleSubgroupAction(subgroup)}
                     activeOpacity={0.7}
                   >
-                    <View style={[styles.subgroupIconWrapper, { backgroundColor: `${color}20` }]}>
-                      <Ionicons name={iconName as any} size={28} color={color} />
-                    </View>
+                    <LinearGradient 
+                      colors={theme.gradient} 
+                      style={styles.subgroupIconWrapper}
+                    >
+                      <Ionicons name={theme.icon as any} size={24} color="#fff" />
+                    </LinearGradient>
+                    
                     <View style={styles.subgroupInfo}>
                       <Text style={styles.subgroupName}>{displayName}</Text>
                       {subgroup.description && (
-                        <Text style={styles.subgroupDescription} numberOfLines={2}>
+                        <Text style={styles.subgroupDescription} numberOfLines={1}>
                           {subgroup.description}
                         </Text>
                       )}
                       <Text style={styles.subgroupMembers}>{subgroup.memberCount} üye</Text>
                     </View>
-                    {renderSubgroupStatus(subgroup)}
+
+                    {renderMembershipBadge(subgroup)}
                   </TouchableOpacity>
                 );
               })}
             </View>
           ) : (
-            <View style={styles.emptySubgroups}>
-              <Ionicons name="chatbubbles-outline" size={48} color="#374151" />
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconWrapper}>
+                <Ionicons name="chatbubbles-outline" size={48} color="#374151" />
+              </View>
               <Text style={styles.emptyText}>Henüz alt grup yok</Text>
             </View>
           )}
         </View>
 
-        {/* Bottom padding */}
+        {/* Yönetici Araçları - Sadece admin için */}
+        {isAdmin && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionTitleRow}>
+                <View style={[styles.sectionIcon, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                  <Ionicons name="shield-checkmark" size={20} color="#8b5cf6" />
+                </View>
+                <Text style={styles.sectionTitle}>Yönetici Araçları</Text>
+              </View>
+            </View>
+
+            <View style={styles.adminToolsList}>
+              <TouchableOpacity 
+                style={styles.adminToolItem}
+                onPress={handleChangeCommunityImage}
+              >
+                <View style={[styles.adminToolIcon, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
+                  <Ionicons name="camera" size={20} color="#6366f1" />
+                </View>
+                <Text style={styles.adminToolText}>Profil Fotoğrafı</Text>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={styles.adminToolItem}
+                onPress={() => setShowAnnouncementModal(true)}
+              >
+                <View style={[styles.adminToolIcon, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
+                  <Ionicons name="megaphone" size={20} color="#f59e0b" />
+                </View>
+                <Text style={styles.adminToolText}>Duyuru Gönder</Text>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.adminToolItem}>
+                <View style={[styles.adminToolIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                  <Ionicons name="people" size={20} color="#10b981" />
+                </View>
+                <Text style={styles.adminToolText}>Üyeleri Yönet</Text>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.adminToolItem}>
+                <View style={[styles.adminToolIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                  <Ionicons name="settings" size={20} color="#3b82f6" />
+                </View>
+                <Text style={styles.adminToolText}>Topluluk Ayarları</Text>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <View style={{ height: 40 }} />
       </ScrollView>
 
@@ -523,6 +586,7 @@ export default function CommunityDetailScreen() {
       <Modal visible={showSettingsModal} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.settingsModalContent}>
+            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Topluluk Ayarları</Text>
               <TouchableOpacity onPress={() => setShowSettingsModal(false)}>
@@ -531,47 +595,6 @@ export default function CommunityDetailScreen() {
             </View>
 
             <View style={styles.settingsModalBody}>
-              {/* Profil Resmi Değiştir - Sadece admin için */}
-              {isAdmin && (
-                <TouchableOpacity 
-                  style={styles.settingsOption}
-                  onPress={() => {
-                    setShowSettingsModal(false);
-                    handleChangeCommunityImage();
-                  }}
-                >
-                  <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(99, 102, 241, 0.1)' }]}>
-                    <Ionicons name="camera" size={24} color="#6366f1" />
-                  </View>
-                  <View style={styles.settingsOptionInfo}>
-                    <Text style={styles.settingsOptionTitle}>Profil Fotoğrafı Değiştir</Text>
-                    <Text style={styles.settingsOptionSubtitle}>Topluluk resmini güncelle</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-                </TouchableOpacity>
-              )}
-
-              {/* Duyuru Gönder - Sadece admin için */}
-              {isAdmin && (
-                <TouchableOpacity 
-                  style={styles.settingsOption}
-                  onPress={() => {
-                    setShowSettingsModal(false);
-                    setShowAnnouncementModal(true);
-                  }}
-                >
-                  <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
-                    <Ionicons name="megaphone" size={24} color="#f59e0b" />
-                  </View>
-                  <View style={styles.settingsOptionInfo}>
-                    <Text style={styles.settingsOptionTitle}>Duyuru Gönder</Text>
-                    <Text style={styles.settingsOptionSubtitle}>Tüm üyelere bildirim gönder</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
-                </TouchableOpacity>
-              )}
-
-              {/* Bildirimler */}
               <TouchableOpacity style={styles.settingsOption}>
                 <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
                   <Ionicons name="notifications" size={24} color="#10b981" />
@@ -583,16 +606,15 @@ export default function CommunityDetailScreen() {
                 <Ionicons name="chevron-forward" size={20} color="#6b7280" />
               </TouchableOpacity>
 
-              {/* Topluluktan Ayrıl */}
               <TouchableOpacity 
-                style={[styles.settingsOption, styles.dangerOption]}
+                style={[styles.settingsOption, { marginTop: 8 }]}
                 onPress={handleLeaveCommunity}
               >
                 <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
                   <Ionicons name="exit" size={24} color="#ef4444" />
                 </View>
                 <View style={styles.settingsOptionInfo}>
-                  <Text style={[styles.settingsOptionTitle, styles.dangerText]}>Topluluktan Ayrıl</Text>
+                  <Text style={[styles.settingsOptionTitle, { color: '#ef4444' }]}>Topluluktan Ayrıl</Text>
                   <Text style={styles.settingsOptionSubtitle}>Bu topluluktan çık</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color="#ef4444" />
@@ -608,7 +630,8 @@ export default function CommunityDetailScreen() {
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalOverlay}
         >
-          <View style={styles.modalContent}>
+          <View style={styles.announcementModalContent}>
+            <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Yeni Duyuru</Text>
               <TouchableOpacity onPress={() => setShowAnnouncementModal(false)}>
@@ -672,343 +695,66 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 16,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#1f2937',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    flex: 1,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  adminButton: {
+  headerButton: {
     width: 44,
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#9ca3af',
+    marginTop: 1,
+  },
+
   scrollView: {
     flex: 1,
   },
-  communityHeader: {
+
+  // Profile Section
+  profileSection: {
     alignItems: 'center',
-    paddingVertical: 32,
-    paddingHorizontal: 24,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f2937',
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+    borderBottomWidth: 8,
+    borderBottomColor: '#111827',
   },
-  communityIcon: {
-    width: 96,
-    height: 96,
-    borderRadius: 24,
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  communityName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    textAlign: 'center',
-  },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-    gap: 4,
-  },
-  locationText: {
-    color: '#9ca3af',
-    fontSize: 16,
-  },
-  memberCount: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  description: {
-    color: '#9ca3af',
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 16,
-    lineHeight: 20,
-  },
-  joinButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#6366f1',
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 24,
-    marginTop: 24,
-    gap: 8,
-  },
-  leaveButton: {
-    backgroundColor: '#374151',
-  },
-  joinButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  subgroupsSection: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1f2937',
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
-    marginBottom: 4,
-  },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#6b7280',
-    marginBottom: 16,
-  },
-  subgroupGrid: {
-    gap: 12,
-  },
-  subgroupCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    borderLeftWidth: 4,
-  },
-  subgroupIconWrapper: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  subgroupInfo: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  subgroupName: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  subgroupDescription: {
-    color: '#9ca3af',
-    fontSize: 12,
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  subgroupMembers: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  memberBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  memberText: {
-    color: '#10b981',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  pendingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  pendingText: {
-    color: '#f59e0b',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  joinBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(99, 102, 241, 0.1)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 4,
-  },
-  joinText: {
-    color: '#6366f1',
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  emptySubgroups: {
-    alignItems: 'center',
-    paddingVertical: 48,
-  },
-  emptyText: {
-    color: '#6b7280',
-    fontSize: 14,
-    marginTop: 12,
-  },
-  announcementsSection: {
-    padding: 16,
-  },
-  announcementHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  guestNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1f2937',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    gap: 8,
-  },
-  guestNoticeText: {
-    flex: 1,
-    color: '#9ca3af',
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  announcementCard: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#f59e0b',
-  },
-  announcementMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  announcementSender: {
-    color: '#f59e0b',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  announcementTime: {
-    color: '#6b7280',
-    fontSize: 12,
-  },
-  announcementContent: {
-    color: '#e5e7eb',
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  emptyAnnouncements: {
-    alignItems: 'center',
-    paddingVertical: 32,
-  },
-  addAnnouncementBtn: {
-    marginLeft: 'auto',
-  },
-  announcementActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  deleteAnnouncementBtn: {
-    padding: 4,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: '#1f2937',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: '80%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#374151',
-  },
-  modalTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-  },
-  modalBody: {
-    padding: 20,
-  },
-  announcementInput: {
-    backgroundColor: '#374151',
-    borderRadius: 12,
-    padding: 16,
-    color: '#fff',
-    fontSize: 16,
-    minHeight: 120,
-    textAlignVertical: 'top',
-  },
-  sendAnnouncementBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f59e0b',
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 16,
-    gap: 8,
-  },
-  disabledBtn: {
-    opacity: 0.6,
-  },
-  sendAnnouncementText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  communityImageWrapper: {
-    width: 96,
-    height: 96,
-    borderRadius: 24,
-    marginBottom: 16,
+  avatarWrapper: {
     position: 'relative',
+    marginBottom: 16,
   },
-  communityImage: {
-    width: 96,
-    height: 96,
-    borderRadius: 24,
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
   },
-  editImageBadge: {
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cameraButton: {
     position: 'absolute',
     bottom: 0,
     right: 0,
@@ -1021,27 +767,305 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#0a0a0a',
   },
+  communityName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  locationText: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginLeft: 4,
+  },
+  dotSeparator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#6b7280',
+    marginHorizontal: 8,
+  },
+  memberCountText: {
+    color: '#9ca3af',
+    fontSize: 14,
+  },
+  descriptionContainer: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  descriptionText: {
+    color: '#d1d5db',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  readMoreText: {
+    color: '#6366f1',
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 4,
+    textAlign: 'center',
+  },
+  joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366f1',
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    marginTop: 20,
+    gap: 8,
+  },
+  joinButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // Section Styles
+  section: {
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderBottomWidth: 8,
+    borderBottomColor: '#111827',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sectionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#6b7280',
+    marginBottom: 16,
+    marginLeft: 46,
+  },
+  addButton: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Announcements
+  announcementList: {
+    gap: 10,
+  },
+  announcementCard: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 14,
+    borderLeftWidth: 3,
+    borderLeftColor: '#f59e0b',
+  },
+  announcementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  announcementSender: {
+    color: '#f59e0b',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  announcementMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  announcementTime: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  announcementContent: {
+    color: '#e5e7eb',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyIconWrapper: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#1f2937',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  emptyText: {
+    color: '#9ca3af',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  emptySubtext: {
+    color: '#6b7280',
+    fontSize: 13,
+    marginTop: 4,
+  },
+
+  // Subgroups
+  subgroupList: {
+    gap: 10,
+  },
+  subgroupCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1f2937',
+  },
+  subgroupIconWrapper: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  subgroupInfo: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  subgroupName: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  subgroupDescription: {
+    color: '#9ca3af',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  subgroupMembers: {
+    color: '#6b7280',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  membershipBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pendingBadge: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  },
+  joinableBadge: {
+    backgroundColor: 'rgba(107, 114, 128, 0.1)',
+  },
+
+  // Admin Tools
+  adminToolsList: {
+    gap: 8,
+  },
+  adminToolItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 14,
+  },
+  adminToolIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  adminToolText: {
+    flex: 1,
+    color: '#fff',
+    fontSize: 15,
+    marginLeft: 12,
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#6b7280',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 8,
+  },
   settingsModalContent: {
     backgroundColor: '#1f2937',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    maxHeight: '70%',
-    marginTop: 'auto',
+    maxHeight: '60%',
+  },
+  announcementModalContent: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  modalTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: 16,
   },
   settingsModalBody: {
     padding: 16,
-    gap: 8,
   },
   settingsOption: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#111827',
-    padding: 16,
+    padding: 14,
     borderRadius: 12,
   },
   settingsIconWrapper: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -1052,7 +1076,7 @@ const styles = StyleSheet.create({
   },
   settingsOptionTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
   settingsOptionSubtitle: {
@@ -1060,10 +1084,33 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 2,
   },
-  dangerOption: {
-    marginTop: 8,
+  announcementInput: {
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 14,
+    color: '#fff',
+    fontSize: 15,
+    minHeight: 120,
+    textAlignVertical: 'top',
+    borderWidth: 1,
+    borderColor: '#374151',
   },
-  dangerText: {
-    color: '#ef4444',
+  sendAnnouncementBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f59e0b',
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 14,
+    gap: 8,
+  },
+  disabledBtn: {
+    opacity: 0.6,
+  },
+  sendAnnouncementText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
   },
 });
