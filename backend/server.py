@@ -752,6 +752,37 @@ async def leave_subgroup(subgroup_id: str, current_user: dict = Depends(get_curr
     )
     return {"message": "Gruptan ayrıldınız"}
 
+# Subgroup (grup) profil resmi güncelle
+@api_router.put("/subgroups/{subgroup_id}/image")
+async def update_subgroup_image(subgroup_id: str, request: Request, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    # Check if user is group admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    body = await request.json()
+    image_data = body.get('imageData')
+    
+    if not image_data:
+        raise HTTPException(status_code=400, detail="Resim verisi gerekli")
+    
+    # Store as data URL
+    image_url = f"data:image/jpeg;base64,{image_data}"
+    
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$set": {"imageUrl": image_url}}
+    )
+    
+    return {"message": "Grup resmi güncellendi", "imageUrl": image_url}
+
 # ==================== MESSAGES ====================
 
 @api_router.get("/subgroups/{subgroup_id}/messages")
