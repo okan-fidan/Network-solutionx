@@ -320,6 +320,13 @@ export default function HomeScreen() {
     loadData();
   }, [loadData]);
 
+  // Sayfa odaklandığında veriyi yenile (silme sonrası otomatik güncelleme için)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [loadData])
+  );
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData();
@@ -336,6 +343,93 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error liking post:', error);
     }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      await postApi.delete(postId);
+      // Gönderiyi listeden kaldır
+      setPosts(posts.filter(post => post.id !== postId));
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Gönderi silindi',
+      });
+    } catch (error: any) {
+      console.error('Error deleting post:', error);
+      const errorMsg = error.response?.data?.detail || 'Gönderi silinemedi';
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: errorMsg,
+      });
+    }
+  };
+
+  const showPostOptions = (item: Post) => {
+    const isOwner = user && item.userId === user.uid;
+    const isAdmin = userProfile?.isAdmin === true;
+    const canDelete = isOwner || isAdmin;
+
+    const options: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' | 'default' }[] = [];
+
+    // Görüntüle seçeneği
+    options.push({ 
+      text: 'Görüntüle', 
+      onPress: () => router.push(`/post/${item.id}`)
+    });
+
+    // Profili görüntüle
+    if (!isOwner) {
+      options.push({ 
+        text: 'Profili Görüntüle', 
+        onPress: () => router.push(`/user/${item.userId}`)
+      });
+    }
+
+    // Silme seçeneği (sadece sahip veya admin için)
+    if (canDelete) {
+      options.push({
+        text: isOwner ? 'Gönderiyi Sil' : 'Gönderiyi Sil (Admin)',
+        style: 'destructive',
+        onPress: () => {
+          Alert.alert(
+            'Gönderiyi Sil',
+            'Bu gönderiyi silmek istediğinizden emin misiniz?',
+            [
+              { text: 'İptal', style: 'cancel' },
+              { 
+                text: 'Sil', 
+                style: 'destructive',
+                onPress: () => handleDeletePost(item.id)
+              },
+            ]
+          );
+        }
+      });
+    }
+
+    // Bildir seçeneği (sadece başkalarının gönderileri için)
+    if (!isOwner) {
+      options.push({ 
+        text: 'Bildir', 
+        onPress: () => {
+          Toast.show({
+            type: 'info',
+            text1: 'Bildirildi',
+            text2: 'Gönderi incelenmek üzere bildirildi',
+          });
+        }
+      });
+    }
+
+    options.push({ text: 'İptal', style: 'cancel' });
+
+    Alert.alert(
+      'Gönderi Seçenekleri',
+      '',
+      options
+    );
   };
 
   const formatTime = (timestamp: string) => {
