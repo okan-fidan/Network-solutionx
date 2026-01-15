@@ -57,6 +57,10 @@ export default function PostDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [newComment, setNewComment] = useState('');
   const [sending, setSending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  // Kullanıcının kendi gönderi mi kontrol et
+  const isOwner = post && user && post.userId === user.uid;
 
   const loadData = useCallback(async () => {
     try {
