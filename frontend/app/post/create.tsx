@@ -147,9 +147,28 @@ export default function CreatePostScreen() {
 
     setLoading(true);
     try {
+      let imageUrl = null;
+      
+      // Eğer resim seçildiyse base64'e dönüştür
+      if (selectedImage) {
+        try {
+          const response = await fetch(selectedImage);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          imageUrl = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (imgError) {
+          console.log('Image conversion error:', imgError);
+          // Resim dönüştürülemezse devam et
+        }
+      }
+
       await postApi.create({
         content: content.trim(),
-        imageUrl: selectedImage,
+        imageUrl: imageUrl,
         location: location,
         mentions: mentions,
       });
@@ -172,9 +191,9 @@ export default function CreatePostScreen() {
           }
         }
       ]);
-    } catch (error) {
-      console.error('Error creating post:', error);
-      Alert.alert('Hata', 'Gönderi paylaşılamadı');
+    } catch (error: any) {
+      console.error('Error creating post:', error?.response?.data || error);
+      Alert.alert('Hata', error?.response?.data?.detail || 'Gönderi paylaşılamadı');
     } finally {
       setLoading(false);
     }
