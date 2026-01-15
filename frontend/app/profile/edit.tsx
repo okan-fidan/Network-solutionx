@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../src/config/firebase';
-import { userApi } from '../../src/services/api';
+import api from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { showToast } from '../../src/components/ui';
 
