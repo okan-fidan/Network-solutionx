@@ -629,9 +629,11 @@ async def request_join_subgroup(subgroup_id: str, current_user: dict = Depends(g
     # Check if requires approval
     if subgroup.get('requiresApproval', True):
         user = await db.users.find_one({"uid": current_user['uid']})
+        if not user:
+            raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı. Lütfen profilinizi tamamlayın.")
         request = {
             "uid": current_user['uid'],
-            "name": f"{user['firstName']} {user['lastName']}",
+            "name": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() or "Kullanıcı",
             "profileImageUrl": user.get('profileImageUrl'),
             "requestedAt": datetime.utcnow()
         }
