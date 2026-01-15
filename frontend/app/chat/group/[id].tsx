@@ -88,6 +88,7 @@ interface SubGroup {
   communityName?: string;
   groupAdmins?: string[];
   members?: string[];
+  imageUrl?: string;
 }
 
 export default function GroupChatScreen() {
@@ -98,6 +99,9 @@ export default function GroupChatScreen() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  // Grup ayarları için state'ler
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [uploadingGroupImage, setUploadingGroupImage] = useState(false);
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
