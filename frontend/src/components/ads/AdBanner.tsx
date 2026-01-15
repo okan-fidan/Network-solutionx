@@ -1,71 +1,67 @@
 import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 
-// Test Ad Unit IDs - Gerçek ID'ler ile değiştirin
-const TEST_BANNER_ID = Platform.select({
-  ios: 'ca-app-pub-3940256099942544/2934735716',
-  android: 'ca-app-pub-3940256099942544/6300978111',
-  default: 'ca-app-pub-3940256099942544/6300978111',
-});
-
-// AdMob sadece native build'de çalışır
-// Expo Go'da placeholder gösterilir
-let BannerAd: any = null;
-let BannerAdSize: any = null;
-let TestIds: any = null;
-
-try {
-  const MobileAds = require('react-native-google-mobile-ads');
-  BannerAd = MobileAds.BannerAd;
-  BannerAdSize = MobileAds.BannerAdSize;
-  TestIds = MobileAds.TestIds;
-} catch (error) {
-  // Expo Go'da modül yüklenemez
-  console.log('AdMob modülü yüklenemedi - Expo Go kullanılıyor olabilir');
-}
-
 interface AdBannerProps {
   size?: 'banner' | 'largeBanner' | 'mediumRectangle' | 'fullBanner' | 'leaderboard';
   style?: any;
 }
 
-export const AdBanner: React.FC<AdBannerProps> = ({ size = 'banner', style }) => {
-  // Expo Go veya Web için placeholder
-  if (!BannerAd || Platform.OS === 'web') {
-    return (
-      <View style={[styles.placeholder, style]}>
-        <View style={styles.placeholderContent}>
-          <Text style={styles.placeholderText}>📢 Reklam Alanı</Text>
-          <Text style={styles.placeholderSubtext}>
-            {Platform.OS === 'web' ? 'Web\'de reklam desteklenmiyor' : 'Development build gerekli'}
-          </Text>
-        </View>
-      </View>
-    );
+// Web ve Expo Go için placeholder banner
+const PlaceholderBanner: React.FC<AdBannerProps> = ({ style }) => (
+  <View style={[styles.placeholder, style]}>
+    <View style={styles.placeholderContent}>
+      <Text style={styles.placeholderText}>📢 Reklam Alanı</Text>
+      <Text style={styles.placeholderSubtext}>
+        {Platform.OS === 'web' ? 'Web\'de reklam desteklenmiyor' : 'Development build gerekli'}
+      </Text>
+    </View>
+  </View>
+);
+
+// Web'de sadece placeholder göster
+export const AdBanner: React.FC<AdBannerProps> = (props) => {
+  // Web'de native modül yüklenemez
+  if (Platform.OS === 'web') {
+    return <PlaceholderBanner {...props} />;
   }
 
-  // Native build için gerçek AdMob banner
-  const adSize = {
-    banner: BannerAdSize.BANNER,
-    largeBanner: BannerAdSize.LARGE_BANNER,
-    mediumRectangle: BannerAdSize.MEDIUM_RECTANGLE,
-    fullBanner: BannerAdSize.FULL_BANNER,
-    leaderboard: BannerAdSize.LEADERBOARD,
-  }[size] || BannerAdSize.BANNER;
+  // Native platformlarda dinamik import dene
+  try {
+    // Lazy load - sadece native'de çalışır
+    const MobileAds = require('react-native-google-mobile-ads');
+    const { BannerAd, BannerAdSize, TestIds } = MobileAds;
 
-  return (
-    <View style={[styles.container, style]}>
-      <BannerAd
-        unitId={TEST_BANNER_ID}
-        size={adSize}
-        requestOptions={{
-          requestNonPersonalizedAdsOnly: true,
-        }}
-        onAdLoaded={() => console.log('Ad loaded')}
-        onAdFailedToLoad={(error: any) => console.log('Ad failed to load:', error)}
-      />
-    </View>
-  );
+    const TEST_BANNER_ID = Platform.select({
+      ios: 'ca-app-pub-3940256099942544/2934735716',
+      android: 'ca-app-pub-3940256099942544/6300978111',
+      default: 'ca-app-pub-3940256099942544/6300978111',
+    });
+
+    const adSize = {
+      banner: BannerAdSize.BANNER,
+      largeBanner: BannerAdSize.LARGE_BANNER,
+      mediumRectangle: BannerAdSize.MEDIUM_RECTANGLE,
+      fullBanner: BannerAdSize.FULL_BANNER,
+      leaderboard: BannerAdSize.LEADERBOARD,
+    }[props.size || 'banner'] || BannerAdSize.BANNER;
+
+    return (
+      <View style={[styles.container, props.style]}>
+        <BannerAd
+          unitId={TEST_BANNER_ID}
+          size={adSize}
+          requestOptions={{
+            requestNonPersonalizedAdsOnly: true,
+          }}
+          onAdLoaded={() => console.log('Ad loaded')}
+          onAdFailedToLoad={(error: any) => console.log('Ad failed:', error)}
+        />
+      </View>
+    );
+  } catch (error) {
+    // Expo Go'da modül yüklenemez - placeholder göster
+    return <PlaceholderBanner {...props} />;
+  }
 };
 
 // Sabit yükseklikli banner wrapper
