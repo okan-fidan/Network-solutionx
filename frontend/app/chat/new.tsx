@@ -139,7 +139,20 @@ export default function NewChatScreen() {
 
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="cloud-offline-outline" size={64} color="#374151" />
+          <Text style={styles.errorText}>Kullanıcılar yüklenemedi</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadUsers}>
+            <Ionicons name="refresh" size={20} color="#fff" />
+            <Text style={styles.retryText}>Tekrar Dene</Text>
+          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -150,7 +163,9 @@ export default function NewChatScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="people-outline" size={64} color="#374151" />
-              <Text style={styles.emptyText}>Kullanıcı bulunamadı</Text>
+              <Text style={styles.emptyText}>
+                {query ? 'Kullanıcı bulunamadı' : 'Henüz kullanıcı yok'}
+              </Text>
             </View>
           }
         />
