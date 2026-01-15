@@ -83,7 +83,7 @@ export default function PostDetailScreen() {
   const handleLike = async () => {
     if (!post) return;
     try {
-      const response = await api.post(`/posts/${postId}/like`);
+      const response = await api.post(`/api/posts/${postId}/like`);
       setPost({
         ...post,
         isLiked: response.data.liked,
@@ -99,7 +99,7 @@ export default function PostDetailScreen() {
     
     setSending(true);
     try {
-      const response = await api.post(`/posts/${postId}/comments`, {
+      const response = await api.post(`/api/posts/${postId}/comments`, {
         content: newComment.trim(),
       });
       setComments([...comments, response.data]);
