@@ -55,7 +55,7 @@ export default function AdminContentScreen() {
 
   const loadCommunities = useCallback(async () => {
     try {
-      const response = await api.get('/admin/communities');
+      const response = await api.get('/api/admin/communities');
       setCommunities(response.data);
     } catch (error) {
       console.error('Error loading communities:', error);

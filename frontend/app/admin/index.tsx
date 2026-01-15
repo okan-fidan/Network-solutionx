@@ -35,7 +35,7 @@ export default function AdminDashboard() {
 
   const loadDashboard = useCallback(async () => {
     try {
-      const response = await api.get('/admin/dashboard');
+      const response = await api.get('/api/admin/dashboard');
       setStats(response.data.stats);
     } catch (error) {
       console.error('Error loading dashboard:', error);
@@ -82,42 +82,42 @@ export default function AdminDashboard() {
       icon: 'people',
       title: 'Üye Yönetimi',
       subtitle: 'Kullanıcıları yönet, yasakla, kısıtla',
-      route: '/admin/users',
+      route: '/api/admin/users',
       color: '#6366f1',
     },
     {
       icon: 'business',
       title: 'Topluluk Yönetimi',
       subtitle: '81 il topluluğunu yönet',
-      route: '/admin/communities',
+      route: '/api/admin/communities',
       color: '#10b981',
     },
     {
       icon: 'chatbubbles',
       title: 'İçerik Yönetimi',
       subtitle: 'Mesajları sil, sabitle',
-      route: '/admin/content',
+      route: '/api/admin/content',
       color: '#f59e0b',
     },
     {
       icon: 'shield-checkmark',
       title: 'Yönetici Yönetimi',
       subtitle: 'Yönetici ata, yetki ver',
-      route: '/admin/admins',
+      route: '/api/admin/admins',
       color: '#ef4444',
     },
     {
       icon: 'flag',
       title: 'Raporlar',
       subtitle: 'Kullanıcı ve içerik raporları',
-      route: '/admin/reports',
+      route: '/api/admin/reports',
       color: '#8b5cf6',
     },
     {
       icon: 'shield',
       title: 'Güvenlik Logları',
       subtitle: 'Şüpheli aktiviteleri izle',
-      route: '/admin/security',
+      route: '/api/admin/security',
       color: '#ec4899',
     },
     {

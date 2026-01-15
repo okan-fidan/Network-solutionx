@@ -43,7 +43,7 @@ export default function AdminUsersScreen() {
 
   const loadUsers = useCallback(async () => {
     try {
-      const response = await api.get('/admin/users');
+      const response = await api.get('/api/admin/users');
       setUsers(response.data);
       setFilteredUsers(response.data);
     } catch (error) {

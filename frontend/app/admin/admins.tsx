@@ -35,7 +35,7 @@ export default function AdminAdminsScreen() {
 
   const loadData = useCallback(async () => {
     try {
-      const response = await api.get('/admin/users');
+      const response = await api.get('/api/admin/users');
       const users = response.data;
       setAllUsers(users.filter((u: Admin) => !u.isAdmin));
       setAdmins(users.filter((u: Admin) => u.isAdmin));
