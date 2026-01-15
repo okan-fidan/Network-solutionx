@@ -12,9 +12,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { userListApi } from '../../src/services/api';
+import api from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import debounce from 'lodash/debounce';
+import { SkeletonCard, showToast } from '../../src/components/ui';
 
 interface User {
   uid: string;
@@ -30,26 +31,36 @@ export default function NewChatScreen() {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { user } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    // User hazır olduktan sonra kullanıcıları yükle
     if (user) {
       loadUsers();
+    } else {
+      setLoading(false);
     }
   }, [user]);
 
   const loadUsers = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
+    setError(false);
     try {
-      const response = await userListApi.getAll();
+      const response = await api.get('/api/users');
       const otherUsers = response.data.filter((u: User) => u.uid !== user?.uid);
       setUsers(otherUsers);
       setFilteredUsers(otherUsers);
-    } catch (error) {
-      console.error('Error loading users:', error);
+    } catch (err: any) {
+      console.error('Error loading users:', err?.message || err);
+      setError(true);
+      // Hata durumunda boş liste göster
+      setUsers([]);
+      setFilteredUsers([]);
     } finally {
       setLoading(false);
     }
