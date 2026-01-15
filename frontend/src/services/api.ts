@@ -84,6 +84,7 @@ export const subgroupApi = {
 
 export const subgroupRequestApi = {
   request: (subgroupId: string) => api.post(`/api/subgroups/${subgroupId}/request-join`),
+  requestJoin: (subgroupId: string) => api.post(`/api/subgroups/${subgroupId}/request-join`),
   approve: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/approve/${userId}`),
   reject: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/reject/${userId}`),
 };
