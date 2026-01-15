@@ -352,6 +352,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
   backButton: { width: 40, height: 40, justifyContent: 'center' },
   headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
+  deleteButton: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
   postCard: { backgroundColor: '#111827', margin: 16, borderRadius: 16, overflow: 'hidden' },
   postHeader: { flexDirection: 'row', alignItems: 'center', padding: 14 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
