@@ -80,6 +80,14 @@ export const subgroupApi = {
   deletePoll: (subgroupId: string, pollId: string) => api.delete(`/api/subgroups/${subgroupId}/polls/${pollId}`),
   muteMember: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/mute/${userId}`),
   kickMember: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/kick/${userId}`),
+  // Medya ve belgeler
+  getMedia: (id: string) => api.get(`/api/subgroups/${id}/media`),
+  getLinks: (id: string) => api.get(`/api/subgroups/${id}/links`),
+  getDocs: (id: string) => api.get(`/api/subgroups/${id}/docs`),
+  // Üye yönetimi
+  removeMember: (subgroupId: string, userId: string) => api.delete(`/api/subgroups/${subgroupId}/members/${userId}`),
+  // Açıklama güncelle
+  updateDescription: (id: string, description: string) => api.put(`/api/subgroups/${id}/description`, { description }),
 };
 
 export const subgroupRequestApi = {
