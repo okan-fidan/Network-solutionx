@@ -444,6 +444,9 @@ export default function HomeScreen() {
         />
       )}
 
+      {/* AdMob Banner */}
+      <AdBanner style={{ marginVertical: 8 }} />
+
       {/* Welcome Card (for new users or incomplete profile) */}
       {showWelcome && userProfile && (userProfile.communities?.length || 0) < 2 && (
         <WelcomeCard 
