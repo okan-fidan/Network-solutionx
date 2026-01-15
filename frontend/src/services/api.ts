@@ -1,13 +1,24 @@
 import axios from 'axios';
 import { auth } from '../config/firebase';
+import Constants from 'expo-constants';
 
-const BASE_URL = '';
+// Get backend URL from environment
+const getBaseUrl = () => {
+  // For Expo Go and development builds
+  const backendUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL 
+    || process.env.EXPO_PUBLIC_BACKEND_URL 
+    || '';
+  return backendUrl;
+};
+
+const BASE_URL = getBaseUrl();
 
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 15000, // 15 saniye timeout
 });
 
 // Add auth token to requests
