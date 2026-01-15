@@ -787,15 +787,7 @@ async def leave_subgroup(subgroup_id: str, current_user: dict = Depends(get_curr
 async def update_subgroup_image(subgroup_id: str, request: Request, current_user: dict = Depends(get_current_user)):
     subgroup = await db.subgroups.find_one({"id": subgroup_id})
     if not subgroup:
-        raise HTTPException(status_code=404, detail="Grup bulunamadı")
-    
-    # Check if user is group admin
-    user = await db.users.find_one({"uid": current_user['uid']})
-    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
-    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
-    
-    if not is_global_admin and not is_group_admin:
-        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
     
     body = await request.json()
     image_data = body.get('imageData')
@@ -812,6 +804,137 @@ async def update_subgroup_image(subgroup_id: str, request: Request, current_user
     )
     
     return {"message": "Grup resmi güncellendi", "imageUrl": image_url}
+
+# Update group description
+@api_router.put("/subgroups/{subgroup_id}/description")
+async def update_subgroup_description(subgroup_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+    
+    # Check if user is admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    new_description = data.get('description', '').strip()
+    
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$set": {"description": new_description, "updatedAt": datetime.utcnow()}}
+    )
+    
+    return {"message": "Açıklama güncellendi"}
+
+# Get group media
+@api_router.get("/subgroups/{subgroup_id}/media")
+async def get_subgroup_media(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    messages = await db.messages.find({
+        "groupId": subgroup_id,
+        "type": {"$in": ["image", "video"]},
+        "deletedForEveryone": {"$ne": True}
+    }).sort("timestamp", -1).limit(50).to_list(50)
+    
+    media_items = []
+    for msg in messages:
+        if msg.get('mediaUrl'):
+            media_items.append({
+                "id": msg['id'],
+                "type": msg.get('type', 'image'),
+                "url": msg['mediaUrl'],
+                "timestamp": msg['timestamp'].isoformat() if msg.get('timestamp') else None,
+                "senderName": msg.get('senderName', 'Bilinmeyen')
+            })
+    
+    return media_items
+
+# Get group links
+@api_router.get("/subgroups/{subgroup_id}/links")
+async def get_subgroup_links(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    import re
+    
+    messages = await db.messages.find({
+        "groupId": subgroup_id,
+        "type": "text",
+        "deletedForEveryone": {"$ne": True}
+    }).sort("timestamp", -1).limit(200).to_list(200)
+    
+    url_pattern = re.compile(r'https?://[^\s<>"{}|\\^`\[\]]+')
+    links = []
+    
+    for msg in messages:
+        content = msg.get('content', '')
+        found_urls = url_pattern.findall(content)
+        
+        for url in found_urls:
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(url)
+                links.append({
+                    "id": f"{msg['id']}_{len(links)}",
+                    "url": url,
+                    "domain": parsed.netloc,
+                    "timestamp": msg['timestamp'].isoformat() if msg.get('timestamp') else None,
+                    "senderName": msg.get('senderName', 'Bilinmeyen')
+                })
+            except:
+                pass
+    
+    return links[:30]
+
+# Get group documents
+@api_router.get("/subgroups/{subgroup_id}/docs")
+async def get_subgroup_docs(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    messages = await db.messages.find({
+        "groupId": subgroup_id,
+        "type": "file",
+        "deletedForEveryone": {"$ne": True}
+    }).sort("timestamp", -1).limit(50).to_list(50)
+    
+    docs = []
+    for msg in messages:
+        if msg.get('mediaUrl'):
+            docs.append({
+                "id": msg['id'],
+                "name": msg.get('fileName', 'document'),
+                "url": msg['mediaUrl'],
+                "timestamp": msg['timestamp'].isoformat() if msg.get('timestamp') else None,
+                "senderName": msg.get('senderName', 'Bilinmeyen')
+            })
+    
+    return docs
+
+# Remove member from group
+@api_router.delete("/subgroups/{subgroup_id}/members/{user_id}")
+async def remove_member_from_subgroup(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+    
+    # Check if user is admin
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    # Can't remove creator
+    if user_id == subgroup.get('creatorId'):
+        raise HTTPException(status_code=403, detail="Grup kurucusu çıkarılamaz")
+    
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {
+            "$pull": {"members": user_id, "groupAdmins": user_id},
+            "$inc": {"memberCount": -1}
+        }
+    )
+    
+    return {"message": "Üye gruptan çıkarıldı"}
 
 # ==================== MESSAGES ====================
 
