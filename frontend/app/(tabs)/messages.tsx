@@ -348,8 +348,11 @@ export default function MessagesScreen() {
           <Text style={styles.headerTitle}>Mesajlar</Text>
         </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Yükleniyor...</Text>
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
+          <SkeletonCard />
         </View>
       </SafeAreaView>
     );
