@@ -162,7 +162,6 @@ export default function CreatePostScreen() {
           });
         } catch (imgError) {
           console.log('Image conversion error:', imgError);
-          // Resim dönüştürülemezse devam et
         }
       }
 
@@ -173,22 +172,17 @@ export default function CreatePostScreen() {
         mentions: mentions,
       });
       
-      // Rating sayacını artır ve kontrol et
-      await incrementPostCount();
-      const shouldShow = await shouldShowRatingPrompt();
+      // Rating işlemleri - hata olursa devam et
+      try {
+        await incrementPostCount();
+      } catch (e) {
+        console.log('Rating increment error:', e);
+      }
       
       Alert.alert('Başarılı', 'Gönderiniz paylaşıldı!', [
         { 
           text: 'Tamam', 
-          onPress: async () => {
-            // Gönderi sonrası rating istemi göster
-            if (shouldShow) {
-              setTimeout(async () => {
-                await requestReview();
-              }, 500);
-            }
-            router.back();
-          }
+          onPress: () => router.back()
         }
       ]);
     } catch (error: any) {
