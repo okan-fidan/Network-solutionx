@@ -2149,6 +2149,145 @@ async def admin_remove_admin(user_id: str, current_user: dict = Depends(get_curr
         {"$pull": {"superAdmins": user_id}}
     )
 
+    return {"message": "Yöneticilik kaldırıldı"}
+
+# ==================== BROADCAST (Toplu Duyuru) ====================
+
+# Get all subgroups for broadcast
+@api_router.get("/admin/all-subgroups")
+async def admin_get_all_subgroups(current_user: dict = Depends(get_current_user)):
+    """Tüm alt grupları listele (toplu duyuru için)"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    subgroups = await db.subgroups.find().to_list(1000)
+    result = []
+    
+    for sg in subgroups:
+        community = await db.communities.find_one({"id": sg.get('communityId')})
+        result.append({
+            "id": sg.get('id'),
+            "name": sg.get('name'),
+            "communityId": sg.get('communityId'),
+            "communityName": community.get('name') if community else None,
+            "memberCount": sg.get('memberCount', 0),
+        })
+    
+    return result
+
+# Send broadcast to multiple groups
+@api_router.post("/admin/broadcast")
+async def admin_send_broadcast(data: dict, current_user: dict = Depends(get_current_user)):
+    """Birden fazla gruba aynı anda duyuru gönder"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    target_groups = data.get('targetGroups', [])
+    content = data.get('content', '').strip()
+    title = data.get('title', '').strip()
+    send_as_announcement = data.get('sendAsAnnouncement', True)
+    send_as_message = data.get('sendAsMessage', False)
+    
+    if not content:
+        raise HTTPException(status_code=400, detail="Mesaj içeriği gerekli")
+    
+    if not target_groups:
+        raise HTTPException(status_code=400, detail="En az bir grup seçmelisiniz")
+    
+    sent_count = 0
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() or "Yönetici"
+    broadcast_id = str(uuid.uuid4())
+    
+    for group_id in target_groups:
+        subgroup = await db.subgroups.find_one({"id": group_id})
+        if not subgroup:
+            continue
+        
+        # Send as message to group
+        if send_as_message:
+            message = {
+                "id": str(uuid.uuid4()),
+                "groupId": group_id,
+                "senderId": current_user['uid'],
+                "senderName": f"📢 {sender_name}",
+                "content": f"**{title}**\n\n{content}" if title else content,
+                "type": "announcement",
+                "timestamp": datetime.utcnow(),
+                "isBroadcast": True,
+                "broadcastId": broadcast_id,
+            }
+            await db.messages.insert_one(message)
+            
+            # Emit via socket
+            msg_copy = dict(message)
+            if '_id' in msg_copy:
+                del msg_copy['_id']
+            msg_copy['timestamp'] = msg_copy['timestamp'].isoformat()
+            await sio.emit('new_message', msg_copy, room=group_id)
+        
+        # Also send to community announcement channel
+        if send_as_announcement:
+            community_id = subgroup.get('communityId')
+            if community_id:
+                community = await db.communities.find_one({"id": community_id})
+                if community and community.get('announcementChannelId'):
+                    announcement = {
+                        "id": str(uuid.uuid4()),
+                        "groupId": community['announcementChannelId'],
+                        "senderId": current_user['uid'],
+                        "senderName": sender_name,
+                        "content": f"**{title}**\n\n{content}" if title else content,
+                        "type": "announcement",
+                        "timestamp": datetime.utcnow(),
+                        "isBroadcast": True,
+                        "broadcastId": broadcast_id,
+                    }
+                    # Avoid duplicate announcements for same community
+                    existing = await db.messages.find_one({
+                        "groupId": community['announcementChannelId'],
+                        "broadcastId": broadcast_id
+                    })
+                    if not existing:
+                        await db.messages.insert_one(announcement)
+        
+        sent_count += 1
+    
+    # Save broadcast to history
+    broadcast_record = {
+        "id": broadcast_id,
+        "title": title,
+        "content": content,
+        "targetGroups": target_groups,
+        "sentCount": sent_count,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "sentAt": datetime.utcnow().isoformat(),
+        "sendAsAnnouncement": send_as_announcement,
+        "sendAsMessage": send_as_message,
+    }
+    await db.broadcasts.insert_one(broadcast_record)
+    
+    return {"message": "Duyuru gönderildi", "sentCount": sent_count, "broadcastId": broadcast_id}
+
+# Get broadcast history
+@api_router.get("/admin/broadcast-history")
+async def admin_get_broadcast_history(current_user: dict = Depends(get_current_user)):
+    """Gönderilen toplu duyuruların geçmişini getir"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    broadcasts = await db.broadcasts.find().sort("sentAt", -1).limit(50).to_list(50)
+    
+    for b in broadcasts:
+        if '_id' in b:
+            del b['_id']
+    
+    return broadcasts
+
     return {"message": "Yönetici yetkisi kaldırıldı"}
 
 # Create new community (admin)
