@@ -344,15 +344,15 @@ export default function CommunityDetailScreen() {
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{community.name}</Text>
-        {community.isSuperAdmin && (
+        {community.isMember && (
           <TouchableOpacity 
-            style={styles.adminButton}
-            onPress={() => router.push('/admin/communities')}
+            style={styles.settingsButton}
+            onPress={() => setShowSettingsModal(true)}
           >
-            <Ionicons name="settings" size={24} color="#6366f1" />
+            <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
           </TouchableOpacity>
         )}
-        {!community.isSuperAdmin && <View style={{ width: 44 }} />}
+        {!community.isMember && <View style={{ width: 44 }} />}
       </View>
 
       <ScrollView
@@ -361,11 +361,30 @@ export default function CommunityDetailScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
         }
       >
-        {/* Community Info */}
+        {/* Community Info with Image */}
         <View style={styles.communityHeader}>
-          <View style={styles.communityIcon}>
-            <Ionicons name="people" size={48} color="#6366f1" />
-          </View>
+          <TouchableOpacity 
+            style={styles.communityImageWrapper}
+            onPress={isAdmin ? handleChangeCommunityImage : undefined}
+            disabled={!isAdmin || uploadingImage}
+          >
+            {community.imageUrl ? (
+              <Image source={{ uri: community.imageUrl }} style={styles.communityImage} />
+            ) : (
+              <View style={styles.communityIcon}>
+                <Ionicons name="people" size={48} color="#6366f1" />
+              </View>
+            )}
+            {isAdmin && (
+              <View style={styles.editImageBadge}>
+                {uploadingImage ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="camera" size={16} color="#fff" />
+                )}
+              </View>
+            )}
+          </TouchableOpacity>
           <Text style={styles.communityName}>{community.name}</Text>
           <View style={styles.locationRow}>
             <Ionicons name="location" size={18} color="#6366f1" />
@@ -376,29 +395,77 @@ export default function CommunityDetailScreen() {
             <Text style={styles.description}>{community.description}</Text>
           )}
 
-          <TouchableOpacity
-            style={[
-              styles.joinButton,
-              community.isMember && styles.leaveButton,
-            ]}
-            onPress={handleJoin}
-            disabled={joining}
-          >
-            {joining ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons
-                  name={community.isMember ? 'exit-outline' : 'enter-outline'}
-                  size={20}
-                  color="#fff"
-                />
-                <Text style={styles.joinButtonText}>
-                  {community.isMember ? 'Ayrıl' : 'Katıl'}
-                </Text>
-              </>
+          {/* Katıl butonu - sadece üye değilse göster */}
+          {!community.isMember && (
+            <TouchableOpacity
+              style={styles.joinButton}
+              onPress={handleJoin}
+              disabled={joining}
+            >
+              {joining ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="enter-outline" size={20} color="#fff" />
+                  <Text style={styles.joinButtonText}>Katıl</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Announcements Section - EN ÜSTTE */}
+        <View style={styles.announcementsSection}>
+          <View style={styles.announcementHeader}>
+            <Ionicons name="megaphone" size={24} color="#f59e0b" />
+            <Text style={styles.sectionTitle}>Duyurular</Text>
+            {isAdmin && (
+              <TouchableOpacity 
+                style={styles.addAnnouncementBtn}
+                onPress={() => setShowAnnouncementModal(true)}
+              >
+                <Ionicons name="add-circle" size={28} color="#f59e0b" />
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+          </View>
+          
+          {!community.isMember && (
+            <View style={styles.guestNotice}>
+              <Ionicons name="information-circle" size={18} color="#6b7280" />
+              <Text style={styles.guestNoticeText}>
+                Sadece son 5 duyuruyu görüntülüyorsunuz. Tümünü görmek için topluluğa katılın.
+              </Text>
+            </View>
+          )}
+
+          {announcements.length > 0 ? (
+            announcements.map((announcement) => (
+              <View key={announcement.id} style={styles.announcementCard}>
+                <View style={styles.announcementMeta}>
+                  <Text style={styles.announcementSender}>{announcement.senderName}</Text>
+                  <View style={styles.announcementActions}>
+                    <Text style={styles.announcementTime}>
+                      {formatDate(announcement.timestamp)}
+                    </Text>
+                    {isAdmin && (
+                      <TouchableOpacity 
+                        onPress={() => handleDeleteAnnouncement(announcement.id)}
+                        style={styles.deleteAnnouncementBtn}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+                <Text style={styles.announcementContent}>{announcement.content}</Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptyAnnouncements}>
+              <Ionicons name="megaphone-outline" size={40} color="#374151" />
+              <Text style={styles.emptyText}>Henüz duyuru yok</Text>
+            </View>
+          )}
         </View>
 
         {/* Subgroups Section */}
