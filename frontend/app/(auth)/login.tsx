@@ -120,21 +120,20 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <Pressable
-              style={({ pressed }) => [
-                styles.button, 
-                loading && styles.buttonDisabled,
-                pressed && { opacity: 0.8 }
-              ]}
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
               onPress={handleLogin}
               disabled={loading}
+              activeOpacity={0.8}
+              // Web için onClick desteği
+              {...(Platform.OS === 'web' ? { onClick: handleLogin } : {})}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.buttonText}>Giriş Yap</Text>
               )}
-            </Pressable>
+            </TouchableOpacity>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Hesabınız yok mu?</Text>
