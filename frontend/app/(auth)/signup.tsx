@@ -26,25 +26,35 @@ export default function SignupScreen() {
   const router = useRouter();
 
   const handleSignup = async () => {
+    console.log('=== handleSignup called ===');
+    console.log('Email:', email, 'Password length:', password?.length, 'Confirm:', confirmPassword?.length);
+    
     if (!email || !password || !confirmPassword) {
+      console.log('Validation failed: empty fields');
       Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
       return;
     }
 
     if (password !== confirmPassword) {
+      console.log('Validation failed: passwords dont match');
       Alert.alert('Hata', 'Şifreler eşleşmiyor');
       return;
     }
 
     if (password.length < 6) {
+      console.log('Validation failed: password too short');
       Alert.alert('Hata', 'Şifre en az 6 karakter olmalıdır');
       return;
     }
 
+    console.log('Validation passed, setting loading...');
     setLoading(true);
     try {
+      console.log('Calling signUp...');
       await signUp(email, password);
+      console.log('signUp successful! Navigating to register-profile...');
       router.replace('/(auth)/register-profile');
+      console.log('Navigation called');
     } catch (error: any) {
       console.error('Signup error:', error);
       let message = 'Kayıt yapılamadı';
