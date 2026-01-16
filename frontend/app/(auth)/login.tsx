@@ -120,8 +120,12 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button, 
+                loading && styles.buttonDisabled,
+                pressed && { opacity: 0.8 }
+              ]}
               onPress={handleLogin}
               disabled={loading}
             >
@@ -130,7 +134,7 @@ export default function LoginScreen() {
               ) : (
                 <Text style={styles.buttonText}>Giriş Yap</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Hesabınız yok mu?</Text>
