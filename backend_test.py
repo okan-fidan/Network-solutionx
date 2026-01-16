@@ -236,7 +236,7 @@ class NetworkSolutionComprehensiveTester:
         """Test 9: Messaging API Structure"""
         messaging_endpoints = [
             ("/chats", "Sohbet Listesi"),
-            ("/private-messages", "Özel Mesajlar")
+            ("/private-messages/test-user-id", "Özel Mesajlar")  # Fixed: requires user_id parameter
         ]
         
         all_structured = True
