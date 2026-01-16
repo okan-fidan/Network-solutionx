@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Network Solution Backend API Comprehensive Test Suite
-Tests ALL backend features as requested by user with test user:
-- Email: testuser@test.com
-- Password: Test123!
-- Name: Test Kullanıcı
+Telegram-like Entrepreneur Community App - Backend API Test Suite
+Tests ALL backend endpoints as specified in review request:
+- Test User: direct67891@test.com (newly created user)
+- Admin User: metaticaretim@gmail.com
+- API Base URL: http://localhost:8001/api (mapped to external URL)
 """
 
 import requests
@@ -14,16 +14,19 @@ import uuid
 from datetime import datetime
 from typing import Dict, Any
 
-# Backend URL from frontend environment
+# Backend URL from frontend environment (external URL mapped to internal)
 BACKEND_URL = "https://procomm-1.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
-# Test User Configuration
+# Test User Configuration as specified in review request
 TEST_USER = {
-    "email": "testuser@test.com",
-    "password": "Test123!",
-    "firstName": "Test",
-    "lastName": "Kullanıcı"
+    "email": "direct67891@test.com",
+    "firstName": "Direct",
+    "lastName": "TestUser"
+}
+
+ADMIN_USER = {
+    "email": "metaticaretim@gmail.com"
 }
 
 class NetworkSolutionComprehensiveTester:
