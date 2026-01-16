@@ -358,225 +358,117 @@ class NetworkSolutionComprehensiveTester:
         except Exception as e:
             self.log_result("Medya Yükleme API Yapısı", False, "", str(e))
             return False
-        
-    def test_server_connectivity(self):
-        """Test basic server connectivity"""
-        print("🔍 Testing server connectivity...")
-        try:
-            response = self.session.get(BACKEND_URL, timeout=5)
-            if response.status_code in [200, 404, 405]:  # Any response means server is up
-                self.results["server_connectivity"]["status"] = "pass"
-                self.results["server_connectivity"]["details"] = f"Server responding (status: {response.status_code})"
-                print(f"✅ Server is responding (status: {response.status_code})")
-                return True
-            else:
-                self.results["server_connectivity"]["status"] = "fail"
-                self.results["server_connectivity"]["details"] = f"Unexpected status code: {response.status_code}"
-                print(f"❌ Unexpected status code: {response.status_code}")
-                return False
-        except requests.exceptions.RequestException as e:
-            self.results["server_connectivity"]["status"] = "fail"
-            self.results["server_connectivity"]["details"] = f"Connection error: {str(e)}"
-            print(f"❌ Server connection failed: {str(e)}")
-            return False
-
-    def test_health_check(self):
-        """Test GET /api/ endpoint"""
-        print("🔍 Testing health check endpoint...")
-        try:
-            response = self.session.get(f"{API_BASE}/")
-            
-            if response.status_code == 200:
-                data = response.json()
-                expected_message = "Network Solution API"
-                
-                if data.get("message") == expected_message:
-                    self.results["health_check"]["status"] = "pass"
-                    self.results["health_check"]["details"] = f"Correct response: {data}"
-                    print(f"✅ Health check passed: {data}")
-                    return True
-                else:
-                    self.results["health_check"]["status"] = "fail"
-                    self.results["health_check"]["details"] = f"Wrong message. Expected: '{expected_message}', Got: {data}"
-                    print(f"❌ Wrong message. Expected: '{expected_message}', Got: {data}")
-                    return False
-            else:
-                self.results["health_check"]["status"] = "fail"
-                self.results["health_check"]["details"] = f"HTTP {response.status_code}: {response.text}"
-                print(f"❌ Health check failed with status {response.status_code}: {response.text}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            self.results["health_check"]["status"] = "fail"
-            self.results["health_check"]["details"] = f"Request error: {str(e)}"
-            print(f"❌ Health check request failed: {str(e)}")
-            return False
-        except json.JSONDecodeError as e:
-            self.results["health_check"]["status"] = "fail"
-            self.results["health_check"]["details"] = f"Invalid JSON response: {str(e)}"
-            print(f"❌ Invalid JSON response: {str(e)}")
-            return False
-
-    def test_cities_endpoint(self):
-        """Test GET /api/cities endpoint"""
-        print("🔍 Testing cities endpoint...")
-        try:
-            response = self.session.get(f"{API_BASE}/cities")
-            
-            if response.status_code == 200:
-                data = response.json()
-                cities = data.get("cities", [])
-                
-                # Check if we have 81 Turkish cities
-                if len(cities) == 81:
-                    # Check for some expected cities
-                    expected_cities = ["İstanbul", "Ankara", "İzmir", "Bursa", "Antalya"]
-                    missing_cities = [city for city in expected_cities if city not in cities]
-                    
-                    if not missing_cities:
-                        self.results["cities_endpoint"]["status"] = "pass"
-                        self.results["cities_endpoint"]["details"] = f"All 81 Turkish cities returned correctly. Sample: {cities[:5]}"
-                        print(f"✅ Cities endpoint passed: {len(cities)} cities returned")
-                        print(f"   Sample cities: {cities[:5]}")
-                        return True
-                    else:
-                        self.results["cities_endpoint"]["status"] = "fail"
-                        self.results["cities_endpoint"]["details"] = f"Missing expected cities: {missing_cities}"
-                        print(f"❌ Missing expected cities: {missing_cities}")
-                        return False
-                else:
-                    self.results["cities_endpoint"]["status"] = "fail"
-                    self.results["cities_endpoint"]["details"] = f"Expected 81 cities, got {len(cities)}"
-                    print(f"❌ Expected 81 cities, got {len(cities)}")
-                    return False
-            else:
-                self.results["cities_endpoint"]["status"] = "fail"
-                self.results["cities_endpoint"]["details"] = f"HTTP {response.status_code}: {response.text}"
-                print(f"❌ Cities endpoint failed with status {response.status_code}: {response.text}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            self.results["cities_endpoint"]["status"] = "fail"
-            self.results["cities_endpoint"]["details"] = f"Request error: {str(e)}"
-            print(f"❌ Cities endpoint request failed: {str(e)}")
-            return False
-        except json.JSONDecodeError as e:
-            self.results["cities_endpoint"]["status"] = "fail"
-            self.results["cities_endpoint"]["details"] = f"Invalid JSON response: {str(e)}"
-            print(f"❌ Invalid JSON response: {str(e)}")
-            return False
-
-    def test_admin_endpoints_protection(self):
-        """Test admin endpoints without authentication - should return 401/403"""
-        admin_endpoints = [
-            ("admin_dashboard", "/admin/dashboard"),
-            ("admin_users", "/admin/users"), 
-            ("admin_communities", "/admin/communities")
-        ]
-        
-        for endpoint_key, endpoint_path in admin_endpoints:
-            print(f"🔍 Testing {endpoint_path} protection...")
-            try:
-                response = self.session.get(f"{API_BASE}{endpoint_path}")
-                
-                # Should return 401, 403, or 422 (missing auth header)
-                if response.status_code in [401, 403, 422]:
-                    self.results[endpoint_key]["status"] = "pass"
-                    self.results[endpoint_key]["details"] = f"Correctly requires authentication (status: {response.status_code})"
-                    print(f"✅ {endpoint_path} correctly protected (status: {response.status_code})")
-                else:
-                    self.results[endpoint_key]["status"] = "fail"
-                    self.results[endpoint_key]["details"] = f"Not protected! Status {response.status_code}: {response.text[:200]}"
-                    print(f"❌ {endpoint_path} not protected! Status {response.status_code}")
-                    
-            except requests.exceptions.RequestException as e:
-                self.results[endpoint_key]["status"] = "fail"
-                self.results[endpoint_key]["details"] = f"Request error: {str(e)}"
-                print(f"❌ {endpoint_path} request failed: {str(e)}")
-
-    def test_communities_endpoint_auth_required(self):
-        """Test GET /api/communities endpoint (should require auth)"""
-        print("🔍 Testing communities endpoint (auth required)...")
-        try:
-            response = self.session.get(f"{API_BASE}/communities")
-            
-            # This endpoint should return 401 or 403 without auth token
-            if response.status_code in [401, 403]:
-                self.results["communities_endpoint"]["status"] = "pass"
-                self.results["communities_endpoint"]["details"] = f"Correctly requires authentication (status: {response.status_code})"
-                print(f"✅ Communities endpoint correctly requires authentication (status: {response.status_code})")
-                return True
-            elif response.status_code == 422:
-                # FastAPI returns 422 for missing authorization header
-                self.results["communities_endpoint"]["status"] = "pass"
-                self.results["communities_endpoint"]["details"] = f"Correctly requires authentication (status: {response.status_code})"
-                print(f"✅ Communities endpoint correctly requires authentication (status: {response.status_code})")
-                return True
-            else:
-                self.results["communities_endpoint"]["status"] = "fail"
-                self.results["communities_endpoint"]["details"] = f"Expected auth error, got status {response.status_code}: {response.text}"
-                print(f"❌ Expected auth error, got status {response.status_code}: {response.text}")
-                return False
-                
-        except requests.exceptions.RequestException as e:
-            self.results["communities_endpoint"]["status"] = "fail"
-            self.results["communities_endpoint"]["details"] = f"Request error: {str(e)}"
-            print(f"❌ Communities endpoint request failed: {str(e)}")
-            return False
-
     def run_all_tests(self):
-        """Run all tests and return summary"""
-        print("🚀 Starting Network Solution API Tests")
-        print(f"📍 Testing backend at: {BACKEND_URL}")
-        print("=" * 60)
-        
+        """Run comprehensive backend API tests"""
+        print("🚀 NETWORK SOLUTION KAPSAMLI BACKEND API TESTİ")
+        print("=" * 80)
+        print(f"📍 Backend URL: {BACKEND_URL}")
+        print(f"👤 Test Kullanıcısı: {TEST_USER['email']} / {TEST_USER['firstName']} {TEST_USER['lastName']}")
+        print("=" * 80)
+        print()
+
         # Test server connectivity first
         if not self.test_server_connectivity():
-            print("\n❌ Server is not accessible. Skipping other tests.")
+            print("\n❌ Sunucu erişilebilir değil. Diğer testler atlanıyor.")
             return self.get_summary()
+
+        # Run all comprehensive tests
+        print("📋 TEMEL API TESTLERİ")
+        print("-" * 40)
+        self.test_health_check_api()
+        self.test_cities_api()
         
-        # Run all tests
-        self.test_health_check()
-        self.test_cities_endpoint()
-        self.test_communities_endpoint_auth_required()
+        print("\n🔐 KİMLİK DOĞRULAMA TESTLERİ")
+        print("-" * 40)
+        self.test_authentication_protection()
         self.test_admin_endpoints_protection()
+        self.test_user_registration_mock()
         
+        print("\n👤 KULLANICI PROFİLİ TESTLERİ")
+        print("-" * 40)
+        self.test_profile_endpoints_structure()
+        
+        print("\n🏘️ TOPLULUKLAR TESTLERİ")
+        print("-" * 40)
+        self.test_communities_structure()
+        
+        print("\n💬 MESAJLAŞMA TESTLERİ")
+        print("-" * 40)
+        self.test_messaging_structure()
+        
+        print("\n📝 GÖNDERİLER TESTLERİ")
+        print("-" * 40)
+        self.test_posts_structure()
+        
+        print("\n🛠️ HİZMETLER TESTLERİ")
+        print("-" * 40)
+        self.test_services_structure()
+        
+        print("\n🔔 BİLDİRİMLER TESTLERİ")
+        print("-" * 40)
+        self.test_notifications_structure()
+        
+        print("\n📋 DİĞER API TESTLERİ")
+        print("-" * 40)
+        self.test_feedback_structure()
+        self.test_users_list_structure()
+        self.test_media_upload_structure()
+
         return self.get_summary()
 
     def get_summary(self):
-        """Get test results summary"""
-        print("\n" + "=" * 60)
-        print("📊 TEST RESULTS SUMMARY")
-        print("=" * 60)
+        """Get comprehensive test results summary"""
+        print("\n" + "=" * 80)
+        print("📊 KAPSAMLI TEST SONUÇLARI ÖZET")
+        print("=" * 80)
         
-        passed = 0
-        failed = 0
+        successful_tests = [name for name, result in self.results.items() if result["success"]]
+        failed_tests = [name for name, result in self.results.items() if not result["success"]]
         
-        for test_name, result in self.results.items():
-            status = result["status"]
-            details = result["details"]
-            
-            if status == "pass":
-                print(f"✅ {test_name}: PASSED")
-                passed += 1
-            elif status == "fail":
-                print(f"❌ {test_name}: FAILED - {details}")
-                failed += 1
-            else:
-                print(f"⏸️  {test_name}: PENDING")
+        print(f"📈 Toplam Test: {len(self.results)}")
+        print(f"✅ Başarılı: {len(successful_tests)}")
+        print(f"❌ Başarısız: {len(failed_tests)}")
+        print()
         
-        print(f"\n📈 Total: {passed} passed, {failed} failed")
+        if failed_tests:
+            print("❌ BAŞARISIZ TESTLER:")
+            for test_name in failed_tests:
+                result = self.results[test_name]
+                print(f"   • {test_name}: {result['error']}")
+            print()
         
-        if failed == 0 and passed > 0:
-            print("🎉 All tests passed!")
+        if successful_tests:
+            print("✅ BAŞARILI TESTLER:")
+            for test_name in successful_tests:
+                print(f"   • {test_name}")
+            print()
+        
+        # Kategorik özet
+        print("📋 KATEGORİK ÖZET:")
+        categories = {
+            "Temel API": ["Sunucu Bağlantısı", "Health Check API", "Şehirler API"],
+            "Kimlik Doğrulama": [name for name in self.results.keys() if "Koruması" in name or "Kullanıcı Kaydı" in name],
+            "API Yapıları": [name for name in self.results.keys() if "API Yapısı" in name or "Yapısı" in name]
+        }
+        
+        for category, tests in categories.items():
+            category_tests = [t for t in tests if t in self.results]
+            if category_tests:
+                category_success = sum(1 for t in category_tests if self.results[t]["success"])
+                print(f"   {category}: {category_success}/{len(category_tests)} başarılı")
+        
+        print("\n" + "=" * 80)
+        
+        if len(failed_tests) == 0 and len(successful_tests) > 0:
+            print("🎉 TÜM TESTLER BAŞARILI!")
             return True
         else:
-            print("⚠️  Some tests failed!")
+            print("⚠️ BAZI TESTLER BAŞARISIZ!")
             return False
 
 def main():
-    """Main test runner"""
-    tester = NetworkSolutionAPITester()
+    """Main comprehensive test runner"""
+    tester = NetworkSolutionComprehensiveTester()
     success = tester.run_all_tests()
     
     # Return appropriate exit code
