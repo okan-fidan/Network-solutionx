@@ -52,6 +52,50 @@ class TelegramLikeAppTester:
             "success": success,
             "details": details,
             "error": error,
+            "timestamp": datetime.now().isoformat()
+        }
+        print(f"{status} {test_name}")
+        if details:
+            print(f"   Details: {details}")
+        if error and not success:
+            print(f"   Error: {error}")
+        print()
+        
+    def make_request(self, method: str, endpoint: str, data: Dict = None, headers: Dict = None) -> requests.Response:
+        """Make HTTP request with proper error handling"""
+        url = f"{API_BASE}{endpoint}"
+        
+        # Set default headers
+        default_headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        }
+        
+        if headers:
+            default_headers.update(headers)
+            
+        # Add auth token if available
+        if self.auth_token:
+            default_headers['Authorization'] = f'Bearer {self.auth_token}'
+        
+        try:
+            if method.upper() == 'GET':
+                response = self.session.get(url, headers=default_headers)
+            elif method.upper() == 'POST':
+                response = self.session.post(url, json=data, headers=default_headers)
+            elif method.upper() == 'PUT':
+                response = self.session.put(url, json=data, headers=default_headers)
+            elif method.upper() == 'DELETE':
+                response = self.session.delete(url, headers=default_headers)
+            else:
+                raise ValueError(f"Unsupported HTTP method: {method}")
+                
+            return response
+            
+        except requests.exceptions.RequestException as e:
+            print(f"Request failed: {str(e)}")
+            return None
+
 def main():
     """Main test execution function"""
     print("🔥 TELEGRAM-LIKE ENTREPRENEUR COMMUNITY APP - BACKEND API TESTING")
