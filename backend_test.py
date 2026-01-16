@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Backend URL from frontend environment
-BACKEND_URL = "https://founder-talk.preview.emergentagent.com"
+BACKEND_URL = "https://procomm-1.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test User Configuration
