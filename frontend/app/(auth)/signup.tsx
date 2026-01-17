@@ -156,12 +156,10 @@ export default function SignupScreen() {
               role="button"
               accessibilityRole="button"
             >
-              {({ pressed }) => (
-                loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.buttonText}>Kayıt Ol</Text>
-                )
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>Kayıt Ol</Text>
               )}
             </Pressable>
 
