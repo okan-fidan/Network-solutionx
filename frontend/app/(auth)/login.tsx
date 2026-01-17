@@ -128,6 +128,8 @@ export default function LoginScreen() {
               ]}
               onPress={handleLogin}
               disabled={loading}
+              role="button"
+              accessibilityRole="button"
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
