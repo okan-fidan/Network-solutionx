@@ -145,20 +145,21 @@ export default function SignupScreen() {
               />
             </View>
 
-            <TouchableOpacity
-              style={[styles.button, loading && styles.buttonDisabled]}
+            <Pressable
+              style={({ pressed }) => [
+                styles.button,
+                loading && styles.buttonDisabled,
+                pressed && { opacity: 0.8 }
+              ]}
               onPress={handleSignup}
               disabled={loading}
-              activeOpacity={0.8}
-              // Web için onClick desteği
-              {...(Platform.OS === 'web' ? { onClick: handleSignup } : {})}
             >
               {loading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.buttonText}>Kayıt Ol</Text>
               )}
-            </TouchableOpacity>
+            </Pressable>
 
             <View style={styles.footer}>
               <Text style={styles.footerText}>Zaten hesabınız var mı?</Text>
