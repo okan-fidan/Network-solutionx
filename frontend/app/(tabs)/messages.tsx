@@ -7,17 +7,16 @@ import {
   TouchableOpacity,
   RefreshControl,
   Image,
-  TextInput,
   ActivityIndicator,
+  Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { useTheme } from '../../src/contexts/ThemeContext';
 import api from '../../src/services/api';
-import { formatDistanceToNow } from 'date-fns';
-import { tr } from 'date-fns/locale';
 import { useFocusEffect } from '@react-navigation/native';
 
 type TabType = 'all' | 'private' | 'service' | 'groups';
@@ -58,8 +57,8 @@ export default function MessagesScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const { userProfile, user } = useAuth();
+  const { colors, isDark } = useTheme();
   const router = useRouter();
 
   const loadData = useCallback(async () => {
@@ -142,10 +141,10 @@ export default function MessagesScreen() {
   };
 
   const tabs = [
-    { key: 'all' as TabType, label: 'Tümü', icon: 'chatbubbles' },
-    { key: 'private' as TabType, label: 'Özel Mesajlar', icon: 'person' },
-    { key: 'service' as TabType, label: 'İşbirliği', icon: 'briefcase' },
-    { key: 'groups' as TabType, label: 'Gruplar', icon: 'people' },
+    { key: 'all' as TabType, label: 'Tümü', icon: 'chatbubbles-outline' },
+    { key: 'private' as TabType, label: 'Özel', icon: 'person-outline' },
+    { key: 'service' as TabType, label: 'İşbirliği', icon: 'briefcase-outline' },
+    { key: 'groups' as TabType, label: 'Gruplar', icon: 'people-outline' },
   ];
 
   const filteredConversations = conversations.filter(conv => {
@@ -161,6 +160,8 @@ export default function MessagesScreen() {
     : [...filteredConversations].sort((a, b) => 
         new Date(b.lastMessageTime || 0).getTime() - new Date(a.lastMessageTime || 0).getTime()
       );
+
+  const styles = createStyles(colors, isDark);
 
   const renderConversation = ({ item }: { item: Conversation }) => (
     <TouchableOpacity
@@ -194,19 +195,22 @@ export default function MessagesScreen() {
           <Text style={styles.chatName} numberOfLines={1}>
             {item.otherUser.name}
           </Text>
-          <Text style={styles.chatTime}>
+          <Text style={[styles.chatTime, item.unreadCount > 0 && styles.chatTimeUnread]}>
             {formatTime(item.lastMessageTime)}
           </Text>
         </View>
         
         {item.type === 'service' && item.service && (
-          <Text style={styles.serviceLabel} numberOfLines={1}>
-            🏷️ {item.service.title}
-          </Text>
+          <View style={styles.serviceBadge}>
+            <Ionicons name="pricetag" size={10} color="#f59e0b" />
+            <Text style={styles.serviceLabel} numberOfLines={1}>
+              {item.service.title}
+            </Text>
+          </View>
         )}
         
         <View style={styles.chatFooter}>
-          <Text style={styles.lastMessage} numberOfLines={1}>
+          <Text style={[styles.lastMessage, item.unreadCount > 0 && styles.lastMessageUnread]} numberOfLines={1}>
             {item.lastMessage || 'Henüz mesaj yok'}
           </Text>
           {item.unreadCount > 0 && (
@@ -232,7 +236,7 @@ export default function MessagesScreen() {
           <Image source={{ uri: item.imageUrl }} style={styles.avatar} />
         ) : (
           <LinearGradient
-            colors={['#10b981', '#14b8a6']}
+            colors={['#10b981', '#059669']}
             style={styles.avatarGradient}
           >
             <Ionicons name="people" size={22} color="#fff" />
@@ -247,9 +251,12 @@ export default function MessagesScreen() {
             {formatTime(item.lastMessageTime || '')}
           </Text>
         </View>
-        <Text style={styles.communityLabel} numberOfLines={1}>
-          {item.communityName}
-        </Text>
+        <View style={styles.communityBadge}>
+          <Ionicons name="globe-outline" size={10} color={colors.textTertiary} />
+          <Text style={styles.communityLabel} numberOfLines={1}>
+            {item.communityName}
+          </Text>
+        </View>
         <View style={styles.chatFooter}>
           <Text style={styles.lastMessage} numberOfLines={1}>
             {item.lastMessage || `${item.memberCount} üye`}
@@ -261,27 +268,34 @@ export default function MessagesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyContainer}>
-      <LinearGradient
-        colors={['#f3f4f6', '#e5e7eb']}
-        style={styles.emptyIcon}
-      >
-        <Ionicons 
-          name={activeTab === 'service' ? 'briefcase-outline' : activeTab === 'groups' ? 'people-outline' : 'chatbubbles-outline'} 
-          size={48} 
-          color="#9ca3af" 
-        />
-      </LinearGradient>
+      <View style={styles.emptyIconContainer}>
+        <LinearGradient
+          colors={isDark ? ['#1f2937', '#374151'] : ['#f3f4f6', '#e5e7eb']}
+          style={styles.emptyIcon}
+        >
+          <Ionicons 
+            name={
+              activeTab === 'service' ? 'briefcase-outline' : 
+              activeTab === 'groups' ? 'people-outline' : 
+              activeTab === 'private' ? 'person-outline' :
+              'chatbubbles-outline'
+            } 
+            size={48} 
+            color={colors.textTertiary} 
+          />
+        </LinearGradient>
+      </View>
       <Text style={styles.emptyTitle}>
-        {activeTab === 'private' && 'Henüz özel mesajınız yok'}
-        {activeTab === 'service' && 'Henüz işbirliği mesajınız yok'}
-        {activeTab === 'groups' && 'Henüz bir gruba katılmadınız'}
-        {activeTab === 'all' && 'Henüz mesajınız yok'}
+        {activeTab === 'private' && 'Özel mesajınız yok'}
+        {activeTab === 'service' && 'İşbirliği mesajı yok'}
+        {activeTab === 'groups' && 'Gruba katılmadınız'}
+        {activeTab === 'all' && 'Mesajınız yok'}
       </Text>
       <Text style={styles.emptySubtitle}>
-        {activeTab === 'private' && 'Kullanıcı profillerinden mesaj gönderebilirsiniz'}
-        {activeTab === 'service' && 'Hizmetler bölümünden iletişime geçebilirsiniz'}
-        {activeTab === 'groups' && 'Topluluklardan gruplara katılabilirsiniz'}
-        {activeTab === 'all' && 'Yeni sohbet başlatın'}
+        {activeTab === 'private' && 'Kullanıcı profillerinden mesaj gönderin'}
+        {activeTab === 'service' && 'Hizmetlerden iletişime geçin'}
+        {activeTab === 'groups' && 'Topluluklardan gruplara katılın'}
+        {activeTab === 'all' && 'Yeni bir sohbet başlatın'}
       </Text>
       <TouchableOpacity
         style={styles.emptyButton}
@@ -295,26 +309,45 @@ export default function MessagesScreen() {
           }
         }}
       >
-        <Ionicons name="add" size={20} color="#fff" />
-        <Text style={styles.emptyButtonText}>
-          {activeTab === 'groups' ? 'Toplulukları Keşfet' : activeTab === 'service' ? 'Hizmetlere Göz At' : 'Yeni Sohbet'}
-        </Text>
+        <LinearGradient
+          colors={['#6366f1', '#8b5cf6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.emptyButtonGradient}
+        >
+          <Ionicons name="add" size={18} color="#fff" />
+          <Text style={styles.emptyButtonText}>
+            {activeTab === 'groups' ? 'Toplulukları Keşfet' : activeTab === 'service' ? 'Hizmetlere Göz At' : 'Yeni Sohbet'}
+          </Text>
+        </LinearGradient>
       </TouchableOpacity>
     </View>
   );
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <View style={styles.loginPrompt}>
-          <Ionicons name="chatbubbles-outline" size={64} color="#9ca3af" />
-          <Text style={styles.loginTitle}>Mesajlarınızı görün</Text>
+          <LinearGradient
+            colors={isDark ? ['#1f2937', '#374151'] : ['#f3f4f6', '#e5e7eb']}
+            style={styles.loginIcon}
+          >
+            <Ionicons name="chatbubbles-outline" size={64} color={colors.textTertiary} />
+          </LinearGradient>
+          <Text style={styles.loginTitle}>Mesajlarınızı Görün</Text>
           <Text style={styles.loginSubtitle}>Mesajlaşmak için giriş yapın</Text>
           <TouchableOpacity
             style={styles.loginButton}
             onPress={() => router.push('/(auth)/login')}
           >
-            <Text style={styles.loginButtonText}>Giriş Yap</Text>
+            <LinearGradient
+              colors={['#6366f1', '#8b5cf6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.loginButtonGradient}
+            >
+              <Text style={styles.loginButtonText}>Giriş Yap</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -322,7 +355,7 @@ export default function MessagesScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mesajlar</Text>
@@ -331,13 +364,13 @@ export default function MessagesScreen() {
             style={styles.headerButton}
             onPress={() => router.push('/search')}
           >
-            <Ionicons name="search" size={24} color="#1f2937" />
+            <Ionicons name="search" size={22} color={colors.text} />
           </TouchableOpacity>
           <TouchableOpacity 
-            style={styles.headerButton}
+            style={[styles.headerButton, styles.headerButtonPrimary]}
             onPress={() => router.push('/chat/new')}
           >
-            <Ionicons name="create-outline" size={24} color="#1f2937" />
+            <Ionicons name="create-outline" size={22} color="#fff" />
           </TouchableOpacity>
         </View>
       </View>
@@ -359,11 +392,12 @@ export default function MessagesScreen() {
               key={tab.key}
               style={[styles.tab, isActive && styles.tabActive]}
               onPress={() => setActiveTab(tab.key)}
+              activeOpacity={0.7}
             >
               <Ionicons 
-                name={tab.icon as any} 
+                name={isActive ? tab.icon.replace('-outline', '') as any : tab.icon as any} 
                 size={18} 
-                color={isActive ? '#6366f1' : '#6b7280'} 
+                color={isActive ? colors.primary : colors.textTertiary} 
               />
               <Text style={[styles.tabText, isActive && styles.tabTextActive]}>
                 {tab.label}
@@ -383,7 +417,8 @@ export default function MessagesScreen() {
       {/* Content */}
       {loading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
         </View>
       ) : (
         <>
@@ -394,15 +429,23 @@ export default function MessagesScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderConversation}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6366f1']} />
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh} 
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
               }
               ListEmptyComponent={activeTab !== 'groups' ? renderEmptyState : null}
               ListFooterComponent={
                 activeTab === 'all' && filteredGroups.length > 0 ? (
                   <View>
                     <View style={styles.sectionHeader}>
-                      <Ionicons name="people" size={18} color="#6b7280" />
+                      <Ionicons name="people" size={16} color={colors.textTertiary} />
                       <Text style={styles.sectionTitle}>Grup Sohbetleri</Text>
+                      <View style={styles.sectionBadge}>
+                        <Text style={styles.sectionBadgeText}>{filteredGroups.length}</Text>
+                      </View>
                     </View>
                     {filteredGroups.map((group) => (
                       <View key={group.id}>
@@ -413,6 +456,7 @@ export default function MessagesScreen() {
                 ) : null
               }
               contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
             />
           )}
 
@@ -423,10 +467,16 @@ export default function MessagesScreen() {
               keyExtractor={(item) => item.id}
               renderItem={renderGroupChat}
               refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#6366f1']} />
+                <RefreshControl 
+                  refreshing={refreshing} 
+                  onRefresh={onRefresh} 
+                  colors={[colors.primary]}
+                  tintColor={colors.primary}
+                />
               }
               ListEmptyComponent={renderEmptyState}
               contentContainerStyle={styles.listContent}
+              showsVerticalScrollIndicator={false}
             />
           )}
         </>
@@ -435,10 +485,9 @@ export default function MessagesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
@@ -447,12 +496,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.border,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: '700',
-    color: '#1f2937',
+    color: colors.text,
+    letterSpacing: -0.5,
   },
   headerActions: {
     flexDirection: 'row',
@@ -461,55 +511,59 @@ const styles = StyleSheet.create({
   headerButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f3f4f6',
+    borderRadius: 12,
+    backgroundColor: colors.surface,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
   tabBar: {
     flexDirection: 'row',
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
     paddingVertical: 8,
+    gap: 4,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 10,
     gap: 4,
   },
   tabActive: {
-    backgroundColor: '#eef2ff',
+    backgroundColor: isDark ? 'rgba(99, 102, 241, 0.15)' : 'rgba(99, 102, 241, 0.1)',
   },
   tabText: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#6b7280',
+    color: colors.textTertiary,
   },
   tabTextActive: {
-    color: '#6366f1',
+    color: colors.primary,
     fontWeight: '600',
   },
   tabBadge: {
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.surfaceSecondary,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 10,
+    borderRadius: 8,
     minWidth: 20,
     alignItems: 'center',
   },
   tabBadgeActive: {
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.primary,
   },
   tabBadgeText: {
     fontSize: 10,
     fontWeight: '600',
-    color: '#6b7280',
+    color: colors.textTertiary,
   },
   tabBadgeTextActive: {
     color: '#fff',
@@ -518,6 +572,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: 12,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: colors.textTertiary,
   },
   listContent: {
     flexGrow: 1,
@@ -525,22 +584,23 @@ const styles = StyleSheet.create({
   chatItem: {
     flexDirection: 'row',
     padding: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: colors.border,
   },
   avatarContainer: {
     position: 'relative',
     marginRight: 12,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
   },
   avatarGradient: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -558,7 +618,7 @@ const styles = StyleSheet.create({
     borderRadius: 7,
     backgroundColor: '#10b981',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.background,
   },
   serviceIndicator: {
     position: 'absolute',
@@ -571,7 +631,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.background,
   },
   chatContent: {
     flex: 1,
@@ -586,23 +646,38 @@ const styles = StyleSheet.create({
   chatName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1f2937',
+    color: colors.text,
     flex: 1,
   },
   chatTime: {
     fontSize: 12,
-    color: '#9ca3af',
+    color: colors.textTertiary,
     marginLeft: 8,
+  },
+  chatTimeUnread: {
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  serviceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 2,
   },
   serviceLabel: {
     fontSize: 12,
     color: '#f59e0b',
+    fontWeight: '500',
+  },
+  communityBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     marginBottom: 2,
   },
   communityLabel: {
     fontSize: 12,
-    color: '#6b7280',
-    marginBottom: 2,
+    color: colors.textTertiary,
   },
   chatFooter: {
     flexDirection: 'row',
@@ -611,20 +686,24 @@ const styles = StyleSheet.create({
   },
   lastMessage: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
     flex: 1,
   },
+  lastMessageUnread: {
+    color: colors.text,
+    fontWeight: '500',
+  },
   unreadBadge: {
-    backgroundColor: '#6366f1',
+    backgroundColor: colors.primary,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 10,
     minWidth: 22,
     alignItems: 'center',
     marginLeft: 8,
   },
   unreadText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#fff',
   },
@@ -633,19 +712,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.surface,
     gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#6b7280',
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  sectionBadge: {
+    backgroundColor: colors.surfaceSecondary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  sectionBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textTertiary,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     padding: 32,
+    paddingTop: 64,
+  },
+  emptyIconContainer: {
+    marginBottom: 20,
   },
   emptyIcon: {
     width: 100,
@@ -653,28 +750,30 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#1f2937',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
     textAlign: 'center',
     marginBottom: 24,
+    lineHeight: 20,
   },
   emptyButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  emptyButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#6366f1',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    borderRadius: 12,
     gap: 8,
   },
   emptyButtonText: {
@@ -688,23 +787,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
+  loginIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
   loginTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: '700',
-    color: '#1f2937',
-    marginTop: 16,
+    color: colors.text,
     marginBottom: 8,
   },
   loginSubtitle: {
     fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 24,
+    color: colors.textSecondary,
+    marginBottom: 32,
   },
   loginButton: {
-    backgroundColor: '#6366f1',
-    paddingHorizontal: 32,
-    paddingVertical: 14,
     borderRadius: 12,
+    overflow: 'hidden',
+  },
+  loginButtonGradient: {
+    paddingHorizontal: 40,
+    paddingVertical: 14,
   },
   loginButtonText: {
     fontSize: 16,
