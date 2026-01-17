@@ -1970,6 +1970,12 @@ async def admin_subgroup_join_requests(community_id: Optional[str] = None, curre
     results.sort(key=sort_key, reverse=True)
     return results
 
+# Alias for join-requests (frontend compatibility)
+@api_router.get("/admin/join-requests")
+async def admin_join_requests(community_id: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Alias for /admin/subgroup-join-requests for frontend compatibility"""
+    return await admin_subgroup_join_requests(community_id, current_user)
+
 # Get all users (admin)
 @api_router.get("/admin/users")
 async def admin_get_users(current_user: dict = Depends(get_current_user), search: str = None):
