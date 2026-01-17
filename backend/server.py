@@ -3073,6 +3073,305 @@ async def invite_project_member(project_id: str, data: dict, current_user: dict 
     
     return {"success": True}
 
+# ============================================
+# DIRECT MESSAGE (DM) / ÖZEL MESAJ SİSTEMİ
+# ============================================
+
+# Conversation types
+CONVERSATION_TYPE_PRIVATE = "private"  # Özel mesajlar
+CONVERSATION_TYPE_SERVICE = "service"  # Hizmet ile ilgili (İşbirliği)
+
+# Get or create conversation between two users
+async def get_or_create_conversation(user1_id: str, user2_id: str, conversation_type: str = CONVERSATION_TYPE_PRIVATE, service_id: str = None):
+    """İki kullanıcı arasında konuşma bul veya oluştur"""
+    participants = sorted([user1_id, user2_id])
+    
+    query = {
+        "participants": participants,
+        "type": conversation_type
+    }
+    if service_id:
+        query["serviceId"] = service_id
+    
+    conversation = await db.conversations.find_one(query)
+    
+    if not conversation:
+        user1 = await db.users.find_one({"uid": user1_id})
+        user2 = await db.users.find_one({"uid": user2_id})
+        
+        conversation = {
+            "id": str(uuid.uuid4()),
+            "participants": participants,
+            "participantDetails": {
+                user1_id: {
+                    "name": f"{user1.get('firstName', '')} {user1.get('lastName', '')}".strip() if user1 else "Bilinmeyen",
+                    "profileImageUrl": user1.get('profileImageUrl') if user1 else None,
+                },
+                user2_id: {
+                    "name": f"{user2.get('firstName', '')} {user2.get('lastName', '')}".strip() if user2 else "Bilinmeyen",
+                    "profileImageUrl": user2.get('profileImageUrl') if user2 else None,
+                }
+            },
+            "type": conversation_type,
+            "serviceId": service_id,
+            "lastMessage": None,
+            "lastMessageTime": None,
+            "unreadCount": {user1_id: 0, user2_id: 0},
+            "createdAt": datetime.utcnow(),
+            "updatedAt": datetime.utcnow(),
+        }
+        await db.conversations.insert_one(conversation)
+    
+    return conversation
+
+@api_router.get("/conversations")
+async def get_conversations(type: Optional[str] = None, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının tüm konuşmalarını getir"""
+    query = {"participants": current_user['uid']}
+    if type:
+        query["type"] = type
+    
+    conversations = await db.conversations.find(query).sort("lastMessageTime", -1).to_list(100)
+    
+    result = []
+    for conv in conversations:
+        if "_id" in conv:
+            del conv["_id"]
+        
+        other_user_id = [p for p in conv["participants"] if p != current_user['uid']][0]
+        other_user = await db.users.find_one({"uid": other_user_id})
+        
+        conv["otherUser"] = {
+            "uid": other_user_id,
+            "name": f"{other_user.get('firstName', '')} {other_user.get('lastName', '')}".strip() if other_user else "Bilinmeyen",
+            "profileImageUrl": other_user.get('profileImageUrl') if other_user else None,
+            "isOnline": other_user.get('isOnline', False) if other_user else False,
+        }
+        
+        if conv.get("type") == CONVERSATION_TYPE_SERVICE and conv.get("serviceId"):
+            service = await db.services.find_one({"id": conv["serviceId"]})
+            if service:
+                conv["service"] = {
+                    "id": service["id"],
+                    "title": service.get("title"),
+                    "category": service.get("category"),
+                }
+        
+        conv["unreadCount"] = conv.get("unreadCount", {}).get(current_user['uid'], 0)
+        result.append(conv)
+    
+    return result
+
+@api_router.get("/conversations/{conversation_id}")
+async def get_conversation(conversation_id: str, current_user: dict = Depends(get_current_user)):
+    """Belirli bir konuşmayı getir"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    if "_id" in conversation:
+        del conversation["_id"]
+    
+    other_user_id = [p for p in conversation["participants"] if p != current_user['uid']][0]
+    other_user = await db.users.find_one({"uid": other_user_id})
+    
+    conversation["otherUser"] = {
+        "uid": other_user_id,
+        "name": f"{other_user.get('firstName', '')} {other_user.get('lastName', '')}".strip() if other_user else "Bilinmeyen",
+        "profileImageUrl": other_user.get('profileImageUrl') if other_user else None,
+        "isOnline": other_user.get('isOnline', False) if other_user else False,
+    }
+    
+    return conversation
+
+@api_router.post("/conversations/start")
+async def start_conversation(data: dict, current_user: dict = Depends(get_current_user)):
+    """Bir kullanıcı ile konuşma başlat"""
+    other_user_id = data.get("userId")
+    conversation_type = data.get("type", CONVERSATION_TYPE_PRIVATE)
+    service_id = data.get("serviceId")
+    
+    if not other_user_id:
+        raise HTTPException(status_code=400, detail="userId gerekli")
+    
+    if other_user_id == current_user['uid']:
+        raise HTTPException(status_code=400, detail="Kendinizle konuşma başlatamazsınız")
+    
+    other_user = await db.users.find_one({"uid": other_user_id})
+    if not other_user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    conversation = await get_or_create_conversation(current_user['uid'], other_user_id, conversation_type, service_id)
+    
+    if "_id" in conversation:
+        del conversation["_id"]
+    
+    conversation["otherUser"] = {
+        "uid": other_user_id,
+        "name": f"{other_user.get('firstName', '')} {other_user.get('lastName', '')}".strip(),
+        "profileImageUrl": other_user.get('profileImageUrl'),
+        "isOnline": other_user.get('isOnline', False),
+    }
+    
+    return conversation
+
+@api_router.get("/conversations/{conversation_id}/messages")
+async def get_conversation_messages(conversation_id: str, skip: int = 0, limit: int = 50, current_user: dict = Depends(get_current_user)):
+    """Konuşmadaki mesajları getir"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    messages = await db.dm_messages.find({"conversationId": conversation_id}).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
+    
+    await db.dm_messages.update_many(
+        {"conversationId": conversation_id, "senderId": {"$ne": current_user['uid']}, "read": False},
+        {"$set": {"read": True, "readAt": datetime.utcnow()}}
+    )
+    
+    await db.conversations.update_one({"id": conversation_id}, {"$set": {f"unreadCount.{current_user['uid']}": 0}})
+    
+    result = []
+    for msg in messages:
+        if "_id" in msg:
+            del msg["_id"]
+        result.append(msg)
+    
+    return list(reversed(result))
+
+@api_router.post("/conversations/{conversation_id}/messages")
+async def send_conversation_message(conversation_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Konuşmaya mesaj gönder"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "conversationId": conversation_id,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "senderImage": user.get('profileImageUrl') if user else None,
+        "content": data.get("content", ""),
+        "type": data.get("type", "text"),
+        "mediaUrl": data.get("mediaUrl"),
+        "timestamp": datetime.utcnow(),
+        "read": False,
+        "readAt": None,
+    }
+    
+    await db.dm_messages.insert_one(message)
+    
+    other_user_id = [p for p in conversation["participants"] if p != current_user['uid']][0]
+    
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {
+            "$set": {
+                "lastMessage": message["content"][:100] if message["content"] else "[Medya]",
+                "lastMessageTime": message["timestamp"],
+                "updatedAt": datetime.utcnow(),
+            },
+            "$inc": {f"unreadCount.{other_user_id}": 1}
+        }
+    )
+    
+    if "_id" in message:
+        del message["_id"]
+    
+    return message
+
+@api_router.post("/services/{service_id}/contact")
+async def contact_service_provider(service_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Hizmet sağlayıcısı ile iletişime geç"""
+    service = await db.services.find_one({"id": service_id})
+    if not service:
+        raise HTTPException(status_code=404, detail="Hizmet bulunamadı")
+    
+    provider_id = service.get("providerId")
+    if not provider_id:
+        raise HTTPException(status_code=400, detail="Hizmet sağlayıcı bulunamadı")
+    
+    if provider_id == current_user['uid']:
+        raise HTTPException(status_code=400, detail="Kendi hizmetinizle iletişime geçemezsiniz")
+    
+    conversation = await get_or_create_conversation(current_user['uid'], provider_id, CONVERSATION_TYPE_SERVICE, service_id)
+    
+    initial_message = data.get("message", "")
+    if initial_message:
+        user = await db.users.find_one({"uid": current_user['uid']})
+        sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+        
+        message = {
+            "id": str(uuid.uuid4()),
+            "conversationId": conversation["id"],
+            "senderId": current_user['uid'],
+            "senderName": sender_name,
+            "senderImage": user.get('profileImageUrl') if user else None,
+            "content": initial_message,
+            "type": "text",
+            "timestamp": datetime.utcnow(),
+            "read": False,
+            "isServiceInquiry": True,
+        }
+        
+        await db.dm_messages.insert_one(message)
+        
+        await db.conversations.update_one(
+            {"id": conversation["id"]},
+            {
+                "$set": {"lastMessage": message["content"][:100], "lastMessageTime": message["timestamp"]},
+                "$inc": {f"unreadCount.{provider_id}": 1}
+            }
+        )
+    
+    if "_id" in conversation:
+        del conversation["_id"]
+    
+    return {"conversationId": conversation["id"], "message": "Konuşma başlatıldı"}
+
+@api_router.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str, current_user: dict = Depends(get_current_user)):
+    """Konuşmayı sil"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    deleted_by = conversation.get("deletedBy", [])
+    if current_user['uid'] not in deleted_by:
+        deleted_by.append(current_user['uid'])
+    
+    if len(deleted_by) >= 2:
+        await db.conversations.delete_one({"id": conversation_id})
+        await db.dm_messages.delete_many({"conversationId": conversation_id})
+    else:
+        await db.conversations.update_one({"id": conversation_id}, {"$set": {"deletedBy": deleted_by}})
+    
+    return {"message": "Konuşma silindi"}
+
+# ============================================
+# END OF DM SYSTEM
+# ============================================
+
 # Include the router in the main app
 app.include_router(api_router)
 
