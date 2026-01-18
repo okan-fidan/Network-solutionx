@@ -185,6 +185,15 @@ export const conversationApi = {
   getMessages: (conversationId: string) => api.get(`/api/conversations/${conversationId}/messages`),
   sendMessage: (conversationId: string, data: { content: string; type?: string; mediaUrl?: string }) => 
     api.post(`/api/conversations/${conversationId}/messages`, data),
+  // WhatsApp benzeri özellikler
+  deleteMessage: (conversationId: string, messageId: string, deleteForAll: boolean = false) =>
+    api.delete(`/api/conversations/${conversationId}/messages/${messageId}?delete_for_all=${deleteForAll}`),
+  reactToMessage: (conversationId: string, messageId: string, emoji: string) =>
+    api.post(`/api/conversations/${conversationId}/messages/${messageId}/react`, { emoji }),
+  replyToMessage: (conversationId: string, messageId: string, data: { content: string; type?: string }) =>
+    api.post(`/api/conversations/${conversationId}/messages/${messageId}/reply`, data),
+  editMessage: (conversationId: string, messageId: string, content: string) =>
+    api.put(`/api/conversations/${conversationId}/messages/${messageId}`, { content }),
 };
 
 export default api;
