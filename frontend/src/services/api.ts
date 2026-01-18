@@ -74,8 +74,12 @@ export const subgroupApi = {
   rejectRequest: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/reject/${userId}`),
   // Yeni eklenen fonksiyonlar
   getMembers: (id: string) => api.get(`/api/subgroups/${id}/members`),
-  deleteMessage: (subgroupId: string, messageId: string) => api.delete(`/api/subgroups/${subgroupId}/messages/${messageId}`),
-  editMessage: (subgroupId: string, messageId: string, data: any) => api.put(`/api/subgroups/${subgroupId}/messages/${messageId}`, data),
+  deleteMessage: (subgroupId: string, messageId: string, deleteForAll: boolean = false) => 
+    api.delete(`/api/subgroups/${subgroupId}/messages/${messageId}?delete_for_all=${deleteForAll}`),
+  editMessage: (subgroupId: string, messageId: string, data: any) => 
+    api.put(`/api/subgroups/${subgroupId}/messages/${messageId}`, data),
+  reactToMessage: (subgroupId: string, messageId: string, emoji: string) =>
+    api.post(`/api/subgroups/${subgroupId}/messages/${messageId}/react`, { emoji }),
   pinMessage: (subgroupId: string, messageId: string) => api.post(`/api/subgroups/${subgroupId}/messages/${messageId}/pin`),
   getPinnedMessages: (id: string) => api.get(`/api/subgroups/${id}/pinned-messages`),
   getPolls: (id: string) => api.get(`/api/subgroups/${id}/polls`),
