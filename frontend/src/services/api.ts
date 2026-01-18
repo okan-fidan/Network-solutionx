@@ -194,6 +194,38 @@ export const conversationApi = {
     api.post(`/api/conversations/${conversationId}/messages/${messageId}/reply`, data),
   editMessage: (conversationId: string, messageId: string, content: string) =>
     api.put(`/api/conversations/${conversationId}/messages/${messageId}`, { content }),
+  // Medya ve konum
+  sendLocation: (conversationId: string, data: { latitude: number; longitude: number; address?: string }) =>
+    api.post(`/api/conversations/${conversationId}/location`, data),
+  uploadMedia: (conversationId: string, formData: FormData) =>
+    api.post(`/api/conversations/${conversationId}/upload`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+};
+
+// Kullanıcı etkileşimleri API
+export const userInteractionApi = {
+  // Engelleme
+  blockUser: (userId: string) => api.post(`/api/users/${userId}/block`),
+  unblockUser: (userId: string) => api.delete(`/api/users/${userId}/block`),
+  getBlockedUsers: () => api.get('/api/users/blocked'),
+  // Şikayet
+  reportUser: (userId: string, data: { reason: string; description?: string }) =>
+    api.post(`/api/users/${userId}/report`, data),
+  // Sessize alma
+  muteUser: (userId: string, duration: string) => api.post(`/api/users/${userId}/mute`, { duration }),
+  unmuteUser: (userId: string) => api.delete(`/api/users/${userId}/mute`),
+  // Durum
+  getUserStatus: (userId: string) => api.get(`/api/users/${userId}/status`),
+};
+
+// Push notification API
+export const notificationApi = {
+  savePushToken: (token: string) => api.post('/api/users/push-token', { token }),
+  getNotifications: (skip?: number, limit?: number) => 
+    api.get(`/api/notifications?skip=${skip || 0}&limit=${limit || 50}`),
+  markAsRead: (notificationId: string) => api.put(`/api/notifications/${notificationId}/read`),
+  markAllAsRead: () => api.put('/api/notifications/read-all'),
 };
 
 export default api;
