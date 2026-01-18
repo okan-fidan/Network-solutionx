@@ -269,6 +269,14 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [showStoryViewer, setShowStoryViewer] = useState(false);
+  const [currentStory, setCurrentStory] = useState<Story | null>(null);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
+  const [storyProgress, setStoryProgress] = useState(0);
+  const [showStoryCreator, setShowStoryCreator] = useState(false);
+  const [storyCaption, setStoryCaption] = useState('');
+  const [selectedStoryImage, setSelectedStoryImage] = useState<string | null>(null);
+  const [uploadingStory, setUploadingStory] = useState(false);
   const { userProfile, user } = useAuth();
   const router = useRouter();
 
