@@ -773,6 +773,147 @@ export default function HomeScreen() {
           }
         />
       )}
+
+      {/* Story Viewer Modal */}
+      <Modal
+        visible={showStoryViewer}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowStoryViewer(false)}
+      >
+        <View style={styles.storyViewerContainer}>
+          {currentStory && currentStory.stories[currentStoryIndex] && (
+            <>
+              {/* Progress Bars */}
+              <View style={styles.storyProgressContainer}>
+                {currentStory.stories.map((_, index) => (
+                  <View key={index} style={styles.storyProgressBarBg}>
+                    <View 
+                      style={[
+                        styles.storyProgressBar, 
+                        { 
+                          width: index < currentStoryIndex 
+                            ? '100%' 
+                            : index === currentStoryIndex 
+                              ? `${storyProgress}%` 
+                              : '0%' 
+                        }
+                      ]} 
+                    />
+                  </View>
+                ))}
+              </View>
+
+              {/* Header */}
+              <View style={styles.storyViewerHeader}>
+                <TouchableOpacity 
+                  style={styles.storyUserInfo}
+                  onPress={() => {
+                    setShowStoryViewer(false);
+                    router.push(`/user/${currentStory.userId}`);
+                  }}
+                >
+                  {currentStory.userProfileImage ? (
+                    <Image source={{ uri: currentStory.userProfileImage }} style={styles.storyViewerAvatar} />
+                  ) : (
+                    <View style={[styles.storyViewerAvatar, { backgroundColor: '#374151', justifyContent: 'center', alignItems: 'center' }]}>
+                      <Ionicons name="person" size={20} color="#9ca3af" />
+                    </View>
+                  )}
+                  <View>
+                    <Text style={styles.storyViewerName}>{currentStory.userName}</Text>
+                    <Text style={styles.storyViewerTime}>
+                      {formatDistanceToNow(new Date(currentStory.stories[currentStoryIndex].createdAt), { addSuffix: true, locale: tr })}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setShowStoryViewer(false)}>
+                  <Ionicons name="close" size={28} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Story Image */}
+              <Image 
+                source={{ uri: currentStory.stories[currentStoryIndex].imageUrl }}
+                style={styles.storyViewerImage}
+                resizeMode="contain"
+              />
+
+              {/* Caption */}
+              {currentStory.stories[currentStoryIndex].caption ? (
+                <View style={styles.storyCaption}>
+                  <Text style={styles.storyCaptionText}>{currentStory.stories[currentStoryIndex].caption}</Text>
+                </View>
+              ) : null}
+
+              {/* Touch Areas */}
+              <TouchableOpacity 
+                style={styles.storyTouchLeft} 
+                onPress={handlePrevStory}
+                activeOpacity={1}
+              />
+              <TouchableOpacity 
+                style={styles.storyTouchRight} 
+                onPress={handleNextStory}
+                activeOpacity={1}
+              />
+            </>
+          )}
+        </View>
+      </Modal>
+
+      {/* Story Creator Modal */}
+      <Modal
+        visible={showStoryCreator}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => {
+          setShowStoryCreator(false);
+          setSelectedStoryImage(null);
+          setStoryCaption('');
+        }}
+      >
+        <SafeAreaView style={styles.storyCreatorContainer}>
+          <View style={styles.storyCreatorHeader}>
+            <TouchableOpacity onPress={() => {
+              setShowStoryCreator(false);
+              setSelectedStoryImage(null);
+              setStoryCaption('');
+            }}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+            <Text style={styles.storyCreatorTitle}>Hikaye Oluştur</Text>
+            <TouchableOpacity 
+              onPress={handleCreateStory}
+              disabled={uploadingStory}
+              style={[styles.storyShareBtn, uploadingStory && { opacity: 0.5 }]}
+            >
+              <Text style={styles.storyShareText}>{uploadingStory ? 'Paylaşılıyor...' : 'Paylaş'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {selectedStoryImage && (
+            <Image 
+              source={{ uri: selectedStoryImage }} 
+              style={styles.storyPreviewImage}
+              resizeMode="contain"
+            />
+          )}
+
+          <View style={styles.storyCaptionInput}>
+            <TextInput
+              style={styles.storyCaptionInputField}
+              placeholder="Açıklama ekle..."
+              placeholderTextColor="#9ca3af"
+              value={storyCaption}
+              onChangeText={setStoryCaption}
+              maxLength={150}
+            />
+          </View>
+
+          <Text style={styles.storyNote}>⏰ Hikayeler 24 saat sonra otomatik olarak silinir</Text>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
