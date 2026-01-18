@@ -404,7 +404,7 @@ export default function GroupChatScreen() {
     if (!editingMessage || !inputText.trim() || !groupId) return;
     
     try {
-      await subgroupApi.editMessage(groupId, editingMessage.id, inputText.trim());
+      await subgroupApi.editMessage(groupId, editingMessage.id, { content: inputText.trim() });
       setMessages(messages.map(m => 
         m.id === editingMessage.id 
           ? { ...m, content: inputText.trim(), edited: true }
@@ -412,9 +412,9 @@ export default function GroupChatScreen() {
       ));
       setEditingMessage(null);
       setInputText('');
-    } catch (error) {
-      console.error('Error editing message:', error);
-      Alert.alert('Hata', 'Mesaj düzenlenemedi');
+    } catch (error: any) {
+      console.error('Error editing message:', error?.response?.data || error);
+      Alert.alert('Hata', error?.response?.data?.detail || 'Mesaj düzenlenemedi');
     }
   };
 
