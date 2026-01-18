@@ -175,4 +175,16 @@ export const adminApi = {
   removeAdmin: (userId: string) => api.post(`/api/admin/users/${userId}/remove-admin`),
 };
 
+// Conversation (DM) API
+export const conversationApi = {
+  getAll: (type?: string) => api.get(`/api/conversations${type ? `?type=${type}` : ''}`),
+  getOne: (id: string) => api.get(`/api/conversations/${id}`),
+  start: (data: { otherUserId: string; type?: string; serviceId?: string }) => 
+    api.post('/api/conversations/start', data),
+  delete: (id: string) => api.delete(`/api/conversations/${id}`),
+  getMessages: (conversationId: string) => api.get(`/api/conversations/${conversationId}/messages`),
+  sendMessage: (conversationId: string, data: { content: string; type?: string; mediaUrl?: string }) => 
+    api.post(`/api/conversations/${conversationId}/messages`, data),
+};
+
 export default api;
