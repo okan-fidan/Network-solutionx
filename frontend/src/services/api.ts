@@ -57,6 +57,12 @@ export const storyApi = {
   create: (data: { imageUrl?: string; videoUrl?: string; caption?: string }) => api.post('/api/stories', data),
   view: (storyId: string) => api.post(`/api/stories/${storyId}/view`),
   delete: (storyId: string) => api.delete(`/api/stories/${storyId}`),
+  // Instagram özellikleri
+  react: (storyId: string, emoji: string) => api.post(`/api/stories/${storyId}/react`, { emoji }),
+  reply: (storyId: string, message: string) => api.post(`/api/stories/${storyId}/reply`, { message }),
+  report: (storyId: string, reason: string) => api.post(`/api/stories/${storyId}/report`, { reason }),
+  getReactions: (storyId: string) => api.get(`/api/stories/${storyId}/reactions`),
+  getViewers: (storyId: string) => api.get(`/api/stories/${storyId}/viewers`),
 };
 
 export const communityApi = {
