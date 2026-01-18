@@ -10,21 +10,27 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Picker } from '@react-native-picker/picker';
 import api from '../../src/services/api';
 
 const CATEGORIES = [
-  { value: 'consulting', label: 'Danışmanlık' },
-  { value: 'marketing', label: 'Pazarlama' },
-  { value: 'design', label: 'Tasarım' },
-  { value: 'development', label: 'Yazılım' },
-  { value: 'finance', label: 'Finans' },
-  { value: 'legal', label: 'Hukuk' },
-  { value: 'other', label: 'Diğer' },
+  { value: 'consulting', label: 'Danışmanlık', icon: 'bulb-outline' },
+  { value: 'marketing', label: 'Pazarlama', icon: 'megaphone-outline' },
+  { value: 'design', label: 'Tasarım', icon: 'color-palette-outline' },
+  { value: 'development', label: 'Yazılım', icon: 'code-slash-outline' },
+  { value: 'finance', label: 'Finans', icon: 'calculator-outline' },
+  { value: 'legal', label: 'Hukuk', icon: 'document-text-outline' },
+  { value: 'education', label: 'Eğitim', icon: 'school-outline' },
+  { value: 'health', label: 'Sağlık', icon: 'fitness-outline' },
+  { value: 'construction', label: 'İnşaat', icon: 'construct-outline' },
+  { value: 'transport', label: 'Nakliyat', icon: 'car-outline' },
+  { value: 'food', label: 'Yemek', icon: 'restaurant-outline' },
+  { value: 'other', label: 'Diğer', icon: 'ellipsis-horizontal-outline' },
 ];
 
 export default function CreateServiceScreen() {
@@ -33,7 +39,10 @@ export default function CreateServiceScreen() {
   const [category, setCategory] = useState('consulting');
   const [price, setPrice] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const router = useRouter();
+
+  const selectedCategory = CATEGORIES.find(c => c.value === category);
 
   const handleCreate = async () => {
     if (!title.trim() || !description.trim()) {
@@ -59,6 +68,26 @@ export default function CreateServiceScreen() {
       setLoading(false);
     }
   };
+
+  const renderCategoryItem = ({ item }: { item: typeof CATEGORIES[0] }) => (
+    <TouchableOpacity
+      style={[styles.categoryItem, category === item.value && styles.categoryItemSelected]}
+      onPress={() => {
+        setCategory(item.value);
+        setShowCategoryModal(false);
+      }}
+    >
+      <View style={[styles.categoryIcon, category === item.value && styles.categoryIconSelected]}>
+        <Ionicons name={item.icon as any} size={24} color={category === item.value ? '#fff' : '#9ca3af'} />
+      </View>
+      <Text style={[styles.categoryLabel, category === item.value && styles.categoryLabelSelected]}>
+        {item.label}
+      </Text>
+      {category === item.value && (
+        <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+      )}
+    </TouchableOpacity>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -96,18 +125,18 @@ export default function CreateServiceScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Kategori</Text>
-            <View style={styles.pickerContainer}>
-              <Picker
-                selectedValue={category}
-                onValueChange={setCategory}
-                style={styles.picker}
-                dropdownIconColor="#fff"
-              >
-                {CATEGORIES.map((cat) => (
-                  <Picker.Item key={cat.value} label={cat.label} value={cat.value} color="#fff" />
-                ))}
-              </Picker>
-            </View>
+            <TouchableOpacity 
+              style={styles.categorySelector}
+              onPress={() => setShowCategoryModal(true)}
+            >
+              <View style={styles.categorySelectorContent}>
+                <View style={styles.categorySelectorIcon}>
+                  <Ionicons name={selectedCategory?.icon as any} size={20} color="#10b981" />
+                </View>
+                <Text style={styles.categorySelectorText}>{selectedCategory?.label}</Text>
+              </View>
+              <Ionicons name="chevron-down" size={20} color="#9ca3af" />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.inputGroup}>
@@ -139,6 +168,32 @@ export default function CreateServiceScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Category Selection Modal */}
+      <Modal
+        visible={showCategoryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowCategoryModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kategori Seçin</Text>
+              <TouchableOpacity onPress={() => setShowCategoryModal(false)}>
+                <Ionicons name="close" size={28} color="#fff" />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={CATEGORIES}
+              keyExtractor={(item) => item.value}
+              renderItem={renderCategoryItem}
+              contentContainerStyle={styles.categoryList}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -155,8 +210,63 @@ const styles = StyleSheet.create({
   label: { color: '#9ca3af', fontSize: 14, fontWeight: '500', marginBottom: 8 },
   input: { backgroundColor: '#1f2937', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, color: '#fff', fontSize: 16 },
   textArea: { minHeight: 120, textAlignVertical: 'top' },
-  pickerContainer: { backgroundColor: '#1f2937', borderRadius: 12, overflow: 'hidden' },
-  picker: { color: '#fff' },
   priceInput: { flexDirection: 'row', alignItems: 'center' },
   currency: { color: '#6b7280', fontSize: 18, marginLeft: 12 },
+
+  // Category Selector
+  categorySelector: { 
+    backgroundColor: '#1f2937', 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    paddingVertical: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  categorySelectorContent: { flexDirection: 'row', alignItems: 'center' },
+  categorySelectorIcon: { 
+    width: 36, 
+    height: 36, 
+    borderRadius: 8, 
+    backgroundColor: 'rgba(16, 185, 129, 0.15)', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  categorySelectorText: { color: '#fff', fontSize: 16 },
+
+  // Modal
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  modalContainer: { backgroundColor: '#111827', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' },
+  modalHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    justifyContent: 'space-between', 
+    padding: 16, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#1f2937' 
+  },
+  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  categoryList: { padding: 16 },
+  categoryItem: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#1f2937',
+  },
+  categoryItemSelected: { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderWidth: 1, borderColor: '#10b981' },
+  categoryIcon: { 
+    width: 44, 
+    height: 44, 
+    borderRadius: 10, 
+    backgroundColor: '#374151', 
+    justifyContent: 'center', 
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  categoryIconSelected: { backgroundColor: '#10b981' },
+  categoryLabel: { flex: 1, color: '#fff', fontSize: 16 },
+  categoryLabelSelected: { color: '#10b981', fontWeight: '600' },
 });
