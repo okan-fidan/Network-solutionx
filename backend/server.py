@@ -256,6 +256,7 @@ async def register_user(user_data: dict, current_user: dict = Depends(get_curren
         "phone": user_data.get('phone'),
         "city": city,
         "occupation": user_data.get('occupation'),
+        "birthDate": user_data.get('birthDate'),
         "profileImageUrl": None,
         "isAdmin": is_admin,
         "isBanned": False,
