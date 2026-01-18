@@ -69,34 +69,44 @@ export default function MessagesScreen() {
     }
 
     try {
-      // Özel mesajları yükle
-      const conversationsRes = await api.get('/api/conversations');
+      // Paralel olarak verileri yükle
+      const [conversationsRes, communitiesRes] = await Promise.all([
+        api.get('/api/conversations').catch(() => ({ data: [] })),
+        api.get('/api/communities').catch(() => ({ data: [] })),
+      ]);
+
       setConversations(conversationsRes.data || []);
 
-      // Grup sohbetlerini yükle
-      const communitiesRes = await api.get('/api/communities');
-      const myGroups: GroupChat[] = [];
+      // Grup sohbetlerini yükle - sadece üye olunan topluluklar
+      const memberCommunities = (communitiesRes.data || []).filter((c: any) => c.isMember);
       
-      for (const community of communitiesRes.data.filter((c: any) => c.isMember)) {
-        try {
-          const communityDetails = await api.get(`/api/communities/${community.id}`);
-          const subgroups = communityDetails.data.subGroupsList || [];
-          for (const sg of subgroups) {
-            if (sg.isMember) {
-              myGroups.push({
-                id: sg.id,
-                name: sg.name.replace(`${community.name} - `, ''),
-                communityId: community.id,
-                communityName: community.name,
-                memberCount: sg.memberCount || 0,
-                lastMessage: sg.lastMessage,
-                lastMessageTime: sg.lastMessageTime,
-                imageUrl: sg.imageUrl,
-              });
-            }
+      // Tüm topluluk detaylarını paralel olarak çek (max 5 tane)
+      const communityPromises = memberCommunities.slice(0, 5).map((community: any) =>
+        api.get(`/api/communities/${community.id}`)
+          .then(res => ({ community, details: res.data }))
+          .catch(() => null)
+      );
+
+      const communityResults = await Promise.all(communityPromises);
+      
+      const myGroups: GroupChat[] = [];
+      for (const result of communityResults) {
+        if (!result) continue;
+        const { community, details } = result;
+        const subgroups = details.subGroupsList || [];
+        for (const sg of subgroups) {
+          if (sg.isMember) {
+            myGroups.push({
+              id: sg.id,
+              name: sg.name.replace(`${community.name} - `, ''),
+              communityId: community.id,
+              communityName: community.name,
+              memberCount: sg.memberCount || 0,
+              lastMessage: sg.lastMessage,
+              lastMessageTime: sg.lastMessageTime,
+              imageUrl: sg.imageUrl,
+            });
           }
-        } catch (e) {
-          // Sessizce devam et
         }
       }
       setGroupChats(myGroups);
