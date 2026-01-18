@@ -1285,4 +1285,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  subgroupCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  subgroupInfo: {
+    flex: 1,
+  },
+  subgroupName: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  subgroupDesc: {
+    color: '#9ca3af',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  subgroupStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
+  subgroupStatText: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  subgroupActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  textAreaInput: {
+    height: 100,
+    textAlignVertical: 'top',
+  },
 });
