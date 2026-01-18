@@ -986,16 +986,18 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         raise HTTPException(status_code=403, detail="Bu grubun üyesi değilsiniz")
 
     user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user['firstName']} {user['lastName']}"
+    message_type = message_data.get('type', 'text')
 
     new_message = {
         "id": str(uuid.uuid4()),
         "groupId": subgroup_id,
         "senderId": current_user['uid'],
-        "senderName": f"{user['firstName']} {user['lastName']}",
+        "senderName": sender_name,
         "senderProfileImage": user.get('profileImageUrl'),
         "senderOccupation": user.get('occupation', ''),
         "content": message_data.get('content', ''),
-        "type": message_data.get('type', 'text'),
+        "type": message_type,
         "mediaUrl": message_data.get('mediaUrl'),
         "replyTo": message_data.get('replyTo'),
         "reactions": {},
@@ -1016,6 +1018,19 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         del new_message['_id']
     
     await sio.emit('new_message', new_message, room=subgroup_id)
+    
+    # Push bildirimleri gönder (arka planda)
+    try:
+        await notify_group_message(
+            subgroup_id, 
+            current_user['uid'], 
+            sender_name, 
+            message_data.get('content', ''),
+            message_type
+        )
+    except Exception as e:
+        logging.error(f"Error sending group notifications: {e}")
+    
     return new_message
 
 @api_router.delete("/subgroups/{subgroup_id}/messages/{message_id}")
