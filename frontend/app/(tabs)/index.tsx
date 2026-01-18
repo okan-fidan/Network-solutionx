@@ -42,11 +42,19 @@ interface Post {
 }
 
 interface Story {
-  id: string;
-  name: string;
-  imageUrl?: string;
-  hasNewStory: boolean;
-  type: 'user' | 'community';
+  userId: string;
+  userName: string;
+  userProfileImage?: string;
+  stories: {
+    id: string;
+    imageUrl?: string;
+    videoUrl?: string;
+    caption?: string;
+    createdAt: string;
+    viewCount: number;
+    hasViewed: boolean;
+  }[];
+  hasViewed: boolean;
 }
 
 interface Announcement {
