@@ -945,12 +945,25 @@ async def get_subgroup_messages(subgroup_id: str, current_user: dict = Depends(g
         "deletedForEveryone": {"$ne": True}
     }).sort("timestamp", -1).limit(100).to_list(100)
 
+    # Gönderenlerin bilgilerini toplu al
+    sender_ids = list(set(msg.get('senderId') for msg in messages if msg.get('senderId')))
+    senders = {}
+    if sender_ids:
+        sender_docs = await db.users.find({"uid": {"$in": sender_ids}}).to_list(len(sender_ids))
+        for s in sender_docs:
+            senders[s['uid']] = s
+
     for msg in messages:
         if '_id' in msg:
             del msg['_id']
         if current_user['uid'] in msg.get('deletedFor', []):
             msg['isDeleted'] = True
             msg['content'] = 'Bu mesaj silindi'
+        
+        # Meslek bilgisi ekle
+        sender = senders.get(msg.get('senderId'))
+        if sender and not msg.get('senderOccupation'):
+            msg['senderOccupation'] = sender.get('occupation', '')
 
     return messages
 
