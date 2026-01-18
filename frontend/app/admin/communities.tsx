@@ -398,6 +398,12 @@ export default function AdminCommunitiesScreen() {
       <View style={styles.communityActions}>
         <TouchableOpacity
           style={styles.actionIconBtn}
+          onPress={() => handleOpenSubgroups(item)}
+        >
+          <Ionicons name="grid-outline" size={20} color="#10b981" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.actionIconBtn}
           onPress={() => openEditCommunity(item)}
         >
           <Ionicons name="create-outline" size={20} color="#3b82f6" />
