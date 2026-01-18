@@ -600,40 +600,33 @@ export default function GroupChatScreen() {
     if (!groupId || !user?.uid) return;
     
     try {
-      await api.post(`/api/subgroups/${groupId}/messages/${message.id}/reaction`, {
-        emoji,
-        userId: user.uid,
-        userName: userProfile?.firstName || 'Kullanıcı',
-      });
+      const result = await subgroupApi.reactToMessage(groupId, message.id, emoji);
       
-      // Tepkileri güncelle
-      const existingReaction = message.reactions?.find(
-        r => r.userId === user.uid && r.emoji === emoji
-      );
+      // Backend'den dönen reactions ile güncelle
+      const newReactions = result.data?.reactions || {};
       
       setMessages(messages.map(m => {
         if (m.id !== message.id) return m;
         
-        let newReactions = [...(m.reactions || [])];
-        
-        if (existingReaction) {
-          // Tepkiyi kaldır
-          newReactions = newReactions.filter(
-            r => !(r.userId === user.uid && r.emoji === emoji)
-          );
-        } else {
-          // Tepki ekle
-          newReactions.push({
-            emoji,
-            userId: user.uid,
-            userName: userProfile?.firstName || 'Kullanıcı',
-          });
+        // reactions formatını dönüştür
+        const formattedReactions: { emoji: string; userId: string; userName: string }[] = [];
+        for (const [emj, userIds] of Object.entries(newReactions)) {
+          if (Array.isArray(userIds)) {
+            userIds.forEach((uid: string) => {
+              formattedReactions.push({
+                emoji: emj,
+                userId: uid,
+                userName: uid === user.uid ? (userProfile?.firstName || 'Sen') : 'Kullanıcı',
+              });
+            });
+          }
         }
         
-        return { ...m, reactions: newReactions };
+        return { ...m, reactions: formattedReactions };
       }));
-    } catch (error) {
-      console.error('Error adding reaction:', error);
+    } catch (error: any) {
+      console.error('Error adding reaction:', error?.response?.data || error);
+      Alert.alert('Hata', 'Reaksiyon eklenemedi');
     }
     
     setShowReactionPicker(false);
