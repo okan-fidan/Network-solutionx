@@ -344,6 +344,140 @@ export default function HomeScreen() {
     loadData();
   }, [loadData]);
 
+  // Hikaye fonksiyonları
+  const handleStoryPress = async (story: Story) => {
+    setCurrentStory(story);
+    setCurrentStoryIndex(0);
+    setStoryProgress(0);
+    setShowStoryViewer(true);
+    
+    // Hikayeyi görüntülenmiş olarak işaretle
+    if (story.stories.length > 0) {
+      try {
+        await storyApi.view(story.stories[0].id);
+      } catch (e) {
+        console.log('Story view error:', e);
+      }
+    }
+  };
+
+  const handleNextStory = async () => {
+    if (!currentStory) return;
+    
+    if (currentStoryIndex < currentStory.stories.length - 1) {
+      const nextIndex = currentStoryIndex + 1;
+      setCurrentStoryIndex(nextIndex);
+      setStoryProgress(0);
+      
+      try {
+        await storyApi.view(currentStory.stories[nextIndex].id);
+      } catch (e) {
+        console.log('Story view error:', e);
+      }
+    } else {
+      // Sonraki kullanıcının hikayesine geç
+      const currentUserIndex = stories.findIndex(s => s.userId === currentStory.userId);
+      if (currentUserIndex < stories.length - 1) {
+        const nextUserStory = stories[currentUserIndex + 1];
+        setCurrentStory(nextUserStory);
+        setCurrentStoryIndex(0);
+        setStoryProgress(0);
+        
+        if (nextUserStory.stories.length > 0) {
+          try {
+            await storyApi.view(nextUserStory.stories[0].id);
+          } catch (e) {
+            console.log('Story view error:', e);
+          }
+        }
+      } else {
+        setShowStoryViewer(false);
+      }
+    }
+  };
+
+  const handlePrevStory = () => {
+    if (!currentStory) return;
+    
+    if (currentStoryIndex > 0) {
+      setCurrentStoryIndex(currentStoryIndex - 1);
+      setStoryProgress(0);
+    } else {
+      // Önceki kullanıcının hikayesine geç
+      const currentUserIndex = stories.findIndex(s => s.userId === currentStory.userId);
+      if (currentUserIndex > 0) {
+        const prevUserStory = stories[currentUserIndex - 1];
+        setCurrentStory(prevUserStory);
+        setCurrentStoryIndex(prevUserStory.stories.length - 1);
+        setStoryProgress(0);
+      }
+    }
+  };
+
+  const handleAddStory = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [9, 16],
+      quality: 0.8,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      setSelectedStoryImage(base64Image);
+      setShowStoryCreator(true);
+    }
+  };
+
+  const handleCreateStory = async () => {
+    if (!selectedStoryImage) return;
+    
+    setUploadingStory(true);
+    try {
+      await storyApi.create({
+        imageUrl: selectedStoryImage,
+        caption: storyCaption,
+      });
+      
+      Toast.show({
+        type: 'success',
+        text1: 'Başarılı',
+        text2: 'Hikaye paylaşıldı (24 saat sonra otomatik silinecek)',
+      });
+      
+      setShowStoryCreator(false);
+      setSelectedStoryImage(null);
+      setStoryCaption('');
+      loadData(); // Hikayeleri yenile
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: error.response?.data?.detail || 'Hikaye paylaşılamadı',
+      });
+    } finally {
+      setUploadingStory(false);
+    }
+  };
+
+  // Hikaye progress timer
+  useEffect(() => {
+    if (showStoryViewer && currentStory) {
+      const timer = setInterval(() => {
+        setStoryProgress(prev => {
+          if (prev >= 100) {
+            handleNextStory();
+            return 0;
+          }
+          return prev + 2; // 5 saniyede dolacak (100/2 = 50 interval, 50*100ms = 5sn)
+        });
+      }, 100);
+      
+      return () => clearInterval(timer);
+    }
+  }, [showStoryViewer, currentStory, currentStoryIndex]);
+
   const handleLike = async (postId: string) => {
     try {
       const response = await postApi.like(postId);
