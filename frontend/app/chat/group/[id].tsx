@@ -836,7 +836,16 @@ export default function GroupChatScreen() {
               <Text style={styles.pinnedText}>Sabitlendi</Text>
             </View>
           )}
-          {!isMe && <Text style={styles.senderName}>{item.senderName}</Text>}
+          {!isMe && (
+            <View style={styles.senderInfo}>
+              <Text style={styles.senderName}>{item.senderName}</Text>
+              {item.senderOccupation && (
+                <View style={styles.occupationBadge}>
+                  <Text style={styles.occupationText}>{item.senderOccupation}</Text>
+                </View>
+              )}
+            </View>
+          )}
           
           {/* Yanıtlanan mesaj */}
           {item.replyTo && (
