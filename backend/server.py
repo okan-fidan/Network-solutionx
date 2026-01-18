@@ -1661,7 +1661,7 @@ async def create_poll(subgroup_id: str, data: dict, current_user: dict = Depends
     if not subgroup:
         raise HTTPException(status_code=404, detail="Grup bulunamadı")
     
-    if current_user['uid'] not in subgroup.get('memberIds', []):
+    if current_user['uid'] not in subgroup.get('members', []):
         raise HTTPException(status_code=403, detail="Grup üyesi değilsiniz")
     
     user = await db.users.find_one({"uid": current_user['uid']})
