@@ -302,20 +302,10 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Comprehensive Backend API Testing"
-    - "Authentication System"
-    - "User Profile Management"
-    - "Communities Management"
-    - "Messaging System"
-    - "Posts System"
-    - "Services System"
-    - "Notifications System"
-    - "Feedback System"
-    - "Subgroups System"
-    - "Admin System"
+    - "DM Conversation System"
   stuck_tasks: []
   test_all: true
-  test_priority: "comprehensive_completed"
+  test_priority: "dm_conversation_completed"
 
 agent_communication:
   - agent: "testing"
