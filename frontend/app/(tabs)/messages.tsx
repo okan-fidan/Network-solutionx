@@ -54,9 +54,10 @@ interface GroupChat {
 export default function MessagesScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [groupChats, setGroupChats] = useState<GroupChat[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('all');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
   const { userProfile, user } = useAuth();
   const { colors, isDark } = useTheme();
   const router = useRouter();
@@ -65,7 +66,12 @@ export default function MessagesScreen() {
     if (!user) {
       setLoading(false);
       setRefreshing(false);
+      setInitialLoadDone(true);
       return;
+    }
+
+    if (!initialLoadDone) {
+      setLoading(true);
     }
 
     try {
