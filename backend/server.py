@@ -1847,8 +1847,8 @@ async def get_user_profile(user_id: str, current_user: dict = Depends(get_curren
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
     
     # Ortak toplulukları bul
-    current_user_communities = await db.communities.find({"memberIds": current_user['uid']}).to_list(100)
-    target_user_communities = await db.communities.find({"memberIds": user_id}).to_list(100)
+    current_user_communities = await db.communities.find({"members": current_user['uid']}).to_list(100)
+    target_user_communities = await db.communities.find({"members": user_id}).to_list(100)
     
     current_ids = {c['id'] for c in current_user_communities}
     common_communities = [c for c in target_user_communities if c['id'] in current_ids]
