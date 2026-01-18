@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
-Admin Panel API Endpoints Testing Script
-Tests the specific admin endpoints requested in the review:
-1. /api/admin/users - Get all users endpoint
-2. /api/admin/join-requests - Get all join requests endpoint  
-3. /api/admin/communities - Get all communities endpoint
-4. /api/admin/communities/{id}/members - Get community members endpoint
+Admin Panel Community and Join Request Management Endpoints Test
+Testing specific admin endpoints as per review request
 """
 
 import requests
@@ -13,301 +9,204 @@ import json
 import sys
 from datetime import datetime
 
-# Get backend URL from frontend .env
-BACKEND_URL = "https://admindash-12.preview.emergentagent.com/api"
-
-def print_test_header(test_name):
-    print(f"\n{'='*60}")
-    print(f"Testing: {test_name}")
-    print(f"{'='*60}")
-
-def print_result(endpoint, status_code, response_data, expected_status=None):
-    print(f"\nEndpoint: {endpoint}")
-    print(f"Status Code: {status_code}")
-    if expected_status:
-        print(f"Expected: {expected_status}")
-        print(f"Result: {'✅ PASS' if status_code in expected_status else '❌ FAIL'}")
-    
-    if isinstance(response_data, dict):
-        print(f"Response: {json.dumps(response_data, indent=2)}")
-    else:
-        print(f"Response: {response_data}")
-
-def test_user_registration():
-    """Test user registration to create test data"""
-    print_test_header("User Registration (Create Test Data)")
-    
-    # Test data for user registration
-    test_user_data = {
-        "firstName": "Test",
-        "lastName": "Admin",
-        "email": "testadmin@example.com",
-        "city": "İstanbul",
-        "occupation": "Software Developer",
-        "uid": "test-firebase-uid-12345"  # Mock Firebase UID
-    }
-    
-    # Mock Firebase token header (for testing purposes)
-    headers = {
-        "Authorization": "Bearer mock-firebase-token-for-testing",
-        "Content-Type": "application/json"
-    }
-    
-    try:
-        response = requests.post(
-            f"{BACKEND_URL}/user/register",
-            json=test_user_data,
-            headers=headers,
-            timeout=10
-        )
-        
-        print_result("/user/register", response.status_code, 
-                    response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text,
-                    [200, 201, 401, 403])
-        
-        return response.status_code in [200, 201, 401, 403]  # Accept auth errors as expected
-        
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request failed: {e}")
-        return False
+# Server configuration
+BASE_URL = "https://admindash-12.preview.emergentagent.com/api"
 
 def test_admin_endpoints():
-    """Test the specific admin endpoints requested"""
+    """Test admin panel community and join request management endpoints"""
     
-    # Mock admin headers (since we can't get real Firebase tokens in testing)
-    headers = {
-        "Authorization": "Bearer mock-admin-firebase-token",
-        "Content-Type": "application/json"
+    print("=" * 80)
+    print("ADMIN PANEL COMMUNITY & JOIN REQUEST MANAGEMENT ENDPOINTS TEST")
+    print("=" * 80)
+    print(f"Server: {BASE_URL}")
+    print(f"Test Time: {datetime.now().isoformat()}")
+    print()
+    
+    # Test results tracking
+    results = {
+        "total_tests": 0,
+        "passed": 0,
+        "failed": 0,
+        "endpoints_tested": [],
+        "issues": []
     }
     
-    admin_endpoints = [
+    # Test endpoints from review request
+    test_cases = [
         {
-            "name": "Get All Users",
-            "endpoint": "/admin/users",
+            "name": "Get Communities (Admin)",
             "method": "GET",
-            "expected_status": [200, 401, 403]  # 200 if authenticated admin, 401/403 if not
+            "url": f"{BASE_URL}/admin/communities",
+            "description": "List all communities"
         },
         {
-            "name": "Get All Join Requests", 
-            "endpoint": "/admin/join-requests",
-            "method": "GET",
-            "expected_status": [200, 401, 403]
+            "name": "Get Community Subgroups (Admin)",
+            "method": "GET", 
+            "url": f"{BASE_URL}/admin/communities/test-community-id/subgroups",
+            "description": "List subgroups with member count and pending request count"
         },
         {
-            "name": "Get All Communities",
-            "endpoint": "/admin/communities", 
+            "name": "Get Community Members (Admin)",
             "method": "GET",
-            "expected_status": [200, 401, 403]
+            "url": f"{BASE_URL}/admin/communities/test-community-id/members", 
+            "description": "List community members"
+        },
+        {
+            "name": "Get All Join Requests (Admin)",
+            "method": "GET",
+            "url": f"{BASE_URL}/admin/join-requests",
+            "description": "Get all pending join requests"
+        },
+        {
+            "name": "Get Subgroup Join Requests (Admin)",
+            "method": "GET",
+            "url": f"{BASE_URL}/admin/subgroup-join-requests?community_id=test-id",
+            "description": "Get join requests for specific community"
+        },
+        {
+            "name": "Approve Join Request",
+            "method": "POST",
+            "url": f"{BASE_URL}/subgroups/test-subgroup-id/approve/test-user-id",
+            "description": "Approve join request"
+        },
+        {
+            "name": "Reject Join Request", 
+            "method": "POST",
+            "url": f"{BASE_URL}/subgroups/test-subgroup-id/reject/test-user-id",
+            "description": "Reject join request"
+        },
+        {
+            "name": "Update Subgroup (Admin)",
+            "method": "PUT",
+            "url": f"{BASE_URL}/admin/subgroups/test-subgroup-id",
+            "description": "Update subgroup name/description",
+            "body": {"name": "New Name", "description": "New description"}
+        },
+        {
+            "name": "Delete Subgroup (Admin)",
+            "method": "DELETE", 
+            "url": f"{BASE_URL}/admin/subgroups/test-subgroup-id",
+            "description": "Delete subgroup"
         }
     ]
     
-    results = []
+    print("TESTING ADMIN ENDPOINTS (WITHOUT AUTHENTICATION)")
+    print("Expected: All should return 401/403 (authentication required)")
+    print("-" * 60)
     
-    for test_case in admin_endpoints:
-        print_test_header(f"Admin Endpoint: {test_case['name']}")
+    for i, test_case in enumerate(test_cases, 1):
+        results["total_tests"] += 1
+        results["endpoints_tested"].append(test_case["url"])
+        
+        print(f"{i}. {test_case['name']}")
+        print(f"   Method: {test_case['method']}")
+        print(f"   URL: {test_case['url']}")
+        print(f"   Description: {test_case['description']}")
         
         try:
-            if test_case['method'] == 'GET':
-                response = requests.get(
-                    f"{BACKEND_URL}{test_case['endpoint']}",
-                    headers=headers,
-                    timeout=10
-                )
+            # Make request without authentication
+            if test_case["method"] == "GET":
+                response = requests.get(test_case["url"], timeout=10)
+            elif test_case["method"] == "POST":
+                body = test_case.get("body", {})
+                response = requests.post(test_case["url"], json=body, timeout=10)
+            elif test_case["method"] == "PUT":
+                body = test_case.get("body", {})
+                response = requests.put(test_case["url"], json=body, timeout=10)
+            elif test_case["method"] == "DELETE":
+                response = requests.delete(test_case["url"], timeout=10)
             
-            response_data = response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
+            print(f"   Status: {response.status_code}")
             
-            print_result(
-                test_case['endpoint'], 
-                response.status_code, 
-                response_data,
-                test_case['expected_status']
-            )
-            
-            # Check if status code is in expected range
-            is_success = response.status_code in test_case['expected_status']
-            results.append({
-                "endpoint": test_case['endpoint'],
-                "name": test_case['name'],
-                "status_code": response.status_code,
-                "success": is_success,
-                "response": response_data
-            })
+            # Check if endpoint exists and requires authentication
+            if response.status_code in [401, 403]:
+                print(f"   Result: ✅ PASS - Properly requires authentication")
+                results["passed"] += 1
+                
+                # Try to parse response
+                try:
+                    response_data = response.json()
+                    print(f"   Response: {json.dumps(response_data, indent=2)}")
+                except:
+                    print(f"   Response: {response.text[:200]}")
+                    
+            elif response.status_code == 404:
+                print(f"   Result: ❌ FAIL - Endpoint not found (404)")
+                results["failed"] += 1
+                results["issues"].append(f"{test_case['name']}: Endpoint not implemented (404)")
+                
+            elif response.status_code >= 500:
+                print(f"   Result: ❌ FAIL - Server error ({response.status_code})")
+                results["failed"] += 1
+                results["issues"].append(f"{test_case['name']}: Server error {response.status_code}")
+                
+            else:
+                print(f"   Result: ⚠️  UNEXPECTED - Status {response.status_code}")
+                results["failed"] += 1
+                results["issues"].append(f"{test_case['name']}: Unexpected status {response.status_code}")
+                
+                try:
+                    response_data = response.json()
+                    print(f"   Response: {json.dumps(response_data, indent=2)}")
+                except:
+                    print(f"   Response: {response.text[:200]}")
             
         except requests.exceptions.RequestException as e:
-            print(f"❌ Request failed: {e}")
-            results.append({
-                "endpoint": test_case['endpoint'],
-                "name": test_case['name'], 
-                "status_code": "ERROR",
-                "success": False,
-                "response": str(e)
-            })
+            print(f"   Result: ❌ FAIL - Connection error: {str(e)}")
+            results["failed"] += 1
+            results["issues"].append(f"{test_case['name']}: Connection error - {str(e)}")
+        
+        print()
+    
+    # Additional connectivity test
+    print("BASIC CONNECTIVITY TEST")
+    print("-" * 30)
+    
+    try:
+        response = requests.get(f"{BASE_URL}/", timeout=10)
+        print(f"GET {BASE_URL}/ - Status: {response.status_code}")
+        if response.status_code == 200:
+            print("✅ Server is accessible")
+            results["passed"] += 1
+        else:
+            print("❌ Server connectivity issue")
+            results["failed"] += 1
+        results["total_tests"] += 1
+    except Exception as e:
+        print(f"❌ Server connection failed: {e}")
+        results["failed"] += 1
+        results["total_tests"] += 1
+    
+    print()
+    
+    # Summary
+    print("=" * 80)
+    print("TEST SUMMARY")
+    print("=" * 80)
+    print(f"Total Tests: {results['total_tests']}")
+    print(f"Passed: {results['passed']}")
+    print(f"Failed: {results['failed']}")
+    print(f"Success Rate: {(results['passed']/results['total_tests']*100):.1f}%")
+    print()
+    
+    if results["issues"]:
+        print("ISSUES FOUND:")
+        for issue in results["issues"]:
+            print(f"  - {issue}")
+        print()
+    
+    print("ENDPOINTS TESTED:")
+    for endpoint in results["endpoints_tested"]:
+        print(f"  - {endpoint}")
+    
+    print()
+    print("NOTES:")
+    print("- All admin endpoints should require Firebase authentication")
+    print("- 401/403 responses indicate proper authentication protection")
+    print("- 404 responses indicate missing endpoint implementations")
+    print("- Server errors (500+) indicate implementation issues")
     
     return results
 
-def test_community_members_endpoint():
-    """Test the community members endpoint with a test community ID"""
-    print_test_header("Admin Endpoint: Get Community Members")
-    
-    headers = {
-        "Authorization": "Bearer mock-admin-firebase-token",
-        "Content-Type": "application/json"
-    }
-    
-    # First, try to get communities to find a valid community ID
-    try:
-        communities_response = requests.get(
-            f"{BACKEND_URL}/admin/communities",
-            headers=headers,
-            timeout=10
-        )
-        
-        if communities_response.status_code == 200:
-            communities_data = communities_response.json()
-            if communities_data and len(communities_data) > 0:
-                # Use the first community ID
-                community_id = communities_data[0].get('id')
-                if community_id:
-                    members_response = requests.get(
-                        f"{BACKEND_URL}/admin/communities/{community_id}/members",
-                        headers=headers,
-                        timeout=10
-                    )
-                    
-                    response_data = members_response.json() if members_response.headers.get('content-type', '').startswith('application/json') else members_response.text
-                    
-                    print_result(
-                        f"/admin/communities/{community_id}/members",
-                        members_response.status_code,
-                        response_data,
-                        [200, 401, 403]
-                    )
-                    
-                    return {
-                        "endpoint": f"/admin/communities/{community_id}/members",
-                        "name": "Get Community Members",
-                        "status_code": members_response.status_code,
-                        "success": members_response.status_code in [200, 401, 403],
-                        "response": response_data
-                    }
-        
-        # If we can't get communities or no communities exist, test with a mock ID
-        print("Testing with mock community ID since no communities found...")
-        mock_response = requests.get(
-            f"{BACKEND_URL}/admin/communities/mock-community-id/members",
-            headers=headers,
-            timeout=10
-        )
-        
-        response_data = mock_response.json() if mock_response.headers.get('content-type', '').startswith('application/json') else mock_response.text
-        
-        print_result(
-            "/admin/communities/mock-community-id/members",
-            mock_response.status_code,
-            response_data,
-            [200, 401, 403, 404]
-        )
-        
-        return {
-            "endpoint": "/admin/communities/{id}/members",
-            "name": "Get Community Members",
-            "status_code": mock_response.status_code,
-            "success": mock_response.status_code in [200, 401, 403, 404],
-            "response": response_data
-        }
-        
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Request failed: {e}")
-        return {
-            "endpoint": "/admin/communities/{id}/members",
-            "name": "Get Community Members",
-            "status_code": "ERROR",
-            "success": False,
-            "response": str(e)
-        }
-
-def test_basic_connectivity():
-    """Test basic API connectivity"""
-    print_test_header("Basic API Connectivity")
-    
-    try:
-        # Test root endpoint
-        response = requests.get(f"{BACKEND_URL}/", timeout=10)
-        print_result("/", response.status_code, 
-                    response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text, 
-                    [200])
-        
-        return response.status_code == 200
-        
-    except requests.exceptions.RequestException as e:
-        print(f"❌ Basic connectivity failed: {e}")
-        return False
-
-def main():
-    """Main testing function"""
-    print("🚀 Starting Admin Panel API Endpoint Testing")
-    print(f"Backend URL: {BACKEND_URL}")
-    print(f"Test Time: {datetime.now().isoformat()}")
-    
-    all_results = []
-    
-    # Test 1: Basic connectivity
-    connectivity_ok = test_basic_connectivity()
-    if not connectivity_ok:
-        print("❌ Basic connectivity failed. Stopping tests.")
-        return
-    
-    # Test 2: User registration (to create test data)
-    print_test_header("Creating Test Data")
-    user_reg_ok = test_user_registration()
-    
-    # Test 3: Admin endpoints
-    admin_results = test_admin_endpoints()
-    all_results.extend(admin_results)
-    
-    # Test 4: Community members endpoint
-    members_result = test_community_members_endpoint()
-    all_results.append(members_result)
-    
-    # Summary
-    print_test_header("TEST SUMMARY")
-    
-    total_tests = len(all_results)
-    passed_tests = sum(1 for r in all_results if r['success'])
-    
-    print(f"Total Tests: {total_tests}")
-    print(f"Passed: {passed_tests}")
-    print(f"Failed: {total_tests - passed_tests}")
-    
-    print("\nDetailed Results:")
-    for result in all_results:
-        status = "✅ PASS" if result['success'] else "❌ FAIL"
-        print(f"{status} {result['name']} ({result['endpoint']}) - Status: {result['status_code']}")
-    
-    # Analysis
-    print_test_header("ANALYSIS")
-    
-    auth_protected_count = sum(1 for r in all_results if r['status_code'] in [401, 403])
-    working_count = sum(1 for r in all_results if r['status_code'] == 200)
-    not_found_count = sum(1 for r in all_results if r['status_code'] == 404)
-    
-    print(f"🔒 Authentication Protected Endpoints: {auth_protected_count}")
-    print(f"✅ Working Endpoints (200 OK): {working_count}")
-    print(f"❓ Not Found Endpoints (404): {not_found_count}")
-    
-    if auth_protected_count > 0:
-        print("\n📋 AUTHENTICATION ANALYSIS:")
-        print("- Endpoints returning 401/403 indicate proper Firebase authentication is required")
-        print("- This is expected behavior for admin endpoints")
-        print("- To test with real data, valid Firebase admin tokens would be needed")
-    
-    if working_count > 0:
-        print(f"\n✅ {working_count} endpoints are accessible and working")
-    
-    if not_found_count > 0:
-        print(f"\n⚠️  {not_found_count} endpoints returned 404 - may not be implemented")
-    
-    print(f"\n🏁 Testing completed at {datetime.now().isoformat()}")
-
 if __name__ == "__main__":
-    main()
+    test_admin_endpoints()
