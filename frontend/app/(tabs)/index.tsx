@@ -1016,4 +1016,31 @@ const styles = StyleSheet.create({
   skeletonActions: { width: '50%', height: 24, borderRadius: 4, backgroundColor: '#1f2937' },
   skeletonStories: { flexDirection: 'row', paddingHorizontal: 12, paddingVertical: 12 },
   skeletonStoryItem: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#1f2937', marginHorizontal: 6 },
+
+  // Story Viewer Styles
+  storyViewerContainer: { flex: 1, backgroundColor: '#000' },
+  storyProgressContainer: { flexDirection: 'row', paddingHorizontal: 8, paddingTop: 50, gap: 4 },
+  storyProgressBarBg: { flex: 1, height: 2, backgroundColor: 'rgba(255,255,255,0.3)', borderRadius: 1 },
+  storyProgressBar: { height: '100%', backgroundColor: '#fff', borderRadius: 1 },
+  storyViewerHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 12 },
+  storyUserInfo: { flexDirection: 'row', alignItems: 'center' },
+  storyViewerAvatar: { width: 36, height: 36, borderRadius: 18, marginRight: 10 },
+  storyViewerName: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  storyViewerTime: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
+  storyViewerImage: { flex: 1, width: '100%' },
+  storyCaption: { position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(0,0,0,0.5)' },
+  storyCaptionText: { color: '#fff', fontSize: 16, textAlign: 'center' },
+  storyTouchLeft: { position: 'absolute', left: 0, top: 100, bottom: 100, width: '30%' },
+  storyTouchRight: { position: 'absolute', right: 0, top: 100, bottom: 100, width: '70%' },
+
+  // Story Creator Styles
+  storyCreatorContainer: { flex: 1, backgroundColor: '#0a0a0a' },
+  storyCreatorHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
+  storyCreatorTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  storyShareBtn: { backgroundColor: '#6366f1', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
+  storyShareText: { color: '#fff', fontWeight: '600' },
+  storyPreviewImage: { flex: 1, width: '100%', backgroundColor: '#111' },
+  storyCaptionInput: { padding: 16, borderTopWidth: 1, borderTopColor: '#1f2937' },
+  storyCaptionInputField: { color: '#fff', fontSize: 16, paddingVertical: 8 },
+  storyNote: { color: '#9ca3af', fontSize: 12, textAlign: 'center', paddingBottom: 20 },
 });
