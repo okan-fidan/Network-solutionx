@@ -132,6 +132,9 @@ export const notificationApi = {
   markAsRead: (id: string) => api.put(`/api/notifications/${id}/read`),
   markAllAsRead: () => api.put('/api/notifications/read-all'),
   send: (data: any) => api.post('/api/notifications/send', data),
+  savePushToken: (token: string) => api.post('/api/users/push-token', { token }),
+  getNotifications: (skip?: number, limit?: number) => 
+    api.get(`/api/notifications?skip=${skip || 0}&limit=${limit || 50}`),
 };
 
 export const badgeApi = {
