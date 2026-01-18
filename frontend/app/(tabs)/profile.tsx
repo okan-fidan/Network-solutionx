@@ -56,38 +56,40 @@ export default function ProfileScreen() {
       return;
     }
 
+    // Resmi çok küçük boyutta al
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.3, // Düşük kalite - küçük dosya boyutu
+      quality: 0.1, // Çok düşük kalite
       base64: true,
     });
 
     if (!result.canceled && result.assets[0] && result.assets[0].base64) {
+      // Dosya boyutunu kontrol et (max 100KB base64)
+      const base64Length = result.assets[0].base64.length;
+      if (base64Length > 133000) { // ~100KB
+        Alert.alert(
+          'Fotoğraf Çok Büyük', 
+          'Lütfen daha küçük bir fotoğraf seçin veya kırpın.',
+          [{ text: 'Tamam' }]
+        );
+        return;
+      }
+
       setUploadingImage(true);
       try {
-        // Base64 formatında gönder
         const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        
-        // Dosya boyutunu kontrol et (max 500KB)
-        const sizeInBytes = (result.assets[0].base64.length * 3) / 4;
-        if (sizeInBytes > 500000) {
-          Alert.alert('Uyarı', 'Fotoğraf çok büyük. Lütfen daha küçük bir fotoğraf seçin.');
-          setUploadingImage(false);
-          return;
-        }
         
         const response = await api.put('/api/user/profile-image', { 
           profileImageUrl: base64Image 
         });
         
-        // Refresh profile to get new image
         if (refreshProfile) await refreshProfile();
         Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
       } catch (error: any) {
         console.error('Error uploading image:', error?.response?.data || error?.message);
-        Alert.alert('Hata', 'Fotoğraf yüklenemedi. Lütfen tekrar deneyin.');
+        Alert.alert('Hata', 'Fotoğraf yüklenemedi. Lütfen daha küçük bir fotoğraf deneyin.');
       } finally {
         setUploadingImage(false);
       }
