@@ -60,30 +60,26 @@ export default function ProfileScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5, // Düşük kalite - hızlı upload
+      base64: true, // Base64 formatında al
     });
 
     if (!result.canceled && result.assets[0]) {
       setUploadingImage(true);
       try {
-        // Upload image - this would need a proper upload endpoint
-        const formData = new FormData();
-        formData.append('image', {
-          uri: result.assets[0].uri,
-          type: 'image/jpeg',
-          name: 'profile.jpg',
-        } as any);
+        // Base64 formatında gönder
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
         
-        await api.put('/api/user/profile-image', formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
+        await api.put('/api/user/profile-image', { 
+          profileImageUrl: base64Image 
         });
         
         // Refresh profile to get new image
         if (refreshProfile) await refreshProfile();
         Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        Alert.alert('Hata', 'Fotoğraf yüklenemedi');
+      } catch (error: any) {
+        console.error('Error uploading image:', error?.message);
+        Alert.alert('Hata', 'Fotoğraf yüklenemedi. Lütfen daha küçük bir fotoğraf deneyin.');
       } finally {
         setUploadingImage(false);
       }
