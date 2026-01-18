@@ -586,12 +586,6 @@ export default function HomeScreen() {
     }
   };
 
-  const handleStoryPress = (story: Story) => {
-    if (story.type === 'community') {
-      router.push(`/community/${story.id}`);
-    }
-  };
-
   const renderPost = ({ item }: { item: Post }) => (
     <View style={styles.postCard}>
       <TouchableOpacity 
