@@ -4136,6 +4136,242 @@ async def send_push_notification(token: str, title: str, body: str, data: dict =
 # END OF DM SYSTEM
 # ============================================
 
+# ============================================
+# STORIES SYSTEM - Kullanıcı Hikayeleri (24 saat otomatik silme)
+# ============================================
+
+@api_router.get("/stories")
+async def get_stories(current_user: dict = Depends(get_current_user)):
+    """Aktif hikayeleri getir (24 saatten eski olanlar otomatik silinir)"""
+    # 24 saat öncesini hesapla
+    cutoff_time = datetime.utcnow() - timedelta(hours=24)
+    
+    # Eski hikayeleri sil
+    await db.stories.delete_many({"createdAt": {"$lt": cutoff_time}})
+    
+    # Aktif hikayeleri getir (sadece kullanıcı hikayeleri)
+    stories = await db.stories.find({
+        "createdAt": {"$gte": cutoff_time}
+    }).sort("createdAt", -1).to_list(100)
+    
+    # Kullanıcı bazlı grupla
+    user_stories = {}
+    for story in stories:
+        uid = story.get('userId')
+        if uid not in user_stories:
+            user_stories[uid] = {
+                "userId": uid,
+                "userName": story.get('userName', ''),
+                "userProfileImage": story.get('userProfileImage'),
+                "stories": [],
+                "hasViewed": current_user['uid'] in story.get('viewedBy', [])
+            }
+        
+        story_item = {
+            "id": story['id'],
+            "imageUrl": story.get('imageUrl'),
+            "videoUrl": story.get('videoUrl'),
+            "caption": story.get('caption', ''),
+            "createdAt": story['createdAt'].isoformat() if isinstance(story['createdAt'], datetime) else story['createdAt'],
+            "viewCount": len(story.get('viewedBy', [])),
+            "hasViewed": current_user['uid'] in story.get('viewedBy', [])
+        }
+        
+        if '_id' in story:
+            del story['_id']
+        
+        user_stories[uid]['stories'].append(story_item)
+    
+    return list(user_stories.values())
+
+@api_router.post("/stories")
+async def create_story(data: dict, current_user: dict = Depends(get_current_user)):
+    """Yeni hikaye oluştur (24 saat sonra otomatik silinir)"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    story = {
+        "id": str(uuid.uuid4()),
+        "userId": current_user['uid'],
+        "userName": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+        "userProfileImage": user.get('profileImageUrl'),
+        "imageUrl": data.get('imageUrl'),
+        "videoUrl": data.get('videoUrl'),
+        "caption": data.get('caption', ''),
+        "viewedBy": [],
+        "createdAt": datetime.utcnow(),
+        "expiresAt": datetime.utcnow() + timedelta(hours=24)
+    }
+    
+    await db.stories.insert_one(story)
+    
+    if '_id' in story:
+        del story['_id']
+    
+    return story
+
+@api_router.get("/stories/{user_id}")
+async def get_user_stories(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Belirli kullanıcının hikayelerini getir"""
+    cutoff_time = datetime.utcnow() - timedelta(hours=24)
+    
+    stories = await db.stories.find({
+        "userId": user_id,
+        "createdAt": {"$gte": cutoff_time}
+    }).sort("createdAt", -1).to_list(50)
+    
+    result = []
+    for story in stories:
+        if '_id' in story:
+            del story['_id']
+        story['viewCount'] = len(story.get('viewedBy', []))
+        story['hasViewed'] = current_user['uid'] in story.get('viewedBy', [])
+        result.append(story)
+    
+    return result
+
+@api_router.post("/stories/{story_id}/view")
+async def view_story(story_id: str, current_user: dict = Depends(get_current_user)):
+    """Hikayeyi görüntüle"""
+    await db.stories.update_one(
+        {"id": story_id},
+        {"$addToSet": {"viewedBy": current_user['uid']}}
+    )
+    return {"message": "Görüntülendi"}
+
+@api_router.delete("/stories/{story_id}")
+async def delete_story(story_id: str, current_user: dict = Depends(get_current_user)):
+    """Hikaye sil"""
+    story = await db.stories.find_one({"id": story_id})
+    if not story:
+        raise HTTPException(status_code=404, detail="Hikaye bulunamadı")
+    
+    if story['userId'] != current_user['uid']:
+        user = await db.users.find_one({"uid": current_user['uid']})
+        if not user.get('isAdmin'):
+            raise HTTPException(status_code=403, detail="Sadece kendi hikayenizi silebilirsiniz")
+    
+    await db.stories.delete_one({"id": story_id})
+    return {"message": "Hikaye silindi"}
+
+# ============================================
+# ENHANCED NOTIFICATION SYSTEM
+# ============================================
+
+async def send_notification_to_user(user_id: str, title: str, body: str, data: dict = None):
+    """Kullanıcıya bildirim gönder (hem DB'ye kaydet hem push notification)"""
+    # Bildirimi veritabanına kaydet
+    notification = {
+        "id": str(uuid.uuid4()),
+        "userId": user_id,
+        "title": title,
+        "body": body,
+        "data": data or {},
+        "isRead": False,
+        "createdAt": datetime.utcnow()
+    }
+    await db.notifications.insert_one(notification)
+    
+    # Push notification gönder
+    recipient = await db.users.find_one({"uid": user_id})
+    if recipient:
+        push_token = recipient.get("expoPushToken") or recipient.get("pushToken")
+        if push_token:
+            await send_push_notification(push_token, title, body, data)
+
+async def notify_group_message(group_id: str, sender_id: str, sender_name: str, content: str, message_type: str = "text"):
+    """Grup mesajı bildirimi gönder"""
+    subgroup = await db.subgroups.find_one({"id": group_id})
+    if not subgroup:
+        return
+    
+    group_name = subgroup.get('name', 'Grup')
+    members = subgroup.get('members', [])
+    
+    # Gönderen hariç tüm üyelere bildirim gönder
+    for member_id in members:
+        if member_id != sender_id:
+            # Kullanıcının susturulup susturulmadığını kontrol et
+            muted_members = subgroup.get('mutedMembers', {})
+            if member_id in muted_members:
+                continue
+            
+            # Mesaj tipine göre bildirim içeriği
+            if message_type == "image":
+                preview = "📷 Fotoğraf gönderdi"
+            elif message_type == "video":
+                preview = "🎥 Video gönderdi"
+            elif message_type == "file":
+                preview = "📎 Dosya gönderdi"
+            elif message_type == "location":
+                preview = "📍 Konum paylaştı"
+            elif message_type == "poll":
+                preview = "📊 Anket oluşturdu"
+            else:
+                preview = content[:100] if content else "Yeni mesaj"
+            
+            await send_notification_to_user(
+                member_id,
+                f"{sender_name} • {group_name}",
+                preview,
+                {"type": "group_message", "groupId": group_id}
+            )
+
+async def notify_dm_message(sender_id: str, receiver_id: str, sender_name: str, content: str, message_type: str = "text", conversation_id: str = None):
+    """DM bildirimi gönder"""
+    # Mesaj tipine göre bildirim içeriği
+    if message_type == "image":
+        preview = "📷 Fotoğraf gönderdi"
+    elif message_type == "video":
+        preview = "🎥 Video gönderdi"
+    elif message_type == "file":
+        preview = "📎 Dosya gönderdi"
+    elif message_type == "location":
+        preview = "📍 Konum paylaştı"
+    else:
+        preview = content[:100] if content else "Yeni mesaj"
+    
+    await send_notification_to_user(
+        receiver_id,
+        sender_name,
+        preview,
+        {"type": "dm", "conversationId": conversation_id, "senderId": sender_id}
+    )
+
+async def notify_post_like(post_owner_id: str, liker_id: str, liker_name: str, post_id: str):
+    """Gönderi beğeni bildirimi"""
+    if post_owner_id == liker_id:
+        return  # Kendi gönderisini beğendi, bildirim gönderme
+    
+    await send_notification_to_user(
+        post_owner_id,
+        f"{liker_name} gönderinizi beğendi ❤️",
+        "Gönderinize yeni bir beğeni geldi",
+        {"type": "post_like", "postId": post_id, "likerId": liker_id}
+    )
+
+async def notify_post_comment(post_owner_id: str, commenter_id: str, commenter_name: str, post_id: str, comment_preview: str):
+    """Gönderi yorum bildirimi"""
+    if post_owner_id == commenter_id:
+        return
+    
+    await send_notification_to_user(
+        post_owner_id,
+        f"{commenter_name} yorum yaptı 💬",
+        comment_preview[:100],
+        {"type": "post_comment", "postId": post_id, "commenterId": commenter_id}
+    )
+
+async def notify_service_inquiry(service_owner_id: str, inquirer_id: str, inquirer_name: str, service_id: str, service_title: str):
+    """Hizmet talebi bildirimi"""
+    await send_notification_to_user(
+        service_owner_id,
+        f"{inquirer_name} hizmetinizle ilgileniyor 💼",
+        f'"{service_title}" hizmeti için yeni bir talep',
+        {"type": "service_inquiry", "serviceId": service_id, "inquirerId": inquirer_id}
+    )
+
 # Include the router in the main app
 app.include_router(api_router)
 
