@@ -305,17 +305,30 @@ async def update_user_profile(updates: dict, current_user: dict = Depends(get_cu
     return {"message": "Profile updated"}
 
 @api_router.put("/user/profile-image")
-async def update_profile_image(data: dict, current_user: dict = Depends(get_current_user)):
+async def update_profile_image(request: Request, current_user: dict = Depends(get_current_user)):
     """Kullanıcının profil resmini güncelle"""
-    image_url = data.get('profileImageUrl') or data.get('imageUrl')
-    if not image_url:
-        raise HTTPException(status_code=400, detail="Profil resmi URL'i gerekli")
-    
-    await db.users.update_one(
-        {"uid": current_user['uid']},
-        {"$set": {"profileImageUrl": image_url}}
-    )
-    return {"message": "Profil resmi güncellendi", "profileImageUrl": image_url}
+    try:
+        body = await request.body()
+        data = json.loads(body.decode('utf-8'))
+        image_url = data.get('profileImageUrl') or data.get('imageUrl')
+        
+        if not image_url:
+            raise HTTPException(status_code=400, detail="Profil resmi URL'i gerekli")
+        
+        # Base64 boyutunu kontrol et (max 2MB)
+        if len(image_url) > 2 * 1024 * 1024:
+            raise HTTPException(status_code=400, detail="Fotoğraf çok büyük. Maksimum 2MB")
+        
+        await db.users.update_one(
+            {"uid": current_user['uid']},
+            {"$set": {"profileImageUrl": image_url}}
+        )
+        return {"message": "Profil resmi güncellendi", "profileImageUrl": image_url[:100] + "..."}
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Geçersiz JSON formatı")
+    except Exception as e:
+        logging.error(f"Profile image update error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Fotoğraf güncellenemedi")
 
 @api_router.get("/user/is-admin")
 async def check_user_admin(current_user: dict = Depends(get_current_user)):
