@@ -1149,6 +1149,7 @@ export default function HomeScreen() {
         onRequestClose={() => {
           setShowStoryCreator(false);
           setSelectedStoryImage(null);
+          setSelectedStoryVideo(null);
           setStoryCaption('');
         }}
       >
@@ -1157,6 +1158,7 @@ export default function HomeScreen() {
             <TouchableOpacity onPress={() => {
               setShowStoryCreator(false);
               setSelectedStoryImage(null);
+              setSelectedStoryVideo(null);
               setStoryCaption('');
             }}>
               <Ionicons name="close" size={28} color="#fff" />
@@ -1164,13 +1166,14 @@ export default function HomeScreen() {
             <Text style={styles.storyCreatorTitle}>Hikaye Oluştur</Text>
             <TouchableOpacity 
               onPress={handleCreateStory}
-              disabled={uploadingStory}
-              style={[styles.storyShareBtn, uploadingStory && { opacity: 0.5 }]}
+              disabled={uploadingStory || (!selectedStoryImage && !selectedStoryVideo)}
+              style={[styles.storyShareBtn, (uploadingStory || (!selectedStoryImage && !selectedStoryVideo)) && { opacity: 0.5 }]}
             >
               <Text style={styles.storyShareText}>{uploadingStory ? 'Paylaşılıyor...' : 'Paylaş'}</Text>
             </TouchableOpacity>
           </View>
 
+          {/* Fotoğraf Preview */}
           {selectedStoryImage && (
             <Image 
               source={{ uri: selectedStoryImage }} 
@@ -1178,6 +1181,32 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
           )}
+
+          {/* Video Preview */}
+          {selectedStoryVideo && (
+            <View style={styles.storyVideoPreview}>
+              <Ionicons name="videocam" size={60} color="#6366f1" />
+              <Text style={styles.storyVideoText}>Video seçildi</Text>
+            </View>
+          )}
+
+          {/* Medya Değiştir Butonları */}
+          <View style={styles.storyMediaButtons}>
+            <TouchableOpacity 
+              style={styles.storyMediaBtn}
+              onPress={() => pickStoryMedia('photo')}
+            >
+              <Ionicons name="image" size={24} color="#10b981" />
+              <Text style={styles.storyMediaBtnText}>Fotoğraf Değiştir</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.storyMediaBtn}
+              onPress={() => pickStoryMedia('video')}
+            >
+              <Ionicons name="videocam" size={24} color="#6366f1" />
+              <Text style={styles.storyMediaBtnText}>Video Değiştir</Text>
+            </TouchableOpacity>
+          </View>
 
           <View style={styles.storyCaptionInput}>
             <TextInput
@@ -1187,6 +1216,7 @@ export default function HomeScreen() {
               value={storyCaption}
               onChangeText={setStoryCaption}
               maxLength={150}
+              multiline
             />
           </View>
 
