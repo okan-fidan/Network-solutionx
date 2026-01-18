@@ -390,16 +390,18 @@ frontend:
 
 metadata:
   created_by: "testing_agent"
-  version: "4.0"
-  test_sequence: 4
+  version: "5.0"
+  test_sequence: 5
   run_ui: false
   comprehensive_test_completed: true
-  total_backend_tests: 34
+  total_backend_tests: 35
   backend_test_success_rate: "100%"
   telegram_app_testing_completed: true
   all_endpoints_verified: true
   dm_system_features_tested: true
   dm_system_test_success_rate: "100%"
+  story_system_tested: true
+  story_system_test_success_rate: "100%"
 
 test_plan:
   current_focus:
