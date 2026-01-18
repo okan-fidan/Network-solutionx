@@ -545,11 +545,12 @@ export default function HomeScreen() {
       await storyApi.reply(storyItem.id, storyReplyText.trim());
       Toast.show({
         type: 'success',
-        text1: 'Yanıt gönderildi',
+        text1: 'Yanıt gönderildi ✉️',
         text2: 'Mesajlar bölümünden görebilirsiniz',
       });
       setStoryReplyText('');
       setShowStoryReply(false);
+      setStoryPaused(false);
     } catch (error: any) {
       Toast.show({
         type: 'error',
