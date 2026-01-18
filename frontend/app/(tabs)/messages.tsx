@@ -166,7 +166,7 @@ export default function MessagesScreen() {
   const renderConversation = ({ item }: { item: Conversation }) => (
     <TouchableOpacity
       style={styles.chatItem}
-      onPress={() => router.push(`/chat/${item.id}?type=dm`)}
+      onPress={() => router.push(`/chat/${item.otherUser.uid}`)}
       activeOpacity={0.7}
     >
       <View style={styles.avatarContainer}>
