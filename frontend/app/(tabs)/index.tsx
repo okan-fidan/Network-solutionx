@@ -1337,10 +1337,32 @@ const styles = StyleSheet.create({
   storyViewerName: { color: '#fff', fontSize: 14, fontWeight: '600' },
   storyViewerTime: { color: 'rgba(255,255,255,0.7)', fontSize: 12 },
   storyViewerImage: { flex: 1, width: '100%' },
-  storyCaption: { position: 'absolute', bottom: 80, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(0,0,0,0.5)' },
+  storyCaption: { position: 'absolute', bottom: 140, left: 0, right: 0, padding: 16, backgroundColor: 'rgba(0,0,0,0.5)' },
   storyCaptionText: { color: '#fff', fontSize: 16, textAlign: 'center' },
-  storyTouchLeft: { position: 'absolute', left: 0, top: 100, bottom: 100, width: '30%' },
-  storyTouchRight: { position: 'absolute', right: 0, top: 100, bottom: 100, width: '70%' },
+  storyTouchLeft: { position: 'absolute', left: 0, top: 100, bottom: 200, width: '30%' },
+  storyTouchRight: { position: 'absolute', right: 0, top: 100, bottom: 200, width: '70%' },
+
+  // Instagram Tarzı Story Bottom Actions
+  storyBottomActions: { position: 'absolute', bottom: 40, left: 0, right: 0, padding: 16 },
+  storyEmojiRow: { flexDirection: 'row', justifyContent: 'center', gap: 12, marginBottom: 16 },
+  storyEmojiBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.15)', justifyContent: 'center', alignItems: 'center' },
+  storyEmoji: { fontSize: 22 },
+  storyReplyButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 25, paddingVertical: 12, paddingHorizontal: 20, gap: 8 },
+  storyReplyButtonText: { color: '#fff', fontSize: 15 },
+  
+  // Story Reply Input
+  storyReplyContainer: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', padding: 12, paddingBottom: 30, gap: 12 },
+  storyReplyInput: { flex: 1, backgroundColor: '#374151', borderRadius: 25, paddingHorizontal: 16, paddingVertical: 12, color: '#fff', fontSize: 15 },
+  storyReplySendBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(99,102,241,0.2)', justifyContent: 'center', alignItems: 'center' },
+
+  // Story Options Modal
+  storyOptionsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  storyOptionsContainer: { backgroundColor: '#1f2937', borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingBottom: 30 },
+  storyOptionsHandle: { width: 40, height: 4, backgroundColor: '#4b5563', borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 20 },
+  storyOptionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, paddingHorizontal: 20, gap: 16 },
+  storyOptionText: { color: '#fff', fontSize: 16 },
+  storyOptionCancel: { justifyContent: 'center', borderTopWidth: 1, borderTopColor: '#374151', marginTop: 8 },
+  storyOptionCancelText: { color: '#9ca3af', fontSize: 16, textAlign: 'center' },
 
   // Story Creator Styles
   storyCreatorContainer: { flex: 1, backgroundColor: '#0a0a0a' },
@@ -1349,7 +1371,12 @@ const styles = StyleSheet.create({
   storyShareBtn: { backgroundColor: '#6366f1', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20 },
   storyShareText: { color: '#fff', fontWeight: '600' },
   storyPreviewImage: { flex: 1, width: '100%', backgroundColor: '#111' },
+  storyVideoPreview: { flex: 1, width: '100%', backgroundColor: '#111', justifyContent: 'center', alignItems: 'center' },
+  storyVideoText: { color: '#9ca3af', fontSize: 16, marginTop: 12 },
+  storyMediaButtons: { flexDirection: 'row', justifyContent: 'center', gap: 16, padding: 16, borderTopWidth: 1, borderTopColor: '#1f2937' },
+  storyMediaBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1f2937', paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, gap: 8 },
+  storyMediaBtnText: { color: '#fff', fontSize: 14 },
   storyCaptionInput: { padding: 16, borderTopWidth: 1, borderTopColor: '#1f2937' },
-  storyCaptionInputField: { color: '#fff', fontSize: 16, paddingVertical: 8 },
+  storyCaptionInputField: { color: '#fff', fontSize: 16, paddingVertical: 8, minHeight: 40 },
   storyNote: { color: '#9ca3af', fontSize: 12, textAlign: 'center', paddingBottom: 20 },
 });
