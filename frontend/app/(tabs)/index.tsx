@@ -941,7 +941,7 @@ export default function HomeScreen() {
         />
       )}
 
-      {/* Story Viewer Modal */}
+      {/* Story Viewer Modal - Instagram Tarzı */}
       <Modal
         visible={showStoryViewer}
         animationType="fade"
@@ -994,9 +994,18 @@ export default function HomeScreen() {
                     </Text>
                   </View>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => setShowStoryViewer(false)}>
-                  <Ionicons name="close" size={28} color="#fff" />
-                </TouchableOpacity>
+                
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                  {/* Seçenekler (Şikayet, Engelle) */}
+                  {currentStory.userId !== user?.uid && (
+                    <TouchableOpacity onPress={() => setShowStoryOptions(true)}>
+                      <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity onPress={() => setShowStoryViewer(false)}>
+                    <Ionicons name="close" size={28} color="#fff" />
+                  </TouchableOpacity>
+                </View>
               </View>
 
               {/* Story Image */}
@@ -1013,20 +1022,123 @@ export default function HomeScreen() {
                 </View>
               ) : null}
 
+              {/* Instagram Tarzı Alt Kısım - Emoji ve Yanıtla */}
+              {currentStory.userId !== user?.uid && !showStoryReply && (
+                <View style={styles.storyBottomActions}>
+                  {/* Emoji Tepkiler */}
+                  <View style={styles.storyEmojiRow}>
+                    {['❤️', '😂', '😮', '😢', '👏', '🔥'].map((emoji) => (
+                      <TouchableOpacity 
+                        key={emoji}
+                        style={styles.storyEmojiBtn}
+                        onPress={() => handleStoryReaction(emoji)}
+                        disabled={sendingReaction}
+                      >
+                        <Text style={styles.storyEmoji}>{emoji}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  
+                  {/* Yanıtla Butonu */}
+                  <TouchableOpacity 
+                    style={styles.storyReplyButton}
+                    onPress={() => {
+                      setStoryPaused(true);
+                      setShowStoryReply(true);
+                    }}
+                  >
+                    <Ionicons name="chatbubble-outline" size={20} color="#fff" />
+                    <Text style={styles.storyReplyButtonText}>Yanıtla...</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Yanıt Input */}
+              {showStoryReply && (
+                <View style={styles.storyReplyContainer}>
+                  <TextInput
+                    style={styles.storyReplyInput}
+                    placeholder={`${currentStory.userName} adlı kişiye yanıt...`}
+                    placeholderTextColor="#9ca3af"
+                    value={storyReplyText}
+                    onChangeText={setStoryReplyText}
+                    autoFocus
+                    onBlur={() => {
+                      if (!storyReplyText.trim()) {
+                        setShowStoryReply(false);
+                        setStoryPaused(false);
+                      }
+                    }}
+                  />
+                  <TouchableOpacity 
+                    style={[styles.storyReplySendBtn, !storyReplyText.trim() && { opacity: 0.5 }]}
+                    onPress={handleStoryReply}
+                    disabled={!storyReplyText.trim()}
+                  >
+                    <Ionicons name="send" size={22} color="#6366f1" />
+                  </TouchableOpacity>
+                </View>
+              )}
+
               {/* Touch Areas */}
               <TouchableOpacity 
                 style={styles.storyTouchLeft} 
                 onPress={handlePrevStory}
+                onLongPress={() => setStoryPaused(true)}
+                onPressOut={() => setStoryPaused(false)}
                 activeOpacity={1}
               />
               <TouchableOpacity 
                 style={styles.storyTouchRight} 
                 onPress={handleNextStory}
+                onLongPress={() => setStoryPaused(true)}
+                onPressOut={() => setStoryPaused(false)}
                 activeOpacity={1}
               />
             </>
           )}
         </View>
+      </Modal>
+
+      {/* Story Options Modal (Şikayet/Engelle) */}
+      <Modal
+        visible={showStoryOptions}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowStoryOptions(false)}
+      >
+        <TouchableOpacity 
+          style={styles.storyOptionsOverlay}
+          activeOpacity={1}
+          onPress={() => setShowStoryOptions(false)}
+        >
+          <View style={styles.storyOptionsContainer}>
+            <View style={styles.storyOptionsHandle} />
+            
+            <TouchableOpacity 
+              style={styles.storyOptionItem}
+              onPress={handleReportStory}
+            >
+              <Ionicons name="flag-outline" size={24} color="#f59e0b" />
+              <Text style={styles.storyOptionText}>Şikayet Et</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.storyOptionItem}
+              onPress={handleBlockUser}
+            >
+              <Ionicons name="ban-outline" size={24} color="#ef4444" />
+              <Text style={[styles.storyOptionText, { color: '#ef4444' }]}>Kullanıcıyı Engelle</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.storyOptionItem, styles.storyOptionCancel]}
+              onPress={() => setShowStoryOptions(false)}
+            >
+              <Text style={styles.storyOptionCancelText}>İptal</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* Story Creator Modal */}
