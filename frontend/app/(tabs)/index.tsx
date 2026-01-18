@@ -1156,7 +1156,7 @@ export default function HomeScreen() {
         </View>
       </Modal>
 
-      {/* Story Options Modal (Şikayet/Engelle) */}
+      {/* Story Options Modal - Kendi hikayem veya başkasının hikayesi */}
       <Modal
         visible={showStoryOptions}
         animationType="slide"
@@ -1171,21 +1171,52 @@ export default function HomeScreen() {
           <View style={styles.storyOptionsContainer}>
             <View style={styles.storyOptionsHandle} />
             
-            <TouchableOpacity 
-              style={styles.storyOptionItem}
-              onPress={handleReportStory}
-            >
-              <Ionicons name="flag-outline" size={24} color="#f59e0b" />
-              <Text style={styles.storyOptionText}>Şikayet Et</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.storyOptionItem}
-              onPress={handleBlockUser}
-            >
-              <Ionicons name="ban-outline" size={24} color="#ef4444" />
-              <Text style={[styles.storyOptionText, { color: '#ef4444' }]}>Kullanıcıyı Engelle</Text>
-            </TouchableOpacity>
+            {/* Kendi hikayem - Silme seçeneği */}
+            {currentStory?.userId === user?.uid ? (
+              <>
+                <TouchableOpacity 
+                  style={styles.storyOptionItem}
+                  onPress={handleDeleteStory}
+                >
+                  <Ionicons name="trash-outline" size={24} color="#ef4444" />
+                  <Text style={[styles.storyOptionText, { color: '#ef4444' }]}>Hikayeyi Sil</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.storyOptionItem}
+                  onPress={() => {
+                    setShowStoryOptions(false);
+                    // Görüntüleyenleri göster (gelecekte eklenecek)
+                    Toast.show({
+                      type: 'info',
+                      text1: `${currentStory?.stories[currentStoryIndex]?.viewCount || 0} görüntülenme`,
+                    });
+                  }}
+                >
+                  <Ionicons name="eye-outline" size={24} color="#6366f1" />
+                  <Text style={styles.storyOptionText}>Görüntüleyenler</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                {/* Başkasının hikayesi - Şikayet ve Engelle */}
+                <TouchableOpacity 
+                  style={styles.storyOptionItem}
+                  onPress={handleReportStory}
+                >
+                  <Ionicons name="flag-outline" size={24} color="#f59e0b" />
+                  <Text style={styles.storyOptionText}>Şikayet Et</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.storyOptionItem}
+                  onPress={handleBlockUser}
+                >
+                  <Ionicons name="ban-outline" size={24} color="#ef4444" />
+                  <Text style={[styles.storyOptionText, { color: '#ef4444' }]}>Kullanıcıyı Engelle</Text>
+                </TouchableOpacity>
+              </>
+            )}
             
             <TouchableOpacity 
               style={[styles.storyOptionItem, styles.storyOptionCancel]}
