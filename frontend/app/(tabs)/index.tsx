@@ -634,6 +634,56 @@ export default function HomeScreen() {
     );
   };
 
+  // Hikayeyi sil (kendi hikayem)
+  const handleDeleteStory = async () => {
+    if (!currentStory) return;
+    
+    const storyItem = currentStory.stories[currentStoryIndex];
+    if (!storyItem) return;
+    
+    Alert.alert(
+      'Hikayeyi Sil',
+      'Bu hikayeyi silmek istediğinizden emin misiniz?',
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Sil',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await storyApi.delete(storyItem.id);
+              Toast.show({
+                type: 'success',
+                text1: 'Hikaye Silindi',
+              });
+              
+              // Bir sonraki hikayeye geç veya kapat
+              if (currentStory.stories.length <= 1) {
+                setShowStoryViewer(false);
+                loadData(); // Hikayeleri yenile
+              } else {
+                // Sonraki hikayeye geç
+                if (currentStoryIndex < currentStory.stories.length - 1) {
+                  handleNextStory();
+                } else {
+                  setCurrentStoryIndex(currentStoryIndex - 1);
+                }
+                loadData();
+              }
+              setShowStoryOptions(false);
+            } catch (error: any) {
+              Toast.show({
+                type: 'error',
+                text1: 'Hata',
+                text2: error.response?.data?.detail || 'Hikaye silinemedi',
+              });
+            }
+          }
+        }
+      ]
+    );
+  };
+
   // Hikaye progress timer (pause desteği ile)
   useEffect(() => {
     if (showStoryViewer && currentStory && !storyPaused && !showStoryReply && !showEmojiPicker) {
