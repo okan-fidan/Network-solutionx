@@ -2516,6 +2516,24 @@ async def admin_get_communities(current_user: dict = Depends(get_current_user)):
     return communities
 
 # Get community members (admin)
+# Get community subgroups (admin)
+@api_router.get("/admin/communities/{community_id}/subgroups")
+async def admin_get_community_subgroups(community_id: str, current_user: dict = Depends(get_current_user)):
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    subgroups = await db.subgroups.find({"communityId": community_id}).to_list(100)
+    
+    result = []
+    for sg in subgroups:
+        if '_id' in sg:
+            del sg['_id']
+        sg['memberCount'] = len(sg.get('members', []))
+        sg['pendingRequestCount'] = len(sg.get('pendingRequests', []))
+        result.append(sg)
+    
+    return result
+
 @api_router.get("/admin/communities/{community_id}/members")
 async def admin_get_community_members(community_id: str, current_user: dict = Depends(get_current_user)):
     if not await check_global_admin(current_user):
