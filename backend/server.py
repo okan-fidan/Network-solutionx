@@ -979,6 +979,7 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         "senderId": current_user['uid'],
         "senderName": f"{user['firstName']} {user['lastName']}",
         "senderProfileImage": user.get('profileImageUrl'),
+        "senderOccupation": user.get('occupation', ''),
         "content": message_data.get('content', ''),
         "type": message_data.get('type', 'text'),
         "mediaUrl": message_data.get('mediaUrl'),
