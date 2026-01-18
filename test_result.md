@@ -379,10 +379,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "DM System New Features - All Complete"
+    - "Bug Fixes and Pending Issues Resolution"
+    - "Poll Feature Testing"
+    - "Admin Panel Verification"
   stuck_tasks: []
   test_all: true
-  test_priority: "dm_system_features_completed"
+  test_priority: "high_first"
 
 agent_communication:
   - agent: "testing"
