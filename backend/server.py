@@ -3292,6 +3292,15 @@ async def send_conversation_message(conversation_id: str, data: dict, current_us
         }
     )
     
+    # Push bildirim gönder
+    await create_dm_notification(
+        other_user_id, 
+        current_user['uid'], 
+        sender_name, 
+        message["content"][:100] if message["content"] else "[Medya]", 
+        conversation_id
+    )
+    
     if "_id" in message:
         del message["_id"]
     
