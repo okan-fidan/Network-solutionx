@@ -1477,6 +1477,15 @@ async def toggle_like_post(post_id: str, current_user: dict = Depends(get_curren
             {"id": post_id},
             {"$addToSet": {"likes": current_user['uid']}}
         )
+        
+        # Beğeni bildirimi gönder
+        try:
+            user = await db.users.find_one({"uid": current_user['uid']})
+            liker_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Birisi"
+            await notify_post_like(post['userId'], current_user['uid'], liker_name, post_id)
+        except Exception as e:
+            logging.error(f"Error sending like notification: {e}")
+        
         return {"liked": True, "likeCount": len(likes) + 1}
 
 @api_router.get("/posts/{post_id}/comments")
