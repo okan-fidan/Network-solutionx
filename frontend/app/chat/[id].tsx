@@ -509,9 +509,15 @@ export default function PrivateChatScreen() {
 
   // Emoji reaksiyon
   const handleReaction = async (emoji: string) => {
-    if (!selectedMessage || !conversation) return;
+    if (!selectedMessage || !conversation?.id) {
+      console.log('Reaction failed: No conversation or message', { conversation, selectedMessage });
+      Alert.alert('Hata', 'Reaksiyon eklenemedi');
+      closeMenu();
+      return;
+    }
 
     try {
+      console.log('Adding reaction:', { conversationId: conversation.id, messageId: selectedMessage.id, emoji });
       await conversationApi.reactToMessage(conversation.id, selectedMessage.id, emoji);
       
       setMessages(prev => prev.map(msg => {
@@ -537,8 +543,10 @@ export default function PrivateChatScreen() {
       }));
       
       closeMenu();
-    } catch (error) {
-      console.error('Error adding reaction:', error);
+    } catch (error: any) {
+      console.error('Error adding reaction:', error?.response?.data || error);
+      Alert.alert('Hata', 'Reaksiyon eklenemedi');
+      closeMenu();
     }
   };
 
