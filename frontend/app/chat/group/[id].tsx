@@ -374,29 +374,65 @@ export default function GroupChatScreen() {
     }
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
+  const handleDeleteMessage = async (messageId: string, deleteForAll: boolean = false) => {
     if (!groupId) return;
     
-    Alert.alert(
-      'Mesajı Sil',
-      'Bu mesajı silmek istediğinize emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await subgroupApi.deleteMessage(groupId, messageId);
-              setMessages(messages.filter(m => m.id !== messageId));
-            } catch (error) {
-              console.error('Error deleting message:', error);
-              Alert.alert('Hata', 'Mesaj silinemedi');
-            }
+    try {
+      await subgroupApi.deleteMessage(groupId, messageId, deleteForAll);
+      if (deleteForAll) {
+        // Herkesten silindi - içeriği güncelle
+        setMessages(messages.map(m => 
+          m.id === messageId 
+            ? { ...m, content: 'Bu mesaj silindi', type: 'deleted' as const, isDeleted: true }
+            : m
+        ));
+      } else {
+        // Sadece benden silindi - listeden kaldır
+        setMessages(messages.filter(m => m.id !== messageId));
+      }
+    } catch (error: any) {
+      console.error('Error deleting message:', error);
+      Alert.alert('Hata', error?.response?.data?.detail || 'Mesaj silinemedi');
+    }
+    setShowMessageActions(false);
+  };
+
+  const showDeleteOptions = (message: Message) => {
+    const isMe = message.senderId === user?.uid;
+    
+    if (isMe) {
+      // Kendi mesajım - iki seçenek göster
+      Alert.alert(
+        'Mesajı Sil',
+        'Bu mesajı nasıl silmek istiyorsunuz?',
+        [
+          { text: 'İptal', style: 'cancel' },
+          {
+            text: 'Benden Sil',
+            onPress: () => handleDeleteMessage(message.id, false),
           },
-        },
-      ]
-    );
+          {
+            text: 'Herkesten Sil',
+            style: 'destructive',
+            onPress: () => handleDeleteMessage(message.id, true),
+          },
+        ]
+      );
+    } else {
+      // Başkasının mesajı - sadece benden sil
+      Alert.alert(
+        'Mesajı Sil',
+        'Bu mesaj sizin için silinecek.',
+        [
+          { text: 'İptal', style: 'cancel' },
+          {
+            text: 'Sil',
+            style: 'destructive',
+            onPress: () => handleDeleteMessage(message.id, false),
+          },
+        ]
+      );
+    }
     setShowMessageActions(false);
   };
 
