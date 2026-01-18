@@ -3562,6 +3562,452 @@ async def edit_message(conversation_id: str, message_id: str, data: dict, curren
     return updated_message
 
 # ============================================
+# USER BLOCKING, REPORTING & MUTING SYSTEM
+# ============================================
+
+@api_router.post("/users/{user_id}/block")
+async def block_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcıyı engelle"""
+    if user_id == current_user['uid']:
+        raise HTTPException(status_code=400, detail="Kendinizi engelleyemezsiniz")
+    
+    target_user = await db.users.find_one({"uid": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    # Mevcut engelleme kaydını kontrol et
+    existing = await db.blocked_users.find_one({
+        "blockerId": current_user['uid'],
+        "blockedId": user_id
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcı zaten engellenmiş")
+    
+    block_record = {
+        "id": str(uuid.uuid4()),
+        "blockerId": current_user['uid'],
+        "blockedId": user_id,
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.blocked_users.insert_one(block_record)
+    
+    # Konuşmayı da sil
+    await db.conversations.delete_many({
+        "participants": {"$all": [current_user['uid'], user_id]}
+    })
+    
+    return {"message": "Kullanıcı engellendi", "blocked": True}
+
+@api_router.delete("/users/{user_id}/block")
+async def unblock_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcı engelini kaldır"""
+    result = await db.blocked_users.delete_one({
+        "blockerId": current_user['uid'],
+        "blockedId": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Engelleme kaydı bulunamadı")
+    
+    return {"message": "Engel kaldırıldı", "blocked": False}
+
+@api_router.get("/users/blocked")
+async def get_blocked_users(current_user: dict = Depends(get_current_user)):
+    """Engellenen kullanıcıları listele"""
+    blocked = await db.blocked_users.find({"blockerId": current_user['uid']}).to_list(100)
+    
+    result = []
+    for block in blocked:
+        user = await db.users.find_one({"uid": block["blockedId"]})
+        if user:
+            result.append({
+                "id": block["blockedId"],
+                "name": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+                "profileImageUrl": user.get('profileImageUrl'),
+                "blockedAt": block["createdAt"]
+            })
+    
+    return result
+
+@api_router.post("/users/{user_id}/report")
+async def report_user(user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcıyı şikayet et"""
+    if user_id == current_user['uid']:
+        raise HTTPException(status_code=400, detail="Kendinizi şikayet edemezsiniz")
+    
+    target_user = await db.users.find_one({"uid": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    reason = data.get("reason", "")
+    description = data.get("description", "")
+    
+    if not reason:
+        raise HTTPException(status_code=400, detail="Şikayet sebebi gerekli")
+    
+    report = {
+        "id": str(uuid.uuid4()),
+        "reporterId": current_user['uid'],
+        "reportedId": user_id,
+        "reason": reason,
+        "description": description,
+        "status": "pending",
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.user_reports.insert_one(report)
+    
+    return {"message": "Şikayet alındı. En kısa sürede incelenecektir.", "reportId": report["id"]}
+
+@api_router.post("/users/{user_id}/mute")
+async def mute_user(user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcıdan gelen bildirimleri sessize al"""
+    if user_id == current_user['uid']:
+        raise HTTPException(status_code=400, detail="Kendinizi sessize alamazsınız")
+    
+    target_user = await db.users.find_one({"uid": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    duration = data.get("duration", "forever")  # "8h", "1w", "forever"
+    
+    mute_until = None
+    if duration == "8h":
+        mute_until = datetime.utcnow() + timedelta(hours=8)
+    elif duration == "1w":
+        mute_until = datetime.utcnow() + timedelta(weeks=1)
+    
+    # Mevcut sessize alma kaydını güncelle veya yeni oluştur
+    await db.muted_users.update_one(
+        {"muterId": current_user['uid'], "mutedId": user_id},
+        {"$set": {
+            "muterId": current_user['uid'],
+            "mutedId": user_id,
+            "muteUntil": mute_until,
+            "duration": duration,
+            "updatedAt": datetime.utcnow()
+        }},
+        upsert=True
+    )
+    
+    return {"message": "Bildirimler sessize alındı", "muted": True, "duration": duration}
+
+@api_router.delete("/users/{user_id}/mute")
+async def unmute_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Sessize almayı kaldır"""
+    result = await db.muted_users.delete_one({
+        "muterId": current_user['uid'],
+        "mutedId": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Sessize alma kaydı bulunamadı")
+    
+    return {"message": "Sessize alma kaldırıldı", "muted": False}
+
+@api_router.get("/users/{user_id}/status")
+async def get_user_status(user_id: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının engelleme ve sessize alma durumunu getir"""
+    is_blocked = await db.blocked_users.find_one({
+        "blockerId": current_user['uid'],
+        "blockedId": user_id
+    }) is not None
+    
+    mute_record = await db.muted_users.find_one({
+        "muterId": current_user['uid'],
+        "mutedId": user_id
+    })
+    
+    is_muted = False
+    mute_duration = None
+    if mute_record:
+        if mute_record.get("muteUntil") is None:
+            is_muted = True
+            mute_duration = "forever"
+        elif mute_record["muteUntil"] > datetime.utcnow():
+            is_muted = True
+            mute_duration = mute_record.get("duration")
+        else:
+            # Süresi dolmuş, kaydı sil
+            await db.muted_users.delete_one({"_id": mute_record["_id"]})
+    
+    return {
+        "isBlocked": is_blocked,
+        "isMuted": is_muted,
+        "muteDuration": mute_duration
+    }
+
+# ============================================
+# PUSH NOTIFICATIONS
+# ============================================
+
+@api_router.post("/users/push-token")
+async def save_push_token(data: dict, current_user: dict = Depends(get_current_user)):
+    """Expo push notification token'ını kaydet"""
+    token = data.get("token")
+    if not token:
+        raise HTTPException(status_code=400, detail="Push token gerekli")
+    
+    await db.users.update_one(
+        {"uid": current_user['uid']},
+        {"$set": {"expoPushToken": token, "pushTokenUpdatedAt": datetime.utcnow()}}
+    )
+    
+    return {"message": "Push token kaydedildi"}
+
+@api_router.get("/notifications")
+async def get_notifications(skip: int = 0, limit: int = 50, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının bildirimlerini getir"""
+    notifications = await db.notifications.find(
+        {"userId": current_user['uid']}
+    ).sort("createdAt", -1).skip(skip).limit(limit).to_list(limit)
+    
+    result = []
+    for notif in notifications:
+        if "_id" in notif:
+            del notif["_id"]
+        result.append(notif)
+    
+    return result
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
+    """Bildirimi okundu olarak işaretle"""
+    result = await db.notifications.update_one(
+        {"id": notification_id, "userId": current_user['uid']},
+        {"$set": {"read": True, "readAt": datetime.utcnow()}}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Bildirim bulunamadı")
+    
+    return {"message": "Bildirim okundu olarak işaretlendi"}
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
+    """Tüm bildirimleri okundu olarak işaretle"""
+    await db.notifications.update_many(
+        {"userId": current_user['uid'], "read": False},
+        {"$set": {"read": True, "readAt": datetime.utcnow()}}
+    )
+    
+    return {"message": "Tüm bildirimler okundu olarak işaretlendi"}
+
+# ============================================
+# MEDIA UPLOAD FOR DM
+# ============================================
+
+@api_router.post("/conversations/{conversation_id}/upload")
+async def upload_dm_media(
+    conversation_id: str,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Konuşmaya medya dosyası yükle"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    # Dosya boyutu kontrolü (10MB max)
+    content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="Dosya boyutu 10MB'ı geçemez")
+    
+    # Dosya türü kontrolü
+    allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 
+                     'video/mp4', 'video/quicktime', 
+                     'application/pdf', 'application/msword',
+                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+    
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Desteklenmeyen dosya türü")
+    
+    # Dosya adı oluştur
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else ''
+    file_id = str(uuid.uuid4())
+    filename = f"{file_id}.{file_ext}" if file_ext else file_id
+    
+    # Base64 olarak kaydet
+    content_base64 = base64.b64encode(content).decode('utf-8')
+    
+    media_record = {
+        "id": file_id,
+        "conversationId": conversation_id,
+        "uploaderId": current_user['uid'],
+        "filename": file.filename,
+        "storedFilename": filename,
+        "contentType": file.content_type,
+        "size": len(content),
+        "content": content_base64,
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.dm_media.insert_one(media_record)
+    
+    # URL oluştur
+    media_url = f"/api/media/{file_id}"
+    
+    return {
+        "id": file_id,
+        "url": media_url,
+        "filename": file.filename,
+        "contentType": file.content_type,
+        "size": len(content)
+    }
+
+@api_router.get("/media/{media_id}")
+async def get_media(media_id: str):
+    """Medya dosyasını getir"""
+    from fastapi.responses import Response
+    
+    media = await db.dm_media.find_one({"id": media_id})
+    if not media:
+        raise HTTPException(status_code=404, detail="Medya bulunamadı")
+    
+    content = base64.b64decode(media["content"])
+    
+    return Response(
+        content=content,
+        media_type=media["contentType"],
+        headers={"Content-Disposition": f'inline; filename="{media["filename"]}"'}
+    )
+
+# ============================================
+# LOCATION SHARING
+# ============================================
+
+@api_router.post("/conversations/{conversation_id}/location")
+async def send_location(conversation_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Konum gönder"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+    address = data.get("address", "")
+    
+    if latitude is None or longitude is None:
+        raise HTTPException(status_code=400, detail="Konum bilgisi gerekli")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "conversationId": conversation_id,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "senderImage": user.get('profileImageUrl') if user else None,
+        "content": address or "📍 Konum paylaşıldı",
+        "type": "location",
+        "location": {
+            "latitude": latitude,
+            "longitude": longitude,
+            "address": address
+        },
+        "timestamp": datetime.utcnow(),
+        "read": False,
+    }
+    
+    await db.dm_messages.insert_one(message)
+    
+    other_user_id = [p for p in conversation["participants"] if p != current_user['uid']][0]
+    
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {
+            "$set": {
+                "lastMessage": "📍 Konum",
+                "lastMessageTime": message["timestamp"],
+            },
+            "$inc": {f"unreadCount.{other_user_id}": 1}
+        }
+    )
+    
+    # Bildirim oluştur
+    await create_dm_notification(other_user_id, current_user['uid'], sender_name, "📍 Konum paylaştı", conversation_id)
+    
+    if "_id" in message:
+        del message["_id"]
+    
+    return message
+
+async def create_dm_notification(user_id: str, sender_id: str, sender_name: str, content: str, conversation_id: str):
+    """DM bildirimi oluştur ve push notification gönder"""
+    # Sessize alınmış mı kontrol et
+    mute_record = await db.muted_users.find_one({
+        "muterId": user_id,
+        "mutedId": sender_id
+    })
+    
+    if mute_record:
+        if mute_record.get("muteUntil") is None:
+            return  # Süresiz sessize alınmış
+        elif mute_record["muteUntil"] > datetime.utcnow():
+            return  # Hala sessize alınmış
+    
+    notification = {
+        "id": str(uuid.uuid4()),
+        "userId": user_id,
+        "type": "dm",
+        "title": sender_name,
+        "body": content[:100],
+        "data": {
+            "conversationId": conversation_id,
+            "senderId": sender_id
+        },
+        "read": False,
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.notifications.insert_one(notification)
+    
+    # Push notification gönder
+    recipient = await db.users.find_one({"uid": user_id})
+    if recipient and recipient.get("expoPushToken"):
+        await send_push_notification(
+            recipient["expoPushToken"],
+            sender_name,
+            content[:100],
+            {"conversationId": conversation_id, "type": "dm"}
+        )
+
+async def send_push_notification(token: str, title: str, body: str, data: dict = None):
+    """Expo push notification gönder"""
+    import aiohttp
+    
+    message = {
+        "to": token,
+        "sound": "default",
+        "title": title,
+        "body": body,
+        "data": data or {}
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://exp.host/--/api/v2/push/send",
+                json=message,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                result = await response.json()
+                logging.info(f"Push notification sent: {result}")
+    except Exception as e:
+        logging.error(f"Push notification error: {e}")
+
+# ============================================
 # END OF DM SYSTEM
 # ============================================
 
