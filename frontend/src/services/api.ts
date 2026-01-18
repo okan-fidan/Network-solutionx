@@ -222,13 +222,4 @@ export const userInteractionApi = {
   getUserStatus: (userId: string) => api.get(`/api/users/${userId}/status`),
 };
 
-// Push notification API
-export const notificationApi = {
-  savePushToken: (token: string) => api.post('/api/users/push-token', { token }),
-  getNotifications: (skip?: number, limit?: number) => 
-    api.get(`/api/notifications?skip=${skip || 0}&limit=${limit || 50}`),
-  markAsRead: (notificationId: string) => api.put(`/api/notifications/${notificationId}/read`),
-  markAllAsRead: () => api.put('/api/notifications/read-all'),
-};
-
 export default api;
