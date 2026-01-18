@@ -1329,7 +1329,7 @@ export default function GroupChatScreen() {
               </View>
               <Text style={styles.attachText}>Dosya</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.attachOption} onPress={() => shareLocation(false)}>
+            <TouchableOpacity style={styles.attachOption} onPress={() => setShowLocationPicker(true)}>
               <View style={[styles.attachIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
                 <Ionicons name="location" size={24} color="#3b82f6" />
               </View>
