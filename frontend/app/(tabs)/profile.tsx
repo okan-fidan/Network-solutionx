@@ -60,17 +60,25 @@ export default function ProfileScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.5, // Düşük kalite - hızlı upload
-      base64: true, // Base64 formatında al
+      quality: 0.3, // Düşük kalite - küçük dosya boyutu
+      base64: true,
     });
 
-    if (!result.canceled && result.assets[0]) {
+    if (!result.canceled && result.assets[0] && result.assets[0].base64) {
       setUploadingImage(true);
       try {
         // Base64 formatında gönder
         const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
         
-        await api.put('/api/user/profile-image', { 
+        // Dosya boyutunu kontrol et (max 500KB)
+        const sizeInBytes = (result.assets[0].base64.length * 3) / 4;
+        if (sizeInBytes > 500000) {
+          Alert.alert('Uyarı', 'Fotoğraf çok büyük. Lütfen daha küçük bir fotoğraf seçin.');
+          setUploadingImage(false);
+          return;
+        }
+        
+        const response = await api.put('/api/user/profile-image', { 
           profileImageUrl: base64Image 
         });
         
@@ -78,8 +86,8 @@ export default function ProfileScreen() {
         if (refreshProfile) await refreshProfile();
         Alert.alert('Başarılı', 'Profil fotoğrafı güncellendi');
       } catch (error: any) {
-        console.error('Error uploading image:', error?.message);
-        Alert.alert('Hata', 'Fotoğraf yüklenemedi. Lütfen daha küçük bir fotoğraf deneyin.');
+        console.error('Error uploading image:', error?.response?.data || error?.message);
+        Alert.alert('Hata', 'Fotoğraf yüklenemedi. Lütfen tekrar deneyin.');
       } finally {
         setUploadingImage(false);
       }
