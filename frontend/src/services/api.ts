@@ -242,4 +242,18 @@ export const userInteractionApi = {
   getUserStatus: (userId: string) => api.get(`/api/users/${userId}/status`),
 };
 
+// Membership API - Üyelik Sistemi
+export const membershipApi = {
+  // Üyelik durumu
+  getStatus: () => api.get('/api/membership/status'),
+  // Üyelik planları
+  getPlans: () => api.get('/api/membership/plans'),
+  // Satın alma başlat
+  purchase: (planId: string) => api.post('/api/membership/purchase', { planId }),
+  // Test modunda onay
+  confirmTest: (orderId: string) => api.post(`/api/membership/confirm-test/${orderId}`),
+  // Sipariş geçmişi
+  getOrders: () => api.get('/api/membership/orders'),
+};
+
 export default api;
