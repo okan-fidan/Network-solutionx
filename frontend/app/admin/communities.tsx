@@ -278,10 +278,11 @@ export default function AdminCommunitiesScreen() {
   const loadSubgroups = async (communityId: string) => {
     setLoadingSubgroups(true);
     try {
-      // For now, we'll just show a placeholder - subgroups are loaded with community detail
-      setSubgroups([]);
+      const response = await adminApi.getCommunitySubgroups(communityId);
+      setSubgroups(response.data || []);
     } catch (error) {
       console.error('Error loading subgroups:', error);
+      Alert.alert('Hata', 'Alt gruplar yüklenemedi');
     } finally {
       setLoadingSubgroups(false);
     }
@@ -290,7 +291,7 @@ export default function AdminCommunitiesScreen() {
   const handleOpenSubgroups = async (community: Community) => {
     setSelectedCommunity(community);
     setSubgroupsModalVisible(true);
-    // Load subgroups for this community - we'll implement this properly
+    await loadSubgroups(community.id);
   };
 
   const handleUpdateSubgroup = async () => {
