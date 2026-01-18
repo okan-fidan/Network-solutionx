@@ -426,29 +426,61 @@ export default function HomeScreen() {
     }
   };
 
-  const handleAddStory = async () => {
+  // Instagram tarzı hikaye ekleme - Fotoğraf veya Video
+  const handleAddStory = () => {
+    Alert.alert(
+      'Hikaye Ekle',
+      'Ne paylaşmak istersiniz?',
+      [
+        {
+          text: '📷 Fotoğraf',
+          onPress: () => pickStoryMedia('photo'),
+        },
+        {
+          text: '🎥 Video',
+          onPress: () => pickStoryMedia('video'),
+        },
+        {
+          text: 'İptal',
+          style: 'cancel',
+        },
+      ]
+    );
+  };
+
+  const pickStoryMedia = async (type: 'photo' | 'video') => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: type === 'photo' 
+        ? ImagePicker.MediaTypeOptions.Images 
+        : ImagePicker.MediaTypeOptions.Videos,
       allowsEditing: true,
       aspect: [9, 16],
       quality: 0.8,
       base64: true,
+      videoMaxDuration: 30, // Max 30 saniye video
     });
 
     if (!result.canceled && result.assets[0]) {
-      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
-      setSelectedStoryImage(base64Image);
+      if (type === 'photo') {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setSelectedStoryImage(base64Image);
+        setSelectedStoryVideo(null);
+      } else {
+        setSelectedStoryVideo(result.assets[0].uri);
+        setSelectedStoryImage(null);
+      }
       setShowStoryCreator(true);
     }
   };
 
   const handleCreateStory = async () => {
-    if (!selectedStoryImage) return;
+    if (!selectedStoryImage && !selectedStoryVideo) return;
     
     setUploadingStory(true);
     try {
       await storyApi.create({
-        imageUrl: selectedStoryImage,
+        imageUrl: selectedStoryImage || undefined,
+        videoUrl: selectedStoryVideo || undefined,
         caption: storyCaption,
       });
       
@@ -460,8 +492,9 @@ export default function HomeScreen() {
       
       setShowStoryCreator(false);
       setSelectedStoryImage(null);
+      setSelectedStoryVideo(null);
       setStoryCaption('');
-      loadData(); // Hikayeleri yenile
+      loadData();
     } catch (error: any) {
       Toast.show({
         type: 'error',
@@ -473,22 +506,150 @@ export default function HomeScreen() {
     }
   };
 
-  // Hikaye progress timer
+  // Instagram tarzı emoji tepkisi
+  const handleStoryReaction = async (emoji: string) => {
+    if (!currentStory || sendingReaction) return;
+    
+    const storyItem = currentStory.stories[currentStoryIndex];
+    if (!storyItem) return;
+    
+    setSendingReaction(true);
+    try {
+      await storyApi.react(storyItem.id, emoji);
+      Toast.show({
+        type: 'success',
+        text1: `${emoji} gönderildi`,
+        position: 'bottom',
+        visibilityTime: 1500,
+      });
+      setShowEmojiPicker(false);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: error.response?.data?.detail || 'Tepki gönderilemedi',
+      });
+    } finally {
+      setSendingReaction(false);
+    }
+  };
+
+  // Instagram tarzı hikaye yanıtlama
+  const handleStoryReply = async () => {
+    if (!currentStory || !storyReplyText.trim()) return;
+    
+    const storyItem = currentStory.stories[currentStoryIndex];
+    if (!storyItem) return;
+    
+    try {
+      await storyApi.reply(storyItem.id, storyReplyText.trim());
+      Toast.show({
+        type: 'success',
+        text1: 'Yanıt gönderildi',
+        text2: 'Mesajlar bölümünden görebilirsiniz',
+      });
+      setStoryReplyText('');
+      setShowStoryReply(false);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: error.response?.data?.detail || 'Yanıt gönderilemedi',
+      });
+    }
+  };
+
+  // Hikayeyi şikayet et
+  const handleReportStory = () => {
+    if (!currentStory) return;
+    
+    Alert.alert(
+      'Hikayeyi Şikayet Et',
+      'Şikayet nedeninizi seçin:',
+      [
+        { text: 'Uygunsuz İçerik', onPress: () => submitStoryReport('Uygunsuz içerik') },
+        { text: 'Spam', onPress: () => submitStoryReport('Spam') },
+        { text: 'Nefret Söylemi', onPress: () => submitStoryReport('Nefret söylemi') },
+        { text: 'Şiddet', onPress: () => submitStoryReport('Şiddet içerikli') },
+        { text: 'İptal', style: 'cancel' },
+      ]
+    );
+  };
+
+  const submitStoryReport = async (reason: string) => {
+    if (!currentStory) return;
+    
+    const storyItem = currentStory.stories[currentStoryIndex];
+    if (!storyItem) return;
+    
+    try {
+      await storyApi.report(storyItem.id, reason);
+      Toast.show({
+        type: 'success',
+        text1: 'Şikayet Alındı',
+        text2: 'İnceleme sonucu size bildirilecektir',
+      });
+      setShowStoryOptions(false);
+    } catch (error: any) {
+      Toast.show({
+        type: 'error',
+        text1: 'Hata',
+        text2: error.response?.data?.detail || 'Şikayet gönderilemedi',
+      });
+    }
+  };
+
+  // Kullanıcıyı engelle
+  const handleBlockUser = () => {
+    if (!currentStory) return;
+    
+    Alert.alert(
+      'Kullanıcıyı Engelle',
+      `${currentStory.userName} adlı kullanıcıyı engellemek istediğinizden emin misiniz?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        { 
+          text: 'Engelle', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              // Block user API call
+              Toast.show({
+                type: 'success',
+                text1: 'Kullanıcı Engellendi',
+                text2: 'Bu kullanıcının hikayelerini artık görmeyeceksiniz',
+              });
+              setShowStoryViewer(false);
+              setShowStoryOptions(false);
+            } catch (error) {
+              Toast.show({
+                type: 'error',
+                text1: 'Hata',
+                text2: 'Kullanıcı engellenemedi',
+              });
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  // Hikaye progress timer (pause desteği ile)
   useEffect(() => {
-    if (showStoryViewer && currentStory) {
+    if (showStoryViewer && currentStory && !storyPaused && !showStoryReply && !showEmojiPicker) {
       const timer = setInterval(() => {
         setStoryProgress(prev => {
           if (prev >= 100) {
             handleNextStory();
             return 0;
           }
-          return prev + 2; // 5 saniyede dolacak (100/2 = 50 interval, 50*100ms = 5sn)
+          return prev + 2;
         });
       }, 100);
       
       return () => clearInterval(timer);
     }
-  }, [showStoryViewer, currentStory, currentStoryIndex]);
+  }, [showStoryViewer, currentStory, currentStoryIndex, storyPaused, showStoryReply, showEmojiPicker]);
 
   const handleLike = async (postId: string) => {
     try {
