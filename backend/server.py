@@ -1876,7 +1876,7 @@ async def get_group_members(subgroup_id: str, current_user: dict = Depends(get_c
     if not subgroup:
         raise HTTPException(status_code=404, detail="Grup bulunamadı")
     
-    member_ids = subgroup.get('memberIds', [])
+    member_ids = subgroup.get('members', [])
     members = await db.users.find({"uid": {"$in": member_ids}}).to_list(100)
     
     result = []
