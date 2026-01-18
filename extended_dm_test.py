@@ -11,7 +11,7 @@ import base64
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://admindash-12.preview.emergentagent.com/api"
+BASE_URL = "https://chatmaster-21.preview.emergentagent.com/api"
 TEST_USER_ID = str(uuid.uuid4())
 TEST_CONVERSATION_ID = str(uuid.uuid4())
 TEST_MEDIA_ID = str(uuid.uuid4())

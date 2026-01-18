@@ -15,7 +15,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Backend URL from frontend environment (external URL mapped to internal)
-BACKEND_URL = "https://admindash-12.preview.emergentagent.com"
+BACKEND_URL = "https://chatmaster-21.preview.emergentagent.com"
 API_BASE = f"{BACKEND_URL}/api"
 
 # Test User Configuration as specified in review request

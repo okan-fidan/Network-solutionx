@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from frontend .env
-BASE_URL = "https://admindash-12.preview.emergentagent.com/api"
+BASE_URL = "https://chatmaster-21.preview.emergentagent.com/api"
 
 class DMConversationTester:
     def __init__(self):
