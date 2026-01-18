@@ -700,7 +700,9 @@ export default function GroupChatScreen() {
 
   const formatTime = (timestamp: string) => {
     try {
-      return formatDistanceToNow(new Date(timestamp), { addSuffix: true, locale: tr });
+      const date = new Date(timestamp);
+      // Gerçek saat göster (HH:mm formatında)
+      return format(date, 'HH:mm');
     } catch {
       return '';
     }
