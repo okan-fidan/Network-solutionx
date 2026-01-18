@@ -278,21 +278,18 @@ export default function HomeScreen() {
       const postsResponse = await postApi.getAll();
       setPosts(postsResponse.data || []);
 
-      // Toplulukları yükle (hikayeler için)
+      // Kullanıcı hikayelerini yükle (24 saatten eski olanlar backend'de otomatik silinir)
+      try {
+        const storiesResponse = await storyApi.getAll();
+        setStories(storiesResponse.data || []);
+      } catch (e) {
+        console.log('Stories load error:', e);
+        setStories([]);
+      }
+
+      // Duyurular için toplulukları yükle
       try {
         const communitiesResponse = await communityApi.getAll();
-        const communityStories: Story[] = (communitiesResponse.data || [])
-          .filter((c: any) => c.isMember)
-          .slice(0, 8)
-          .map((c: any) => ({
-            id: c.id,
-            name: c.name,
-            imageUrl: c.imageUrl,
-            hasNewStory: Math.random() > 0.5, // Demo için rastgele
-            type: 'community' as const,
-          }));
-        setStories(communityStories);
-
         // Son duyuruyu al
         const memberCommunities = (communitiesResponse.data || []).filter((c: any) => c.isMember);
         if (memberCommunities.length > 0) {
