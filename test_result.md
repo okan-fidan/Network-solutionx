@@ -363,21 +363,23 @@ frontend:
 
 metadata:
   created_by: "testing_agent"
-  version: "3.0"
-  test_sequence: 3
+  version: "4.0"
+  test_sequence: 4
   run_ui: false
   comprehensive_test_completed: true
-  total_backend_tests: 28
+  total_backend_tests: 34
   backend_test_success_rate: "100%"
   telegram_app_testing_completed: true
   all_endpoints_verified: true
+  dm_system_features_tested: true
+  dm_system_test_success_rate: "100%"
 
 test_plan:
   current_focus:
-    - "DM Conversation System"
+    - "DM System New Features - All Complete"
   stuck_tasks: []
   test_all: true
-  test_priority: "dm_conversation_completed"
+  test_priority: "dm_system_features_completed"
 
 agent_communication:
   - agent: "testing"
