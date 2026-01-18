@@ -14,21 +14,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import api from '../src/services/api';
 import { useAuth } from '../src/contexts/AuthContext';
 
-// Bildirim handler ayarları
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-  }),
-});
+// Expo Go kontrolü - push notifications Expo Go'da desteklenmiyor
+const isExpoGo = Constants.appOwnership === 'expo';
 
 interface Notification {
   id: string;
