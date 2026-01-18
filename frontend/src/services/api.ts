@@ -168,6 +168,7 @@ export const adminApi = {
   kickFromCommunity: (communityId: string, userId: string) => api.post(`/api/admin/communities/${communityId}/kick/${userId}`),
   addSuperAdmin: (communityId: string, userId: string) => api.post(`/api/admin/communities/${communityId}/super-admin/${userId}`),
   removeSuperAdmin: (communityId: string, userId: string) => api.delete(`/api/admin/communities/${communityId}/super-admin/${userId}`),
+  getCommunitySubgroups: (communityId: string) => api.get(`/api/admin/communities/${communityId}/subgroups`),
   updateSubgroup: (subgroupId: string, data: any) => api.put(`/api/admin/subgroups/${subgroupId}`, data),
   deleteSubgroup: (subgroupId: string) => api.delete(`/api/admin/subgroups/${subgroupId}`),
   banUser: (userId: string) => api.post(`/api/admin/users/${userId}/ban`),
