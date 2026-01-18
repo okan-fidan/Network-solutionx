@@ -1046,7 +1046,13 @@ export default function HomeScreen() {
                 </TouchableOpacity>
                 
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                  {/* Seçenekler (Şikayet, Engelle) */}
+                  {/* Kendi hikayem - Silme butonu */}
+                  {currentStory.userId === user?.uid && (
+                    <TouchableOpacity onPress={() => setShowStoryOptions(true)}>
+                      <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                  {/* Başkasının hikayesi - Şikayet/Engelle */}
                   {currentStory.userId !== user?.uid && (
                     <TouchableOpacity onPress={() => setShowStoryOptions(true)}>
                       <Ionicons name="ellipsis-vertical" size={24} color="#fff" />
