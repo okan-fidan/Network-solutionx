@@ -137,6 +137,14 @@ export default function ProfileScreen() {
 
   const menuItems = [
     {
+      icon: 'diamond-outline',
+      label: 'Üyelik',
+      subtitle: 'Premium avantajları keşfedin',
+      onPress: () => router.push('/membership'),
+      color: '#f59e0b',
+      highlight: true,
+    },
+    {
       icon: 'person-outline',
       label: 'Profili Düzenle',
       subtitle: 'Bilgilerinizi güncelleyin',
