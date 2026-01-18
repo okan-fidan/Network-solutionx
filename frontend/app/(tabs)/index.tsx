@@ -269,6 +269,8 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  
+  // Story States - Instagram tarzı
   const [showStoryViewer, setShowStoryViewer] = useState(false);
   const [currentStory, setCurrentStory] = useState<Story | null>(null);
   const [currentStoryIndex, setCurrentStoryIndex] = useState(0);
@@ -276,7 +278,17 @@ export default function HomeScreen() {
   const [showStoryCreator, setShowStoryCreator] = useState(false);
   const [storyCaption, setStoryCaption] = useState('');
   const [selectedStoryImage, setSelectedStoryImage] = useState<string | null>(null);
+  const [selectedStoryVideo, setSelectedStoryVideo] = useState<string | null>(null);
   const [uploadingStory, setUploadingStory] = useState(false);
+  const [storyPaused, setStoryPaused] = useState(false);
+  
+  // Story interaction states
+  const [showStoryReply, setShowStoryReply] = useState(false);
+  const [storyReplyText, setStoryReplyText] = useState('');
+  const [showStoryOptions, setShowStoryOptions] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [sendingReaction, setSendingReaction] = useState(false);
+  
   const { userProfile, user } = useAuth();
   const router = useRouter();
 
