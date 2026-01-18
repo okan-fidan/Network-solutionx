@@ -137,8 +137,9 @@ export default function MessagesScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setInitialLoadDone(true);
     }
-  }, [user]);
+  }, [user, initialLoadDone]);
 
   useFocusEffect(
     useCallback(() => {
