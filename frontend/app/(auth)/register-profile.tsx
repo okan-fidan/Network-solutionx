@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -16,8 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
-import api from '../../src/services/api';
 import { showToast } from '../../src/components/ui';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 // Türkiye şehirleri
 const TURKISH_CITIES = [
@@ -37,6 +37,8 @@ export default function RegisterProfileScreen() {
   const [phone, setPhone] = useState('');
   const [city, setCity] = useState('');
   const [occupation, setOccupation] = useState('');
+  const [birthDate, setBirthDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [citySearch, setCitySearch] = useState('');
@@ -48,6 +50,39 @@ export default function RegisterProfileScreen() {
         c.toLowerCase().includes(citySearch.toLowerCase())
       )
     : TURKISH_CITIES;
+
+  // Minimum 13 yaş kontrolü
+  const maxDate = new Date();
+  maxDate.setFullYear(maxDate.getFullYear() - 13);
+  
+  const minDate = new Date();
+  minDate.setFullYear(minDate.getFullYear() - 100);
+
+  const formatDate = (date: Date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+
+  const calculateAge = (date: Date) => {
+    const today = new Date();
+    let age = today.getFullYear() - date.getFullYear();
+    const monthDiff = today.getMonth() - date.getMonth();
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < date.getDate())) {
+      age--;
+    }
+    return age;
+  };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setBirthDate(selectedDate);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!firstName.trim()) {
@@ -62,6 +97,16 @@ export default function RegisterProfileScreen() {
       showToast.error('Hata', 'Lütfen şehrinizi seçin');
       return;
     }
+    if (!birthDate) {
+      showToast.error('Hata', 'Lütfen doğum tarihinizi seçin');
+      return;
+    }
+
+    const age = calculateAge(birthDate);
+    if (age < 13) {
+      showToast.error('Hata', 'Uygulamayı kullanmak için en az 13 yaşında olmalısınız');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -72,6 +117,7 @@ export default function RegisterProfileScreen() {
         phone: phone.trim(),
         city,
         occupation: occupation.trim(),
+        birthDate: birthDate.toISOString(),
       });
       showToast.success('Başarılı', 'Profiliniz oluşturuldu');
       router.replace('/(tabs)');
@@ -99,7 +145,6 @@ export default function RegisterProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Arama */}
           <View style={styles.searchContainer}>
             <Ionicons name="search" size={20} color="#9ca3af" />
             <TextInput
@@ -117,7 +162,6 @@ export default function RegisterProfileScreen() {
             )}
           </View>
 
-          {/* Şehir Listesi */}
           <FlatList
             data={filteredCities}
             keyExtractor={(item) => item}
@@ -156,6 +200,38 @@ export default function RegisterProfileScreen() {
                 <Text style={styles.emptyText}>Şehir bulunamadı</Text>
               </View>
             }
+          />
+        </View>
+      </View>
+    </Modal>
+  );
+
+  const DatePickerModal = () => (
+    <Modal
+      visible={showDatePicker && Platform.OS === 'ios'}
+      animationType="slide"
+      transparent
+      onRequestClose={() => setShowDatePicker(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.datePickerModal}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Doğum Tarihi</Text>
+            <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+              <Text style={styles.doneButton}>Tamam</Text>
+            </TouchableOpacity>
+          </View>
+          
+          <DateTimePicker
+            value={birthDate || maxDate}
+            mode="date"
+            display="spinner"
+            onChange={handleDateChange}
+            maximumDate={maxDate}
+            minimumDate={minDate}
+            locale="tr"
+            textColor="#fff"
+            style={styles.datePicker}
           />
         </View>
       </View>
@@ -207,6 +283,24 @@ export default function RegisterProfileScreen() {
                 autoCapitalize="words"
               />
             </View>
+
+            {/* Doğum Tarihi */}
+            <TouchableOpacity
+              style={styles.inputContainer}
+              onPress={() => setShowDatePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#9ca3af" style={styles.inputIcon} />
+              <Text style={[styles.inputText, !birthDate && styles.placeholder]}>
+                {birthDate ? formatDate(birthDate) : 'Doğum Tarihi *'}
+              </Text>
+              {birthDate && (
+                <View style={styles.ageBadge}>
+                  <Text style={styles.ageText}>{calculateAge(birthDate)} yaş</Text>
+                </View>
+              )}
+              <Ionicons name="chevron-down" size={20} color="#6b7280" />
+            </TouchableOpacity>
 
             {/* Telefon */}
             <View style={styles.inputContainer}>
@@ -269,6 +363,19 @@ export default function RegisterProfileScreen() {
       </KeyboardAvoidingView>
 
       <CityPickerModal />
+      <DatePickerModal />
+      
+      {/* Android DatePicker */}
+      {showDatePicker && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={birthDate || maxDate}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          maximumDate={maxDate}
+          minimumDate={minDate}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -338,6 +445,18 @@ const styles = StyleSheet.create({
   placeholder: {
     color: '#6b7280',
   },
+  ageBadge: {
+    backgroundColor: '#6366f120',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  ageText: {
+    color: '#6366f1',
+    fontSize: 13,
+    fontWeight: '600',
+  },
   button: {
     backgroundColor: '#6366f1',
     height: 56,
@@ -375,6 +494,12 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
     paddingBottom: Platform.OS === 'ios' ? 34 : 20,
   },
+  datePickerModal: {
+    backgroundColor: '#1f2937',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -387,6 +512,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '600',
     color: '#fff',
+  },
+  doneButton: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#6366f1',
+  },
+  datePicker: {
+    height: 200,
+    backgroundColor: '#1f2937',
   },
   searchContainer: {
     flexDirection: 'row',
