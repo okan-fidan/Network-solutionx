@@ -69,10 +69,18 @@ export default function MessagesScreen() {
     }
 
     try {
-      // Paralel olarak verileri yükle
+      // Timeout ile API çağrıları
+      const timeoutPromise = (promise: Promise<any>, ms: number) => {
+        return Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), ms))
+        ]);
+      };
+
+      // Paralel olarak verileri yükle (5 saniye timeout)
       const [conversationsRes, communitiesRes] = await Promise.all([
-        api.get('/api/conversations').catch(() => ({ data: [] })),
-        api.get('/api/communities').catch(() => ({ data: [] })),
+        timeoutPromise(api.get('/api/conversations'), 5000).catch(() => ({ data: [] })),
+        timeoutPromise(api.get('/api/communities'), 5000).catch(() => ({ data: [] })),
       ]);
 
       setConversations(conversationsRes.data || []);
@@ -80,9 +88,14 @@ export default function MessagesScreen() {
       // Grup sohbetlerini yükle - sadece üye olunan topluluklar
       const memberCommunities = (communitiesRes.data || []).filter((c: any) => c.isMember);
       
-      // Tüm topluluk detaylarını paralel olarak çek (max 5 tane)
+      if (memberCommunities.length === 0) {
+        setGroupChats([]);
+        return;
+      }
+
+      // Tüm topluluk detaylarını paralel olarak çek (max 5 tane, 3 saniye timeout)
       const communityPromises = memberCommunities.slice(0, 5).map((community: any) =>
-        api.get(`/api/communities/${community.id}`)
+        timeoutPromise(api.get(`/api/communities/${community.id}`), 3000)
           .then(res => ({ community, details: res.data }))
           .catch(() => null)
       );
@@ -112,6 +125,9 @@ export default function MessagesScreen() {
       setGroupChats(myGroups);
     } catch (error: any) {
       console.log('Error loading messages:', error?.message);
+      // Hata durumunda boş liste göster, yükleme durumunu kapat
+      setConversations([]);
+      setGroupChats([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
