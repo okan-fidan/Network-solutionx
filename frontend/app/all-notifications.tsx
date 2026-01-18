@@ -41,23 +41,9 @@ export default function AllNotificationsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [pushEnabled, setPushEnabled] = useState(false);
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
 
   useEffect(() => {
-    registerForPushNotifications();
     loadNotifications();
-
-    // Bildirim dinleyicileri
-    notificationListener.current = Notifications.addNotificationReceivedListener(notification => {
-      console.log('Notification received:', notification);
-      loadNotifications();
-    });
-
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const data = response.notification.request.content.data;
-      handleNotificationNavigation(data);
-    });
 
     // Uygulama aktif olduğunda yenile
     const subscription = AppState.addEventListener('change', nextAppState => {
@@ -67,64 +53,9 @@ export default function AllNotificationsScreen() {
     });
 
     return () => {
-      try {
-        if (notificationListener.current) {
-          notificationListener.current.remove();
-        }
-        if (responseListener.current) {
-          responseListener.current.remove();
-        }
-      } catch (error) {
-        // Web'de desteklenmiyor, hata yoksay
-      }
       subscription.remove();
     };
   }, []);
-
-  const registerForPushNotifications = async () => {
-    try {
-      if (!Device.isDevice) {
-        console.log('Push notifications need a physical device');
-        return;
-      }
-
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      if (finalStatus !== 'granted') {
-        console.log('Push notification permission denied');
-        return;
-      }
-
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: 'your-project-id', // Expo project ID
-      });
-
-      setPushEnabled(true);
-
-      // Token'ı backend'e kaydet
-      if (token?.data) {
-        await api.post('/api/user/push-token', { token: token.data });
-      }
-
-      // Android için kanal ayarı
-      if (Platform.OS === 'android') {
-        Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#6366f1',
-        });
-      }
-    } catch (error) {
-      console.error('Push notification registration error:', error);
-    }
-  };
 
   const handleNotificationNavigation = (data: any) => {
     if (data?.type === 'message' && data?.groupId) {
@@ -133,6 +64,8 @@ export default function AllNotificationsScreen() {
       router.push(`/post/${data.postId}`);
     } else if (data?.type === 'community' && data?.communityId) {
       router.push(`/community/${data.communityId}`);
+    } else if (data?.type === 'dm' && data?.conversationId) {
+      router.push(`/chat/${data.conversationId}`);
     }
   };
 
