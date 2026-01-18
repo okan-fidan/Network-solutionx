@@ -4279,6 +4279,185 @@ async def delete_story(story_id: str, current_user: dict = Depends(get_current_u
     await db.stories.delete_one({"id": story_id})
     return {"message": "Hikaye silindi"}
 
+@api_router.post("/stories/{story_id}/react")
+async def react_to_story(story_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Hikayeye emoji tepkisi ekle"""
+    story = await db.stories.find_one({"id": story_id})
+    if not story:
+        raise HTTPException(status_code=404, detail="Hikaye bulunamadı")
+    
+    emoji = data.get('emoji', '❤️')
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Birisi"
+    
+    reaction = {
+        "id": str(uuid.uuid4()),
+        "storyId": story_id,
+        "userId": current_user['uid'],
+        "userName": sender_name,
+        "userProfileImage": user.get('profileImageUrl') if user else None,
+        "emoji": emoji,
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.story_reactions.insert_one(reaction)
+    
+    # Hikaye sahibine bildirim gönder
+    if story['userId'] != current_user['uid']:
+        await send_notification_to_user(
+            story['userId'],
+            f"{sender_name} hikayenize tepki verdi {emoji}",
+            "Hikayenize yeni bir tepki geldi",
+            {"type": "story_reaction", "storyId": story_id}
+        )
+    
+    if '_id' in reaction:
+        del reaction['_id']
+    
+    return reaction
+
+@api_router.post("/stories/{story_id}/reply")
+async def reply_to_story(story_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Hikayeye yanıt gönder (DM olarak)"""
+    story = await db.stories.find_one({"id": story_id})
+    if not story:
+        raise HTTPException(status_code=404, detail="Hikaye bulunamadı")
+    
+    message = data.get('message', '')
+    if not message:
+        raise HTTPException(status_code=400, detail="Mesaj boş olamaz")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Birisi"
+    
+    # Hikaye yanıtı olarak DM gönder
+    story_owner_id = story['userId']
+    
+    # Mevcut conversation var mı kontrol et
+    participants = sorted([current_user['uid'], story_owner_id])
+    existing_conv = await db.conversations.find_one({"participants": participants})
+    
+    if existing_conv:
+        conversation_id = existing_conv['id']
+    else:
+        # Yeni conversation oluştur
+        conversation_id = str(uuid.uuid4())
+        story_owner = await db.users.find_one({"uid": story_owner_id})
+        
+        new_conv = {
+            "id": conversation_id,
+            "participants": participants,
+            "participantDetails": {
+                current_user['uid']: {
+                    "name": sender_name,
+                    "profileImage": user.get('profileImageUrl') if user else None
+                },
+                story_owner_id: {
+                    "name": f"{story_owner.get('firstName', '')} {story_owner.get('lastName', '')}".strip() if story_owner else "Kullanıcı",
+                    "profileImage": story_owner.get('profileImageUrl') if story_owner else None
+                }
+            },
+            "lastMessage": message,
+            "lastMessageTime": datetime.utcnow(),
+            "createdAt": datetime.utcnow()
+        }
+        await db.conversations.insert_one(new_conv)
+    
+    # Mesajı kaydet
+    dm_message = {
+        "id": str(uuid.uuid4()),
+        "conversationId": conversation_id,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "senderProfileImage": user.get('profileImageUrl') if user else None,
+        "content": message,
+        "type": "story_reply",
+        "storyId": story_id,
+        "storyImageUrl": story.get('imageUrl'),
+        "timestamp": datetime.utcnow(),
+        "isRead": False
+    }
+    
+    await db.dm_messages.insert_one(dm_message)
+    
+    # Conversation'ı güncelle
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {"$set": {"lastMessage": f"Hikayenize yanıt: {message[:50]}...", "lastMessageTime": datetime.utcnow()}}
+    )
+    
+    # Hikaye sahibine bildirim gönder
+    if story_owner_id != current_user['uid']:
+        await send_notification_to_user(
+            story_owner_id,
+            f"{sender_name} hikayenize yanıt verdi",
+            message[:100],
+            {"type": "story_reply", "storyId": story_id, "conversationId": conversation_id}
+        )
+    
+    if '_id' in dm_message:
+        del dm_message['_id']
+    
+    return {"message": "Yanıt gönderildi", "conversationId": conversation_id}
+
+@api_router.post("/stories/{story_id}/report")
+async def report_story(story_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Hikayeyi şikayet et"""
+    story = await db.stories.find_one({"id": story_id})
+    if not story:
+        raise HTTPException(status_code=404, detail="Hikaye bulunamadı")
+    
+    reason = data.get('reason', 'Uygunsuz içerik')
+    
+    report = {
+        "id": str(uuid.uuid4()),
+        "type": "story",
+        "targetId": story_id,
+        "targetUserId": story['userId'],
+        "reporterId": current_user['uid'],
+        "reason": reason,
+        "status": "pending",
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.reports.insert_one(report)
+    
+    return {"message": "Şikayet alındı. İnceleme sonucu size bildirilecektir."}
+
+@api_router.get("/stories/{story_id}/reactions")
+async def get_story_reactions(story_id: str, current_user: dict = Depends(get_current_user)):
+    """Hikaye tepkilerini getir"""
+    reactions = await db.story_reactions.find({"storyId": story_id}).sort("createdAt", -1).to_list(100)
+    
+    for reaction in reactions:
+        if '_id' in reaction:
+            del reaction['_id']
+    
+    return reactions
+
+@api_router.get("/stories/{story_id}/viewers")
+async def get_story_viewers(story_id: str, current_user: dict = Depends(get_current_user)):
+    """Hikayeyi görüntüleyenleri getir (sadece hikaye sahibi görebilir)"""
+    story = await db.stories.find_one({"id": story_id})
+    if not story:
+        raise HTTPException(status_code=404, detail="Hikaye bulunamadı")
+    
+    if story['userId'] != current_user['uid']:
+        raise HTTPException(status_code=403, detail="Sadece kendi hikayenizin görüntüleyenlerini görebilirsiniz")
+    
+    viewer_ids = story.get('viewedBy', [])
+    viewers = await db.users.find({"uid": {"$in": viewer_ids}}).to_list(100)
+    
+    result = []
+    for viewer in viewers:
+        result.append({
+            "userId": viewer['uid'],
+            "userName": f"{viewer.get('firstName', '')} {viewer.get('lastName', '')}".strip(),
+            "userProfileImage": viewer.get('profileImageUrl')
+        })
+    
+    return result
+
 # ============================================
 # ENHANCED NOTIFICATION SYSTEM
 # ============================================
