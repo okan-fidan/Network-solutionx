@@ -50,6 +50,15 @@ export const postApi = {
   share: (id: string) => api.post(`/api/posts/${id}/share`),
 };
 
+// Story API - Kullanıcı hikayeleri (24 saat sonra otomatik silinir)
+export const storyApi = {
+  getAll: () => api.get('/api/stories'),
+  getUserStories: (userId: string) => api.get(`/api/stories/${userId}`),
+  create: (data: { imageUrl?: string; videoUrl?: string; caption?: string }) => api.post('/api/stories', data),
+  view: (storyId: string) => api.post(`/api/stories/${storyId}/view`),
+  delete: (storyId: string) => api.delete(`/api/stories/${storyId}`),
+};
+
 export const communityApi = {
   getAll: () => api.get('/api/communities'),
   getOne: (id: string) => api.get(`/api/communities/${id}`),
