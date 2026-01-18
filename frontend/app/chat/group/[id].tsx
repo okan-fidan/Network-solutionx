@@ -45,12 +45,14 @@ interface Message {
   senderId: string;
   senderName: string;
   senderProfileImage?: string;
+  senderOccupation?: string;
   content: string;
   timestamp: string;
-  type?: 'text' | 'image' | 'video' | 'file' | 'location' | 'poll';
+  type?: 'text' | 'image' | 'video' | 'file' | 'location' | 'poll' | 'deleted';
   mediaUrl?: string;
   fileName?: string;
   edited?: boolean;
+  isDeleted?: boolean;
   isPinned?: boolean;
   replyTo?: {
     id: string;
