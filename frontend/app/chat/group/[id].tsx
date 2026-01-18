@@ -736,6 +736,36 @@ export default function GroupChatScreen() {
     });
   };
 
+  // Anket oluştur
+  const handleCreatePoll = async () => {
+    if (!pollQuestion.trim() || !groupId) return;
+    
+    const validOptions = pollOptions.filter(o => o.trim());
+    if (validOptions.length < 2) {
+      Alert.alert('Hata', 'En az 2 seçenek gerekli');
+      return;
+    }
+
+    try {
+      await subgroupApi.createPoll(groupId, {
+        question: pollQuestion.trim(),
+        options: validOptions.map(o => o.trim()),
+      });
+      
+      // Reset form
+      setPollQuestion('');
+      setPollOptions(['', '']);
+      setShowPollModal(false);
+      setShowAttachMenu(false);
+      
+      loadData();
+      Alert.alert('Başarılı', 'Anket oluşturuldu');
+    } catch (error: any) {
+      console.error('Error creating poll:', error);
+      Alert.alert('Hata', error?.response?.data?.detail || 'Anket oluşturulamadı');
+    }
+  };
+
   const formatTime = (timestamp: string) => {
     try {
       const date = new Date(timestamp);
