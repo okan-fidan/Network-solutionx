@@ -1439,6 +1439,193 @@ export default function GroupChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Anket Oluşturma Modal */}
+      <Modal
+        visible={showPollModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowPollModal(false)}
+      >
+        <View style={styles.pollModalOverlay}>
+          <View style={styles.pollModalContent}>
+            <View style={styles.pollModalHeader}>
+              <Text style={styles.pollModalTitle}>Yeni Anket</Text>
+              <TouchableOpacity onPress={() => setShowPollModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.pollModalBody} showsVerticalScrollIndicator={false}>
+              <Text style={styles.pollInputLabel}>Soru</Text>
+              <TextInput
+                style={styles.pollInput}
+                placeholder="Anket sorusunu yazın..."
+                placeholderTextColor="#6b7280"
+                value={pollQuestion}
+                onChangeText={setPollQuestion}
+                multiline
+              />
+
+              <Text style={styles.pollInputLabel}>Seçenekler</Text>
+              {pollOptions.map((option, index) => (
+                <View key={index} style={styles.pollOptionRow}>
+                  <TextInput
+                    style={styles.pollOptionInput}
+                    placeholder={`Seçenek ${index + 1}`}
+                    placeholderTextColor="#6b7280"
+                    value={option}
+                    onChangeText={(text) => {
+                      const newOptions = [...pollOptions];
+                      newOptions[index] = text;
+                      setPollOptions(newOptions);
+                    }}
+                  />
+                  {pollOptions.length > 2 && (
+                    <TouchableOpacity
+                      style={styles.removeOptionBtn}
+                      onPress={() => {
+                        const newOptions = pollOptions.filter((_, i) => i !== index);
+                        setPollOptions(newOptions);
+                      }}
+                    >
+                      <Ionicons name="close-circle" size={24} color="#ef4444" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+
+              {pollOptions.length < 6 && (
+                <TouchableOpacity
+                  style={styles.addOptionBtn}
+                  onPress={() => setPollOptions([...pollOptions, ''])}
+                >
+                  <Ionicons name="add-circle" size={22} color="#6366f1" />
+                  <Text style={styles.addOptionText}>Seçenek Ekle</Text>
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+
+            <View style={styles.pollModalFooter}>
+              <TouchableOpacity
+                style={[styles.pollSubmitBtn, (!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2) && styles.pollSubmitBtnDisabled]}
+                onPress={handleCreatePoll}
+                disabled={!pollQuestion.trim() || pollOptions.filter(o => o.trim()).length < 2}
+              >
+                <Ionicons name="send" size={20} color="#fff" />
+                <Text style={styles.pollSubmitText}>Anketi Oluştur</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Harita ile Konum Seçme Modal */}
+      <Modal
+        visible={showLocationPicker}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowLocationPicker(false)}
+      >
+        <View style={styles.locationModalOverlay}>
+          <View style={styles.locationModalContent}>
+            <View style={styles.locationModalHeader}>
+              <Text style={styles.locationModalTitle}>Konum Paylaş</Text>
+              <TouchableOpacity onPress={() => setShowLocationPicker(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.locationOptions}>
+              {/* Mevcut Konumu Gönder */}
+              <TouchableOpacity
+                style={styles.locationOptionBtn}
+                onPress={() => shareLocation(false)}
+                disabled={loadingLocation}
+              >
+                <View style={[styles.locationOptionIcon, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                  {loadingLocation ? (
+                    <ActivityIndicator size="small" color="#3b82f6" />
+                  ) : (
+                    <Ionicons name="navigate" size={28} color="#3b82f6" />
+                  )}
+                </View>
+                <View style={styles.locationOptionInfo}>
+                  <Text style={styles.locationOptionTitle}>Mevcut Konumumu Gönder</Text>
+                  <Text style={styles.locationOptionDesc}>Anlık konumunuzu paylaşın</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              {/* Canlı Konum */}
+              <TouchableOpacity
+                style={styles.locationOptionBtn}
+                onPress={() => {
+                  Alert.alert(
+                    'Canlı Konum Süresi',
+                    'Ne kadar süre canlı konum paylaşmak istersiniz?',
+                    [
+                      { text: 'İptal', style: 'cancel' },
+                      { text: '15 dakika', onPress: () => shareLocation(true, 15) },
+                      { text: '1 saat', onPress: () => shareLocation(true, 60) },
+                      { text: '8 saat', onPress: () => shareLocation(true, 480) },
+                    ]
+                  );
+                }}
+                disabled={loadingLocation}
+              >
+                <View style={[styles.locationOptionIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
+                  <Ionicons name="radio" size={28} color="#10b981" />
+                </View>
+                <View style={styles.locationOptionInfo}>
+                  <Text style={styles.locationOptionTitle}>Canlı Konum Paylaş</Text>
+                  <Text style={styles.locationOptionDesc}>Gerçek zamanlı konum takibi</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+              </TouchableOpacity>
+
+              {/* Haritadan Seç - Harici harita uygulaması */}
+              <TouchableOpacity
+                style={styles.locationOptionBtn}
+                onPress={async () => {
+                  // Harita uygulamasını aç
+                  const url = Platform.select({
+                    ios: 'maps://',
+                    android: 'geo:0,0?q=',
+                  });
+                  if (url) {
+                    try {
+                      await Linking.openURL(url);
+                    } catch (e) {
+                      Alert.alert('Hata', 'Harita uygulaması açılamadı');
+                    }
+                  }
+                  // Sonra mevcut konumu gönder
+                  setShowLocationPicker(false);
+                  setShowAttachMenu(false);
+                  Alert.alert(
+                    'Konum Gönder',
+                    'Harita uygulamasından konumu kopyaladıktan sonra mevcut konumunuzu göndermek ister misiniz?',
+                    [
+                      { text: 'Hayır', style: 'cancel' },
+                      { text: 'Mevcut Konumu Gönder', onPress: () => shareLocation(false) },
+                    ]
+                  );
+                }}
+              >
+                <View style={[styles.locationOptionIcon, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                  <Ionicons name="map" size={28} color="#8b5cf6" />
+                </View>
+                <View style={styles.locationOptionInfo}>
+                  <Text style={styles.locationOptionTitle}>Haritadan Seç</Text>
+                  <Text style={styles.locationOptionDesc}>Harita uygulamasını açın</Text>
+                </View>
+                <Ionicons name="open-outline" size={20} color="#6b7280" />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
