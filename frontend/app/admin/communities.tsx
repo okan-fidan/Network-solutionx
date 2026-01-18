@@ -775,6 +775,129 @@ export default function AdminCommunitiesScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Subgroups Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={subgroupsModalVisible}
+        onRequestClose={() => setSubgroupsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{selectedCommunity?.name}</Text>
+                <Text style={styles.modalSubtitle}>{subgroups.length} alt grup</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSubgroupsModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            {loadingSubgroups ? (
+              <ActivityIndicator size="large" color="#6366f1" style={{ marginTop: 32 }} />
+            ) : (
+              <FlatList
+                data={subgroups}
+                keyExtractor={(item) => item.id}
+                renderItem={({ item }) => (
+                  <View style={styles.subgroupCard}>
+                    <View style={styles.subgroupInfo}>
+                      <Text style={styles.subgroupName}>{item.name}</Text>
+                      <Text style={styles.subgroupDesc}>{item.description || 'Açıklama yok'}</Text>
+                      <View style={styles.subgroupStats}>
+                        <Text style={styles.subgroupStatText}>{item.memberCount || 0} üye</Text>
+                        {(item as any).pendingRequestCount > 0 && (
+                          <>
+                            <Text style={styles.subgroupStatText}>•</Text>
+                            <Text style={[styles.subgroupStatText, { color: '#f59e0b' }]}>
+                              {(item as any).pendingRequestCount} bekleyen istek
+                            </Text>
+                          </>
+                        )}
+                      </View>
+                    </View>
+                    <View style={styles.subgroupActions}>
+                      <TouchableOpacity
+                        style={styles.actionIconBtn}
+                        onPress={() => {
+                          setSelectedSubgroup(item);
+                          setSubgroupForm({ name: item.name, description: item.description || '' });
+                          setEditSubgroupModal(true);
+                        }}
+                      >
+                        <Ionicons name="create-outline" size={18} color="#3b82f6" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.actionIconBtn}
+                        onPress={() => handleDeleteSubgroup(item)}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+                style={styles.membersList}
+                ListEmptyComponent={
+                  <Text style={styles.emptyText}>Alt grup bulunamadı</Text>
+                }
+              />
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Subgroup Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={editSubgroupModal}
+        onRequestClose={() => setEditSubgroupModal(false)}
+      >
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Alt Grubu Düzenle</Text>
+              <TouchableOpacity onPress={() => setEditSubgroupModal(false)}>
+                <Ionicons name="close" size={24} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.formContainer}>
+              <Text style={styles.inputLabel}>Grup Adı</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Grup adı"
+                placeholderTextColor="#6b7280"
+                value={subgroupForm.name}
+                onChangeText={(text) => setSubgroupForm({ ...subgroupForm, name: text })}
+              />
+
+              <Text style={styles.inputLabel}>Açıklama</Text>
+              <TextInput
+                style={[styles.textInput, styles.textAreaInput]}
+                placeholder="Grup açıklaması"
+                placeholderTextColor="#6b7280"
+                value={subgroupForm.description}
+                onChangeText={(text) => setSubgroupForm({ ...subgroupForm, description: text })}
+                multiline
+                numberOfLines={4}
+              />
+
+              <TouchableOpacity
+                style={styles.submitButton}
+                onPress={handleUpdateSubgroup}
+              >
+                <Text style={styles.submitButtonText}>Kaydet</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </SafeAreaView>
   );
 }
