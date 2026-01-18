@@ -1810,13 +1810,10 @@ async def kick_member(subgroup_id: str, user_id: str, current_user: dict = Depen
     if not is_global_admin and not is_group_admin:
         raise HTTPException(status_code=403, detail="Moderasyon yetkisi yok")
     
-    member_ids = subgroup.get('memberIds', [])
-    if user_id in member_ids:
-        member_ids.remove(user_id)
-    
+    # Üyeyi members listesinden çıkar
     await db.subgroups.update_one(
         {"id": subgroup_id}, 
-        {"$set": {"memberIds": member_ids}, "$inc": {"memberCount": -1}}
+        {"$pull": {"members": user_id, "groupAdmins": user_id}}
     )
     return {"message": "Üye gruptan çıkarıldı"}
 
