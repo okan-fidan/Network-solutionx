@@ -81,7 +81,7 @@ const SkeletonPost = () => (
   </View>
 );
 
-// Stories Component
+// Stories Component - Sadece kullanıcı hikayeleri (24 saat sonra otomatik silinir)
 const StoriesSection = ({ stories, onStoryPress, onAddStory }: { 
   stories: Story[], 
   onStoryPress: (story: Story) => void,
@@ -102,32 +102,28 @@ const StoriesSection = ({ stories, onStoryPress, onAddStory }: {
         <Text style={styles.storyName} numberOfLines={1}>Hikaye Ekle</Text>
       </TouchableOpacity>
 
-      {/* Stories */}
+      {/* User Stories Only */}
       {stories.map((story) => (
         <TouchableOpacity 
-          key={story.id} 
+          key={story.userId} 
           style={styles.storyItem}
           onPress={() => onStoryPress(story)}
         >
           <LinearGradient
-            colors={story.hasNewStory ? ['#f59e0b', '#ef4444', '#ec4899'] : ['#374151', '#374151']}
+            colors={!story.hasViewed ? ['#f59e0b', '#ef4444', '#ec4899'] : ['#374151', '#374151']}
             style={styles.storyCircle}
           >
             <View style={styles.storyImageContainer}>
-              {story.imageUrl ? (
-                <Image source={{ uri: story.imageUrl }} style={styles.storyImage} />
+              {story.userProfileImage ? (
+                <Image source={{ uri: story.userProfileImage }} style={styles.storyImage} />
               ) : (
                 <View style={styles.storyPlaceholder}>
-                  <Ionicons 
-                    name={story.type === 'community' ? 'people' : 'person'} 
-                    size={24} 
-                    color="#9ca3af" 
-                  />
+                  <Ionicons name="person" size={24} color="#9ca3af" />
                 </View>
               )}
             </View>
           </LinearGradient>
-          <Text style={styles.storyName} numberOfLines={1}>{story.name}</Text>
+          <Text style={styles.storyName} numberOfLines={1}>{story.userName}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
