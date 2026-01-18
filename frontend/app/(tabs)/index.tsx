@@ -832,7 +832,7 @@ export default function HomeScreen() {
       <StoriesSection 
         stories={stories} 
         onStoryPress={handleStoryPress}
-        onAddStory={() => router.push('/post/create')}
+        onAddStory={handleAddStory}
       />
 
       {/* Announcement Banner */}
