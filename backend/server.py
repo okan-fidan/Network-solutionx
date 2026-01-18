@@ -3191,12 +3191,13 @@ async def get_conversation(conversation_id: str, current_user: dict = Depends(ge
 @api_router.post("/conversations/start")
 async def start_conversation(data: dict, current_user: dict = Depends(get_current_user)):
     """Bir kullanıcı ile konuşma başlat"""
-    other_user_id = data.get("userId")
+    # Hem userId hem otherUserId kabul et
+    other_user_id = data.get("userId") or data.get("otherUserId")
     conversation_type = data.get("type", CONVERSATION_TYPE_PRIVATE)
     service_id = data.get("serviceId")
     
     if not other_user_id:
-        raise HTTPException(status_code=400, detail="userId gerekli")
+        raise HTTPException(status_code=400, detail="userId veya otherUserId gerekli")
     
     if other_user_id == current_user['uid']:
         raise HTTPException(status_code=400, detail="Kendinizle konuşma başlatamazsınız")
