@@ -1051,7 +1051,93 @@ async def edit_subgroup_message(subgroup_id: str, message_id: str, data: dict, c
     )
     
     await sio.emit('message_edited', {"messageId": message_id, "content": new_content}, room=subgroup_id)
-    return {"message": "Mesaj düzenlendi"}
+    return {"message": "Mesaj düzenlendi", "success": True}
+
+@api_router.post("/subgroups/{subgroup_id}/messages/{message_id}/react")
+async def react_to_subgroup_message(subgroup_id: str, message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Grup mesajına emoji reaksiyon ekle"""
+    # Kullanıcının grup üyesi olduğunu kontrol et
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    if current_user['uid'] not in subgroup.get('members', []):
+        raise HTTPException(status_code=403, detail="Bu grubun üyesi değilsiniz")
+    
+    message = await db.messages.find_one({"id": message_id, "groupId": subgroup_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    emoji = data.get("emoji")
+    if not emoji:
+        raise HTTPException(status_code=400, detail="emoji gerekli")
+    
+    reactions = message.get("reactions", {})
+    user_id = current_user['uid']
+    
+    # Kullanıcının mevcut reaksiyonunu kontrol et
+    current_reaction = None
+    for em, users in reactions.items():
+        if user_id in users:
+            current_reaction = em
+            break
+    
+    # Aynı emoji ise kaldır, farklı ise güncelle
+    if current_reaction == emoji:
+        reactions[emoji].remove(user_id)
+        if not reactions[emoji]:
+            del reactions[emoji]
+    else:
+        if current_reaction:
+            reactions[current_reaction].remove(user_id)
+            if not reactions[current_reaction]:
+                del reactions[current_reaction]
+        
+        if emoji not in reactions:
+            reactions[emoji] = []
+        reactions[emoji].append(user_id)
+    
+    await db.messages.update_one(
+        {"id": message_id},
+        {"$set": {"reactions": reactions}}
+    )
+    
+    # Socket ile bildir
+    await sio.emit('message_reaction', {"messageId": message_id, "reactions": reactions}, room=subgroup_id)
+    
+    return {"reactions": reactions, "success": True}
+
+@api_router.delete("/subgroups/{subgroup_id}/messages/{message_id}")
+async def delete_subgroup_message(subgroup_id: str, message_id: str, delete_for_all: bool = False, current_user: dict = Depends(get_current_user)):
+    """Grup mesajını sil"""
+    message = await db.messages.find_one({"id": message_id, "groupId": subgroup_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', []) if subgroup else False
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower() if user else False
+    
+    if message['senderId'] != current_user['uid'] and not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu mesajı silme yetkiniz yok")
+    
+    if delete_for_all or message['senderId'] == current_user['uid']:
+        await db.messages.update_one(
+            {"id": message_id},
+            {"$set": {"deletedForEveryone": True, "content": "Bu mesaj silindi", "isDeleted": True}}
+        )
+    else:
+        deleted_for = message.get("deletedFor", [])
+        if current_user['uid'] not in deleted_for:
+            deleted_for.append(current_user['uid'])
+        await db.messages.update_one(
+            {"id": message_id},
+            {"$set": {"deletedFor": deleted_for}}
+        )
+    
+    return {"message": "Mesaj silindi", "success": True}
 
 @api_router.delete("/messages/{message_id}")
 async def delete_message(message_id: str, current_user: dict = Depends(get_current_user)):
