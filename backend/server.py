@@ -3369,6 +3369,198 @@ async def delete_conversation(conversation_id: str, current_user: dict = Depends
     
     return {"message": "Konuşma silindi"}
 
+# ============ WhatsApp Benzeri Mesaj Özellikleri ============
+
+@api_router.delete("/conversations/{conversation_id}/messages/{message_id}")
+async def delete_message(conversation_id: str, message_id: str, delete_for_all: bool = False, current_user: dict = Depends(get_current_user)):
+    """Mesajı sil - sadece kendim için veya herkes için"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    message = await db.dm_messages.find_one({"id": message_id, "conversationId": conversation_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    if delete_for_all:
+        # Herkes için sil - sadece gönderen silebilir
+        if message["senderId"] != current_user['uid']:
+            raise HTTPException(status_code=403, detail="Bu mesajı herkes için silemezsiniz")
+        
+        await db.dm_messages.update_one(
+            {"id": message_id},
+            {"$set": {
+                "content": "Bu mesaj silindi",
+                "deletedForAll": True,
+                "deletedAt": datetime.utcnow(),
+                "originalContent": message.get("content"),
+                "type": "deleted"
+            }}
+        )
+    else:
+        # Sadece kendim için sil
+        deleted_for = message.get("deletedFor", [])
+        if current_user['uid'] not in deleted_for:
+            deleted_for.append(current_user['uid'])
+        await db.dm_messages.update_one(
+            {"id": message_id},
+            {"$set": {"deletedFor": deleted_for}}
+        )
+    
+    return {"message": "Mesaj silindi", "deleteForAll": delete_for_all}
+
+@api_router.post("/conversations/{conversation_id}/messages/{message_id}/react")
+async def react_to_message(conversation_id: str, message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mesaja emoji reaksiyon ekle"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    message = await db.dm_messages.find_one({"id": message_id, "conversationId": conversation_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    emoji = data.get("emoji")
+    if not emoji:
+        raise HTTPException(status_code=400, detail="emoji gerekli")
+    
+    reactions = message.get("reactions", {})
+    user_id = current_user['uid']
+    
+    # Kullanıcının mevcut reaksiyonunu kontrol et
+    current_reaction = None
+    for em, users in reactions.items():
+        if user_id in users:
+            current_reaction = em
+            break
+    
+    # Aynı emoji ise kaldır, farklı ise güncelle
+    if current_reaction == emoji:
+        reactions[emoji].remove(user_id)
+        if not reactions[emoji]:
+            del reactions[emoji]
+    else:
+        if current_reaction:
+            reactions[current_reaction].remove(user_id)
+            if not reactions[current_reaction]:
+                del reactions[current_reaction]
+        
+        if emoji not in reactions:
+            reactions[emoji] = []
+        reactions[emoji].append(user_id)
+    
+    await db.dm_messages.update_one(
+        {"id": message_id},
+        {"$set": {"reactions": reactions}}
+    )
+    
+    return {"reactions": reactions}
+
+@api_router.post("/conversations/{conversation_id}/messages/{message_id}/reply")
+async def reply_to_message(conversation_id: str, message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mesaja yanıt ver"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    original_message = await db.dm_messages.find_one({"id": message_id, "conversationId": conversation_id})
+    if not original_message:
+        raise HTTPException(status_code=404, detail="Yanıtlanacak mesaj bulunamadı")
+    
+    content = data.get("content", "")
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Mesaj içeriği gerekli")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+    
+    reply_message = {
+        "id": str(uuid.uuid4()),
+        "conversationId": conversation_id,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "senderImage": user.get('profileImageUrl') if user else None,
+        "content": content,
+        "type": data.get("type", "text"),
+        "mediaUrl": data.get("mediaUrl"),
+        "timestamp": datetime.utcnow(),
+        "read": False,
+        "readAt": None,
+        "replyTo": {
+            "id": original_message["id"],
+            "content": original_message.get("content", "")[:100],
+            "senderName": original_message.get("senderName", ""),
+            "senderId": original_message.get("senderId"),
+        }
+    }
+    
+    await db.dm_messages.insert_one(reply_message)
+    
+    other_user_id = [p for p in conversation["participants"] if p != current_user['uid']][0]
+    
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {
+            "$set": {
+                "lastMessage": reply_message["content"][:100],
+                "lastMessageTime": reply_message["timestamp"],
+                "updatedAt": datetime.utcnow(),
+            },
+            "$inc": {f"unreadCount.{other_user_id}": 1}
+        }
+    )
+    
+    if "_id" in reply_message:
+        del reply_message["_id"]
+    
+    return reply_message
+
+@api_router.put("/conversations/{conversation_id}/messages/{message_id}")
+async def edit_message(conversation_id: str, message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mesajı düzenle"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    message = await db.dm_messages.find_one({"id": message_id, "conversationId": conversation_id})
+    if not message:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    if message["senderId"] != current_user['uid']:
+        raise HTTPException(status_code=403, detail="Sadece kendi mesajlarınızı düzenleyebilirsiniz")
+    
+    new_content = data.get("content", "")
+    if not new_content.strip():
+        raise HTTPException(status_code=400, detail="Mesaj içeriği gerekli")
+    
+    await db.dm_messages.update_one(
+        {"id": message_id},
+        {"$set": {
+            "content": new_content,
+            "edited": True,
+            "editedAt": datetime.utcnow(),
+            "originalContent": message.get("originalContent") or message.get("content")
+        }}
+    )
+    
+    updated_message = await db.dm_messages.find_one({"id": message_id})
+    if "_id" in updated_message:
+        del updated_message["_id"]
+    
+    return updated_message
+
 # ============================================
 # END OF DM SYSTEM
 # ============================================
