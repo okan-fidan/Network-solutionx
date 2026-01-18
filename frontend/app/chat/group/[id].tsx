@@ -1027,7 +1027,7 @@ export default function GroupChatScreen() {
             {(selectedMessage?.senderId === user?.uid || isGroupAdmin) && (
               <TouchableOpacity 
                 style={[styles.actionItem, styles.deleteAction]}
-                onPress={() => selectedMessage && handleDeleteMessage(selectedMessage.id)}
+                onPress={() => selectedMessage && showDeleteOptions(selectedMessage)}
               >
                 <Ionicons name="trash" size={22} color="#ef4444" />
                 <Text style={[styles.actionText, styles.deleteText]}>Sil</Text>
