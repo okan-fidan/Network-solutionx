@@ -11,17 +11,20 @@ import {
   Animated,
   Dimensions,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { postApi, communityApi } from '../../src/services/api';
+import { postApi, communityApi, storyApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import { LinearGradient } from 'expo-linear-gradient';
 import { AdBanner } from '../../src/components/ads';
 import Toast from 'react-native-toast-message';
+import * as ImagePicker from 'expo-image-picker';
 
 const { width } = Dimensions.get('window');
 
