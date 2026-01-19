@@ -107,6 +107,20 @@ export const subgroupApi = {
   getMedia: (id: string) => api.get(`/api/subgroups/${id}/media`),
   getLinks: (id: string) => api.get(`/api/subgroups/${id}/links`),
   getDocs: (id: string) => api.get(`/api/subgroups/${id}/docs`),
+  
+  // Alt Yönetici (Moderatör) Sistemi
+  getMyRole: (id: string) => api.get(`/api/subgroups/${id}/my-role`),
+  getModerators: (id: string) => api.get(`/api/subgroups/${id}/moderators`),
+  addModerator: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/moderators/${userId}`),
+  removeModerator: (subgroupId: string, userId: string) => api.delete(`/api/subgroups/${subgroupId}/moderators/${userId}`),
+  // Alt yönetici işlemleri
+  modDeleteMessage: (subgroupId: string, messageId: string) => api.post(`/api/subgroups/${subgroupId}/mod/delete-message/${messageId}`),
+  modBanUser: (subgroupId: string, userId: string, reason: string) => api.post(`/api/subgroups/${subgroupId}/mod/ban/${userId}`, { reason }),
+  modKickUser: (subgroupId: string, userId: string, reason: string, notes?: string) => 
+    api.post(`/api/subgroups/${subgroupId}/mod/kick/${userId}`, { reason, notes }),
+  getKickReports: (id: string) => api.get(`/api/subgroups/${id}/kick-reports`),
+  getModLogs: (id: string) => api.get(`/api/subgroups/${id}/mod-logs`),
+  
   // Üye yönetimi
   removeMember: (subgroupId: string, userId: string) => api.delete(`/api/subgroups/${subgroupId}/members/${userId}`),
   // Açıklama güncelle
