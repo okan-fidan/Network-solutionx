@@ -12,7 +12,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.founderconnect.app",
       "infoPlist": {
-        "GADApplicationIdentifier": "ca-app-pub-4676051761874687~XXXXXXXXXX",
+        "GADApplicationIdentifier": "ca-app-pub-4676051761874687~8110388870",
         "SKAdNetworkItems": [
           { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
         ]
@@ -30,7 +30,7 @@
         "android.permission.ACCESS_NETWORK_STATE"
       ],
       "config": {
-        "googleMobileAdsAppId": "ca-app-pub-4676051761874687~XXXXXXXXXX"
+        "googleMobileAdsAppId": "ca-app-pub-4676051761874687~8110388870"
       }
     },
     "web": {
