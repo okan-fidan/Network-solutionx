@@ -10,7 +10,13 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.founderconnect.app"
+      "bundleIdentifier": "com.founderconnect.app",
+      "infoPlist": {
+        "GADApplicationIdentifier": "ca-app-pub-4676051761874687~XXXXXXXXXX",
+        "SKAdNetworkItems": [
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +24,14 @@
         "backgroundColor": "#000"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.founderconnect.app"
+      "package": "com.founderconnect.app",
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
+      "config": {
+        "googleMobileAdsAppId": "ca-app-pub-4676051761874687~XXXXXXXXXX"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -34,6 +47,12 @@
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#000"
+        }
+      ],
+      [
+        "expo-ads-admob",
+        {
+          "userTrackingPermission": "Kişiselleştirilmiş reklamlar göstermek için izninizi istiyoruz."
         }
       ]
     ],
