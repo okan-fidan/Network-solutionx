@@ -1870,6 +1870,375 @@ async def kick_member(subgroup_id: str, user_id: str, current_user: dict = Depen
     )
     return {"message": "Üye gruptan çıkarıldı"}
 
+# ==================== MODERATOR (ALT YÖNETİCİ) SYSTEM ====================
+
+@api_router.post("/subgroups/{subgroup_id}/moderators/{user_id}")
+async def add_moderator(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    """Alt yönetici ekle (sadece grup admini veya global admin yapabilir)"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor")
+    
+    # Kullanıcının üye olduğunu kontrol et
+    if user_id not in subgroup.get('members', []):
+        raise HTTPException(status_code=400, detail="Kullanıcı grubun üyesi değil")
+    
+    # Moderatör olarak ekle
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$addToSet": {"moderators": user_id}}
+    )
+    
+    # Bildirim gönder
+    target_user = await db.users.find_one({"uid": user_id})
+    if target_user:
+        await send_notification_to_user(
+            user_id,
+            "🛡️ Alt Yönetici Oldunuz!",
+            f"{subgroup.get('name', 'Grup')} grubunda alt yönetici olarak atandınız.",
+            {"type": "moderator_assigned", "groupId": subgroup_id}
+        )
+    
+    return {"message": "Alt yönetici eklendi"}
+
+@api_router.delete("/subgroups/{subgroup_id}/moderators/{user_id}")
+async def remove_moderator(subgroup_id: str, user_id: str, current_user: dict = Depends(get_current_user)):
+    """Alt yöneticiyi kaldır"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için yönetici yetkisi gerekiyor")
+    
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$pull": {"moderators": user_id}}
+    )
+    
+    return {"message": "Alt yönetici kaldırıldı"}
+
+@api_router.get("/subgroups/{subgroup_id}/moderators")
+async def get_moderators(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Grup alt yöneticilerini getir"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    moderator_ids = subgroup.get('moderators', [])
+    moderators = await db.users.find({"uid": {"$in": moderator_ids}}).to_list(100)
+    
+    result = []
+    for mod in moderators:
+        result.append({
+            "uid": mod['uid'],
+            "firstName": mod.get('firstName', ''),
+            "lastName": mod.get('lastName', ''),
+            "profileImageUrl": mod.get('profileImageUrl'),
+            "occupation": mod.get('occupation', '')
+        })
+    
+    return result
+
+@api_router.post("/subgroups/{subgroup_id}/mod/delete-message/{message_id}")
+async def moderator_delete_message(subgroup_id: str, message_id: str, current_user: dict = Depends(get_current_user)):
+    """Alt yönetici: Mesaj silme"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    is_moderator = current_user['uid'] in subgroup.get('moderators', [])
+    
+    if not is_global_admin and not is_group_admin and not is_moderator:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    # Mesajı sil (soft delete - deletedForEveryone olarak işaretle)
+    result = await db.messages.update_one(
+        {"id": message_id, "groupId": subgroup_id},
+        {"$set": {"deletedForEveryone": True, "deletedBy": current_user['uid'], "deletedAt": datetime.utcnow()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
+    
+    # Log kaydet
+    await db.mod_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "groupId": subgroup_id,
+        "moderatorId": current_user['uid'],
+        "action": "delete_message",
+        "targetMessageId": message_id,
+        "timestamp": datetime.utcnow()
+    })
+    
+    return {"message": "Mesaj silindi"}
+
+@api_router.post("/subgroups/{subgroup_id}/mod/ban/{user_id}")
+async def moderator_ban_user(subgroup_id: str, user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Alt yönetici: 30 dakika banlama"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    is_moderator = current_user['uid'] in subgroup.get('moderators', [])
+    
+    if not is_global_admin and not is_group_admin and not is_moderator:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    # Yöneticiyi banlayamaz
+    if user_id in subgroup.get('groupAdmins', []):
+        raise HTTPException(status_code=403, detail="Yöneticileri banlayamazsınız")
+    
+    reason = data.get('reason', 'Kural ihlali')
+    ban_duration = 30  # 30 dakika
+    ban_until = datetime.utcnow() + timedelta(minutes=ban_duration)
+    
+    # Ban kaydı oluştur
+    ban_record = {
+        "id": str(uuid.uuid4()),
+        "groupId": subgroup_id,
+        "userId": user_id,
+        "bannedBy": current_user['uid'],
+        "reason": reason,
+        "duration": ban_duration,
+        "bannedAt": datetime.utcnow(),
+        "expiresAt": ban_until
+    }
+    
+    await db.bans.insert_one(ban_record)
+    
+    # Grupta restricted user olarak işaretle
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$push": {"restrictedUsers": {"uid": user_id, "until": ban_until, "reason": reason}}}
+    )
+    
+    # Kullanıcıya bildirim gönder
+    await send_notification_to_user(
+        user_id,
+        "⚠️ Geçici Kısıtlama",
+        f"30 dakika boyunca mesaj gönderemezsiniz. Sebep: {reason}",
+        {"type": "ban", "groupId": subgroup_id}
+    )
+    
+    # Log kaydet
+    await db.mod_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "groupId": subgroup_id,
+        "moderatorId": current_user['uid'],
+        "action": "ban_user",
+        "targetUserId": user_id,
+        "reason": reason,
+        "duration": ban_duration,
+        "timestamp": datetime.utcnow()
+    })
+    
+    return {"message": f"Kullanıcı 30 dakika banlandı", "expiresAt": ban_until.isoformat()}
+
+@api_router.post("/subgroups/{subgroup_id}/mod/kick/{user_id}")
+async def moderator_kick_user(subgroup_id: str, user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Alt yönetici: Üyeyi çıkarma (yöneticiler hariç) + sebep formu"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    is_moderator = current_user['uid'] in subgroup.get('moderators', [])
+    
+    if not is_global_admin and not is_group_admin and not is_moderator:
+        raise HTTPException(status_code=403, detail="Bu işlem için yetkiniz yok")
+    
+    # Yöneticiyi çıkaramaz
+    if user_id in subgroup.get('groupAdmins', []):
+        raise HTTPException(status_code=403, detail="Yöneticileri gruptan çıkaramazsınız")
+    
+    # Diğer moderatörleri de çıkaramaz (sadece admin çıkarabilir)
+    if user_id in subgroup.get('moderators', []) and not is_group_admin and not is_global_admin:
+        raise HTTPException(status_code=403, detail="Diğer alt yöneticileri çıkaramazsınız")
+    
+    reason = data.get('reason', '')
+    additional_notes = data.get('notes', '')
+    
+    if not reason:
+        raise HTTPException(status_code=400, detail="Çıkarma sebebi zorunludur")
+    
+    # Üyeyi gruptan çıkar
+    await db.subgroups.update_one(
+        {"id": subgroup_id},
+        {"$pull": {"members": user_id, "moderators": user_id}}
+    )
+    
+    # Çıkarma raporu oluştur (yöneticiye gönderilecek)
+    kick_report = {
+        "id": str(uuid.uuid4()),
+        "type": "member_kick",
+        "groupId": subgroup_id,
+        "groupName": subgroup.get('name', ''),
+        "kickedUserId": user_id,
+        "kickedBy": current_user['uid'],
+        "kickedByName": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+        "reason": reason,
+        "additionalNotes": additional_notes,
+        "timestamp": datetime.utcnow(),
+        "status": "pending_review"
+    }
+    
+    await db.kick_reports.insert_one(kick_report)
+    
+    # Grup yöneticilerine bildirim gönder
+    for admin_id in subgroup.get('groupAdmins', []):
+        if admin_id != current_user['uid']:
+            kicked_user = await db.users.find_one({"uid": user_id})
+            kicked_name = f"{kicked_user.get('firstName', '')} {kicked_user.get('lastName', '')}".strip() if kicked_user else "Bir üye"
+            
+            await send_notification_to_user(
+                admin_id,
+                "📋 Üye Çıkarma Raporu",
+                f"{kicked_name} gruptan çıkarıldı. Sebep: {reason}",
+                {"type": "kick_report", "reportId": kick_report['id'], "groupId": subgroup_id}
+            )
+    
+    # Çıkarılan kullanıcıya bildirim
+    await send_notification_to_user(
+        user_id,
+        "❌ Gruptan Çıkarıldınız",
+        f"{subgroup.get('name', 'Grup')} grubundan çıkarıldınız. Sebep: {reason}",
+        {"type": "kicked", "groupId": subgroup_id}
+    )
+    
+    # Log kaydet
+    await db.mod_logs.insert_one({
+        "id": str(uuid.uuid4()),
+        "groupId": subgroup_id,
+        "moderatorId": current_user['uid'],
+        "action": "kick_user",
+        "targetUserId": user_id,
+        "reason": reason,
+        "notes": additional_notes,
+        "timestamp": datetime.utcnow()
+    })
+    
+    return {"message": "Üye gruptan çıkarıldı ve rapor yöneticiye gönderildi"}
+
+@api_router.get("/subgroups/{subgroup_id}/kick-reports")
+async def get_kick_reports(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Çıkarma raporlarını getir (sadece yöneticiler)"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu raporları sadece yöneticiler görebilir")
+    
+    reports = await db.kick_reports.find({"groupId": subgroup_id}).sort("timestamp", -1).to_list(50)
+    
+    for report in reports:
+        if '_id' in report:
+            del report['_id']
+        # Çıkarılan kullanıcı bilgisi ekle
+        kicked_user = await db.users.find_one({"uid": report['kickedUserId']})
+        if kicked_user:
+            report['kickedUserName'] = f"{kicked_user.get('firstName', '')} {kicked_user.get('lastName', '')}".strip()
+            report['kickedUserImage'] = kicked_user.get('profileImageUrl')
+    
+    return reports
+
+@api_router.get("/subgroups/{subgroup_id}/mod-logs")
+async def get_mod_logs(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Moderasyon loglarını getir (yöneticiler için)"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', [])
+    
+    if not is_global_admin and not is_group_admin:
+        raise HTTPException(status_code=403, detail="Bu logları sadece yöneticiler görebilir")
+    
+    logs = await db.mod_logs.find({"groupId": subgroup_id}).sort("timestamp", -1).to_list(100)
+    
+    for log in logs:
+        if '_id' in log:
+            del log['_id']
+        # Moderatör bilgisi ekle
+        mod = await db.users.find_one({"uid": log['moderatorId']})
+        if mod:
+            log['moderatorName'] = f"{mod.get('firstName', '')} {mod.get('lastName', '')}".strip()
+    
+    return logs
+
+@api_router.get("/subgroups/{subgroup_id}/my-role")
+async def get_my_role(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının gruptaki rolünü getir"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    
+    role = "member"
+    permissions = {
+        "canDeleteMessages": False,
+        "canBanUsers": False,
+        "canKickUsers": False,
+        "canAddModerators": False,
+        "canRemoveModerators": False,
+        "canManageGroup": False
+    }
+    
+    if is_global_admin or current_user['uid'] in subgroup.get('groupAdmins', []):
+        role = "admin"
+        permissions = {
+            "canDeleteMessages": True,
+            "canBanUsers": True,
+            "canKickUsers": True,
+            "canAddModerators": True,
+            "canRemoveModerators": True,
+            "canManageGroup": True
+        }
+    elif current_user['uid'] in subgroup.get('moderators', []):
+        role = "moderator"
+        permissions = {
+            "canDeleteMessages": True,
+            "canBanUsers": True,
+            "canKickUsers": True,
+            "canAddModerators": False,
+            "canRemoveModerators": False,
+            "canManageGroup": False
+        }
+    
+    return {
+        "role": role,
+        "roleName": "Yönetici" if role == "admin" else "Alt Yönetici" if role == "moderator" else "Üye",
+        "permissions": permissions
+    }
+
 @api_router.post("/messages/{message_id}/report")
 async def report_message(message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
     """Mesajı raporla"""
