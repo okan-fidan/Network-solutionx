@@ -1252,6 +1252,26 @@ export default function GroupChatScreen() {
                 <Ionicons name="chevron-forward" size={20} color="#6b7280" />
               </TouchableOpacity>
 
+              {/* Moderatör Paneli - Sadece admin görür */}
+              {isGroupAdmin && (
+                <TouchableOpacity 
+                  style={styles.settingsOption}
+                  onPress={() => {
+                    setShowGroupSettings(false);
+                    router.push(`/chat/group/moderator-panel?id=${groupId}`);
+                  }}
+                >
+                  <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(139, 92, 246, 0.1)' }]}>
+                    <Ionicons name="shield-checkmark" size={24} color="#8b5cf6" />
+                  </View>
+                  <View style={styles.settingsOptionInfo}>
+                    <Text style={styles.settingsOptionTitle}>Yönetim Paneli</Text>
+                    <Text style={styles.settingsOptionSubtitle}>Alt yöneticileri ve üyeleri yönet</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+                </TouchableOpacity>
+              )}
+
               {/* Bildirimler */}
               <TouchableOpacity style={styles.settingsOption}>
                 <View style={[styles.settingsIconWrapper, { backgroundColor: 'rgba(245, 158, 11, 0.1)' }]}>
