@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Base URL from frontend .env
-BASE_URL = "https://chatmaster-21.preview.emergentagent.com/api"
+BASE_URL = "https://membership-moderator.preview.emergentagent.com/api"
 
 class SpecificEndpointTester:
     def __init__(self):

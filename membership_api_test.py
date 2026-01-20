@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 
 # Backend URL - Production URL from frontend .env
-BASE_URL = "https://chatmaster-21.preview.emergentagent.com/api"
+BASE_URL = "https://membership-moderator.preview.emergentagent.com/api"
 
 def test_membership_apis():
     """Üyelik sistemi API testleri"""
