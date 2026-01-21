@@ -139,10 +139,10 @@ export default function ProfileScreen() {
     {
       icon: 'diamond-outline',
       label: 'Üyelik',
-      subtitle: 'Premium avantajları keşfedin',
+      subtitle: 'Yakında: Premium avantajlar',
       onPress: () => router.push('/membership'),
-      color: '#f59e0b',
-      highlight: true,
+      color: '#6b7280',
+      highlight: false,
     },
     {
       icon: 'person-outline',
