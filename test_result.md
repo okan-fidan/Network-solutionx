@@ -431,7 +431,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Moderator System API Testing"
     - "Admin Panel Frontend Verification"
     - "Push Notification Token Registration"
   stuck_tasks: []
