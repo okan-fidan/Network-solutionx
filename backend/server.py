@@ -1485,20 +1485,28 @@ async def get_posts(current_user: dict = Depends(get_current_user)):
     return posts
 
 @api_router.post("/posts")
-async def create_post(post: dict, current_user: dict = Depends(get_current_user)):
+@limiter.limit("30/minute")  # Rate limiting - dakikada 30 post
+async def create_post(request: Request, post: dict, current_user: dict = Depends(get_current_user)):
     user = await db.users.find_one({"uid": current_user['uid']})
     
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı. Lütfen profilinizi tamamlayın.")
+
+    # Input sanitization - XSS ve injection koruması
+    content = sanitize_input(post.get('content', ''), max_length=5000)
+    location = sanitize_input(post.get('location', ''), max_length=200) if post.get('location') else None
+    
+    if not content:
+        raise HTTPException(status_code=400, detail="Gönderi içeriği boş olamaz")
 
     new_post = {
         "id": str(uuid.uuid4()),
         "userId": current_user['uid'],
         "userName": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() or "Kullanıcı",
         "userProfileImage": user.get('profileImageUrl'),
-        "content": post['content'],
+        "content": content,
         "imageUrl": post.get('imageUrl'),
-        "location": post.get('location'),
+        "location": location,
         "mentions": post.get('mentions', []),
         "likes": [],
         "comments": [],
@@ -1516,7 +1524,7 @@ async def create_post(post: dict, current_user: dict = Depends(get_current_user)
                 db,
                 mentioned_uid,
                 f"{user['firstName']} sizi etiketledi",
-                f"{post['content'][:100]}...",
+                f"{content[:100]}...",
                 {"type": "mention", "postId": new_post['id']}
             )
     
