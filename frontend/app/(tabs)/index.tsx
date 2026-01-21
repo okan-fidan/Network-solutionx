@@ -305,9 +305,25 @@ export default function HomeScreen() {
 
   const loadData = useCallback(async () => {
     try {
+      // Welcome kartının gösterilip gösterilmeyeceğini kontrol et
+      const dismissed = await AsyncStorage.getItem('welcomeCardDismissed');
+      if (dismissed === 'true') {
+        setWelcomeDismissed(true);
+        setShowWelcome(false);
+      } else if (!isProfileComplete) {
+        setShowWelcome(true);
+      }
+      
       // Posts yükle
       const postsResponse = await postApi.getAll();
-      setPosts(postsResponse.data || []);
+      const allPosts = postsResponse.data || [];
+      
+      // Sabitlenmiş gönderileri ayır
+      const pinned = allPosts.filter((p: any) => p.isPinned === true);
+      const unpinned = allPosts.filter((p: any) => !p.isPinned);
+      
+      setPinnedPosts(pinned);
+      setPosts(unpinned);
 
       // Kullanıcı hikayelerini yükle (24 saatten eski olanlar backend'de otomatik silinir)
       try {
