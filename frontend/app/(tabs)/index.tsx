@@ -263,11 +263,13 @@ const QuickActions = ({ router }: { router: any }) => (
 
 export default function HomeScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [pinnedPosts, setPinnedPosts] = useState<Post[]>([]);
   const [stories, setStories] = useState<Story[]>([]);
   const [announcement, setAnnouncement] = useState<Announcement | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showWelcome, setShowWelcome] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false); // AsyncStorage'dan kontrol edilecek
+  const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
   
   // Story States - Instagram tarzı
@@ -291,6 +293,14 @@ export default function HomeScreen() {
   
   const { userProfile, user } = useAuth();
   const router = useRouter();
+  
+  // Admin kontrolü
+  const isGlobalAdmin = userProfile?.isAdmin === true || userProfile?.email?.toLowerCase() === 'metaticaretim@gmail.com';
+
+  // Profil tamamlama kontrolü - Sadece bir kez göster
+  const isProfileComplete = userProfile?.firstName && 
+                           userProfile?.lastName && 
+                           (userProfile?.communities?.length || 0) > 0;
 
   const loadData = useCallback(async () => {
     try {
