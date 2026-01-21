@@ -20,6 +20,8 @@ import base64
 import json
 import hashlib
 import hmac
+import re
+import html
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -28,18 +30,6 @@ load_dotenv(ROOT_DIR / '.env')
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'network_solution')]
-
-# PayTR Test Mode Credentials (Test için)
-PAYTR_MERCHANT_ID = os.environ.get('PAYTR_MERCHANT_ID', 'TEST_MERCHANT')
-PAYTR_MERCHANT_KEY = os.environ.get('PAYTR_MERCHANT_KEY', 'TEST_KEY')
-PAYTR_MERCHANT_SALT = os.environ.get('PAYTR_MERCHANT_SALT', 'TEST_SALT')
-PAYTR_TEST_MODE = os.environ.get('PAYTR_TEST_MODE', '1')  # 1 = Test, 0 = Production
-
-# Üyelik Fiyatları
-MEMBERSHIP_PRICES = {
-    'premium_monthly': 7000,  # 70.00 TL (kuruş cinsinden)
-    'premium_yearly': 60000,  # 600.00 TL (kuruş cinsinden)
-}
 
 # Rate Limiter setup
 limiter = Limiter(key_func=get_remote_address)
