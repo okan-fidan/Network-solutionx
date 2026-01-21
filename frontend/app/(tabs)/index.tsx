@@ -952,6 +952,77 @@ export default function HomeScreen() {
     </View>
   );
 
+  // Welcome kartını dismiss et ve AsyncStorage'a kaydet
+  const handleDismissWelcome = async () => {
+    setShowWelcome(false);
+    setWelcomeDismissed(true);
+    await AsyncStorage.setItem('welcomeCardDismissed', 'true');
+  };
+
+  // Sabitlenmiş gönderi render
+  const renderPinnedPost = (item: Post) => (
+    <View key={item.id} style={[styles.postCard, styles.pinnedPostCard]}>
+      <View style={styles.pinnedBadge}>
+        <Ionicons name="pin" size={14} color="#f59e0b" />
+        <Text style={styles.pinnedBadgeText}>Sabitlenmiş</Text>
+      </View>
+      <TouchableOpacity 
+        style={styles.postHeader}
+        onPress={() => router.push(`/user/${item.userId}`)}
+      >
+        <View style={styles.avatar}>
+          {item.userProfileImage ? (
+            <Image source={{ uri: item.userProfileImage }} style={styles.avatarImage} />
+          ) : (
+            <Ionicons name="person" size={20} color="#9ca3af" />
+          )}
+        </View>
+        <View style={styles.postHeaderInfo}>
+          <Text style={styles.userName}>{item.userName}</Text>
+          <Text style={styles.postTime}>{formatTime(item.timestamp)}</Text>
+        </View>
+        <TouchableOpacity 
+          style={styles.moreButton}
+          onPress={() => showPostOptions(item)}
+        >
+          <Ionicons name="ellipsis-horizontal" size={20} color="#6b7280" />
+        </TouchableOpacity>
+      </TouchableOpacity>
+      <Text style={styles.postContent}>{item.content}</Text>
+      {item.imageUrl && (
+        <Image source={{ uri: item.imageUrl }} style={styles.postImage} resizeMode="cover" />
+      )}
+      <View style={styles.postActions}>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => handleLike(item.id)}
+        >
+          <Ionicons 
+            name={item.isLiked ? 'heart' : 'heart-outline'} 
+            size={24} 
+            color={item.isLiked ? '#ef4444' : '#6b7280'} 
+          />
+          <Text style={[styles.actionText, item.isLiked && styles.likedText]}>
+            {item.likeCount}
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => router.push(`/post/${item.id}`)}
+        >
+          <Ionicons name="chatbubble-outline" size={22} color="#6b7280" />
+          <Text style={styles.actionText}>{item.commentCount}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={styles.actionButton}
+          onPress={() => Alert.alert('Paylaş', 'Bu gönderiyi paylaşmak istiyor musunuz?')}
+        >
+          <Ionicons name="share-outline" size={22} color="#6b7280" />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
   const ListHeader = () => (
     <>
       {/* Stories */}
@@ -973,11 +1044,11 @@ export default function HomeScreen() {
       {/* AdMob Banner */}
       <AdBanner style={{ marginVertical: 8 }} />
 
-      {/* Welcome Card (for new users or incomplete profile) */}
-      {showWelcome && userProfile && (userProfile.communities?.length || 0) < 2 && (
+      {/* Welcome Card - Sadece profil tamamlanmamışsa ve daha önce dismiss edilmediyse */}
+      {showWelcome && !welcomeDismissed && userProfile && !isProfileComplete && (
         <WelcomeCard 
           userProfile={userProfile} 
-          onDismiss={() => setShowWelcome(false)}
+          onDismiss={handleDismissWelcome}
           router={router}
         />
       )}
@@ -1004,6 +1075,13 @@ export default function HomeScreen() {
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
+
+      {/* Sabitlenmiş Gönderiler */}
+      {pinnedPosts.length > 0 && (
+        <View style={styles.pinnedSection}>
+          {pinnedPosts.map(post => renderPinnedPost(post))}
+        </View>
+      )}
     </>
   );
 
