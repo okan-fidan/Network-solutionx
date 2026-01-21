@@ -3,8 +3,6 @@ import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { membershipApi } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
 
 // AdMob Reklam ID'leri
 const AD_UNIT_IDS = {
@@ -29,39 +27,21 @@ interface AdBannerProps {
   testMode?: boolean;
 }
 
-// Premium kullanıcılar için reklam gizleme + AdMob entegrasyonu
+// Herkes için reklam gösterimi + AdMob entegrasyonu
 export const AdBanner: React.FC<AdBannerProps> = ({ style, testMode = false }) => {
-  const [isPremium, setIsPremium] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [AdMobBanner, setAdMobBanner] = useState<any>(null);
   const [adError, setAdError] = useState(false);
-  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    checkMembership();
     loadAdMob();
-  }, [user]);
-
-  const checkMembership = async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const response = await membershipApi.getStatus();
-      setIsPremium(response.data.isPremium);
-    } catch (error) {
-      setIsPremium(false);
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   const loadAdMob = async () => {
     // Expo Go'da veya Web'de AdMob çalışmaz
     if (isExpoGo || Platform.OS === 'web') {
+      setLoading(false);
       return;
     }
 
@@ -74,6 +54,8 @@ export const AdBanner: React.FC<AdBannerProps> = ({ style, testMode = false }) =
     } catch (error) {
       console.log('AdMob yüklenemedi:', error);
       setAdError(true);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,36 +68,28 @@ export const AdBanner: React.FC<AdBannerProps> = ({ style, testMode = false }) =
       : AD_UNIT_IDS.android.banner;
   };
 
-  // Premium kullanıcılara reklam gösterme
-  if (isPremium || loading) {
+  // Yüklenirken gösterme
+  if (loading) {
     return null;
   }
 
   // Expo Go veya Web'de placeholder göster
   if (isExpoGo || Platform.OS === 'web' || !AdMobBanner || adError) {
     return (
-      <TouchableOpacity 
-        style={[styles.placeholder, style]}
-        onPress={() => router.push('/membership')}
-        activeOpacity={0.8}
-      >
+      <View style={[styles.placeholder, style]}>
         <View style={styles.placeholderContent}>
           <View style={styles.adHeader}>
             <Text style={styles.placeholderText}>📢 Reklam Alanı</Text>
-            <View style={styles.premiumBadge}>
-              <Ionicons name="diamond" size={12} color="#f59e0b" />
-              <Text style={styles.premiumBadgeText}>Kaldır</Text>
-            </View>
           </View>
           <Text style={styles.placeholderSubtext}>
             {Platform.OS === 'web' 
               ? 'Web\'de reklam desteklenmiyor' 
               : isExpoGo 
                 ? 'EAS Build ile gerçek reklamlar gösterilecek'
-                : 'Reklamsız deneyim için Premium\'a geçin'}
+                : 'Reklam yükleniyor...'}
           </Text>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   }
 
@@ -131,13 +105,6 @@ export const AdBanner: React.FC<AdBannerProps> = ({ style, testMode = false }) =
           setAdError(true);
         }}
       />
-      <TouchableOpacity 
-        style={styles.removeBadge}
-        onPress={() => router.push('/membership')}
-      >
-        <Ionicons name="diamond" size={10} color="#f59e0b" />
-        <Text style={styles.removeBadgeText}>Kaldır</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -162,23 +129,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginVertical: 8,
     position: 'relative',
-  },
-  removeBadge: {
-    position: 'absolute',
-    top: 4,
-    right: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 3,
-  },
-  removeBadgeText: {
-    color: '#f59e0b',
-    fontSize: 9,
-    fontWeight: '600',
   },
 
   // Placeholder (Expo Go / Web)
@@ -208,20 +158,6 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: '#6b7280',
     fontSize: 14,
-    fontWeight: '600',
-  },
-  premiumBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(245, 158, 11, 0.15)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    gap: 4,
-  },
-  premiumBadgeText: {
-    color: '#f59e0b',
-    fontSize: 10,
     fontWeight: '600',
   },
   placeholderSubtext: {
