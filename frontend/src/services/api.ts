@@ -48,6 +48,10 @@ export const postApi = {
   getComments: (id: string) => api.get(`/api/posts/${id}/comments`),
   addComment: (id: string, data: any) => api.post(`/api/posts/${id}/comments`, data),
   share: (id: string) => api.post(`/api/posts/${id}/share`),
+  // Post Pinning - Sadece Admin
+  pin: (id: string) => api.post(`/api/posts/${id}/pin`),
+  unpin: (id: string) => api.delete(`/api/posts/${id}/pin`),
+  getPinned: () => api.get('/api/posts/pinned'),
 };
 
 // Story API - Kullanıcı hikayeleri (24 saat sonra otomatik silinir)
