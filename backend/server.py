@@ -1613,6 +1613,65 @@ async def delete_post(post_id: str, current_user: dict = Depends(get_current_use
     await db.posts.delete_one({"id": post_id})
     return {"message": "Gönderi silindi"}
 
+# ============================================
+# POST PINNING - Gönderi Sabitleme (Sadece Admin)
+# ============================================
+
+@api_router.post("/posts/{post_id}/pin")
+async def pin_post(post_id: str, current_user: dict = Depends(get_current_user)):
+    """Gönderiyi en üste sabitle - Sadece Global Admin"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    
+    if not is_global_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için admin yetkisi gereklidir")
+    
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Gönderi bulunamadı")
+    
+    # Gönderiyi sabitle
+    await db.posts.update_one(
+        {"id": post_id},
+        {"$set": {"isPinned": True, "pinnedAt": datetime.utcnow(), "pinnedBy": current_user['uid']}}
+    )
+    
+    return {"message": "Gönderi sabitlendi", "isPinned": True}
+
+@api_router.delete("/posts/{post_id}/pin")
+async def unpin_post(post_id: str, current_user: dict = Depends(get_current_user)):
+    """Gönderi sabitlemesini kaldır - Sadece Global Admin"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
+    
+    if not is_global_admin:
+        raise HTTPException(status_code=403, detail="Bu işlem için admin yetkisi gereklidir")
+    
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Gönderi bulunamadı")
+    
+    # Sabitlemeyi kaldır
+    await db.posts.update_one(
+        {"id": post_id},
+        {"$set": {"isPinned": False}, "$unset": {"pinnedAt": "", "pinnedBy": ""}}
+    )
+    
+    return {"message": "Gönderi sabitlemesi kaldırıldı", "isPinned": False}
+
+@api_router.get("/posts/pinned")
+async def get_pinned_posts(current_user: dict = Depends(get_current_user)):
+    """Sabitlenmiş gönderileri getir"""
+    pinned_posts = await db.posts.find({"isPinned": True}).sort("pinnedAt", -1).to_list(20)
+    for post in pinned_posts:
+        if '_id' in post:
+            del post['_id']
+        post['likes'] = post.get('likes', [])
+        post['likeCount'] = len(post['likes'])
+        post['isLiked'] = current_user['uid'] in post['likes']
+        post['commentCount'] = len(post.get('comments', []))
+    return pinned_posts
+
 @api_router.get("/my-posts")
 async def get_my_posts(current_user: dict = Depends(get_current_user)):
     posts = await db.posts.find({"userId": current_user['uid']}).sort("timestamp", -1).to_list(100)
