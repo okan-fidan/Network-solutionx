@@ -1532,6 +1532,10 @@ const styles = StyleSheet.create({
   // Posts
   postsList: { paddingBottom: 16 },
   postCard: { backgroundColor: '#111827', marginHorizontal: 16, marginTop: 12, borderRadius: 16, overflow: 'hidden' },
+  pinnedPostCard: { borderWidth: 1, borderColor: '#f59e0b', position: 'relative' },
+  pinnedBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(245, 158, 11, 0.15)', paddingHorizontal: 12, paddingVertical: 6, gap: 4 },
+  pinnedBadgeText: { color: '#f59e0b', fontSize: 12, fontWeight: '600' },
+  pinnedSection: { marginBottom: 8 },
   postHeader: { flexDirection: 'row', alignItems: 'center', padding: 14 },
   avatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#1f2937', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
   avatarImage: { width: '100%', height: '100%' },
