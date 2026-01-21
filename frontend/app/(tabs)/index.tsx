@@ -767,6 +767,7 @@ export default function HomeScreen() {
     const isOwner = user && item.userId === user.uid;
     const isAdmin = userProfile?.isAdmin === true;
     const canDelete = isOwner || isAdmin;
+    const isPinned = (item as any).isPinned === true;
 
     const options: { text: string; onPress?: () => void; style?: 'cancel' | 'destructive' | 'default' }[] = [];
 
@@ -782,6 +783,53 @@ export default function HomeScreen() {
         text: 'Profili Görüntüle', 
         onPress: () => router.push(`/user/${item.userId}`)
       });
+    }
+
+    // Sabitleme seçeneği - Sadece Global Admin
+    if (isGlobalAdmin) {
+      if (isPinned) {
+        options.push({
+          text: '📌 Sabitlemeyi Kaldır',
+          onPress: async () => {
+            try {
+              await postApi.unpin(item.id);
+              Toast.show({
+                type: 'success',
+                text1: 'Başarılı',
+                text2: 'Gönderi sabitlemesi kaldırıldı',
+              });
+              loadData();
+            } catch (error: any) {
+              Toast.show({
+                type: 'error',
+                text1: 'Hata',
+                text2: error.response?.data?.detail || 'İşlem başarısız',
+              });
+            }
+          }
+        });
+      } else {
+        options.push({
+          text: '📌 En Başa Sabitle',
+          onPress: async () => {
+            try {
+              await postApi.pin(item.id);
+              Toast.show({
+                type: 'success',
+                text1: 'Başarılı',
+                text2: 'Gönderi en başa sabitlendi',
+              });
+              loadData();
+            } catch (error: any) {
+              Toast.show({
+                type: 'error',
+                text1: 'Hata',
+                text2: error.response?.data?.detail || 'İşlem başarısız',
+              });
+            }
+          }
+        });
+      }
     }
 
     // Silme seçeneği (sadece sahip veya admin için)
