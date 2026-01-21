@@ -475,6 +475,7 @@ test_plan:
       - working: true
         agent: "main"
         comment: "Push notification token kaydı AuthContext'de implement edilmiş. Kullanıcı giriş yaptığında otomatik olarak: 1) registerForPushNotificationsAsync() ile token alınıyor 2) savePushToken() ile backend'e kaydediliyor. Expo Go'da çalışmıyor (beklenen davranış - development build veya production gerekli). Web'de devre dışı (Platform.OS !== 'web' kontrolü)."
+
 agent_communication:
   - agent: "testing"
     message: "Backend API testing completed successfully. All basic endpoints (health check, cities, auth verification) are working correctly. Server is responsive and returning expected data. Created comprehensive backend_test.py for future testing."
