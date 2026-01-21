@@ -5088,13 +5088,29 @@ async def get_user_orders(current_user: dict = Depends(get_current_user)):
 # Include the router in the main app
 app.include_router(api_router)
 
+# CORS Configuration - Güvenli ayar
+# Production'da belirli domain'lere izin ver
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8081",
+    "https://membership-moderator.preview.emergentagent.com",
+    "https://*.preview.emergentagent.com",
+    "exp://",  # Expo Go için
+]
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # Mobile app için gerekli - Expo Go dinamik hostname kullanır
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Requested-With"],
+    expose_headers=["Content-Length", "X-Request-Id"],
+    max_age=86400,  # CORS preflight cache - 24 saat
 )
+
+# Rate Limiter - Brute force ve DDoS koruması
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Configure logging
 logging.basicConfig(
