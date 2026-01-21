@@ -62,6 +62,52 @@ DEFAULT_SUBGROUPS = [
     {"name": "Duyurular", "description": "Topluluk duyuruları ve önemli bilgiler", "isPublic": True, "requiresApproval": False},
 ]
 
+# ============================================
+# SECURITY UTILITIES - Güvenlik Araçları
+# ============================================
+
+def sanitize_input(text: str, max_length: int = 10000) -> str:
+    """XSS ve injection saldırılarına karşı input temizleme"""
+    if not text:
+        return ""
+    
+    # Max uzunluk kontrolü
+    text = text[:max_length]
+    
+    # HTML entity encode (XSS önleme)
+    text = html.escape(text)
+    
+    # Tehlikeli karakterleri temizle
+    # JavaScript injection
+    text = re.sub(r'javascript:', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'on\w+\s*=', '', text, flags=re.IGNORECASE)
+    
+    # NoSQL injection karakterleri
+    text = text.replace('$', '').replace('{', '').replace('}', '')
+    
+    return text.strip()
+
+def validate_email(email: str) -> bool:
+    """Email formatını doğrula"""
+    if not email:
+        return False
+    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    return bool(re.match(pattern, email))
+
+def validate_uuid(uuid_str: str) -> bool:
+    """UUID formatını doğrula"""
+    if not uuid_str:
+        return False
+    pattern = r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$'
+    return bool(re.match(pattern, uuid_str))
+
+def validate_url(url: str) -> bool:
+    """URL formatını doğrula"""
+    if not url:
+        return True  # Boş URL kabul edilebilir
+    pattern = r'^https?://[^\s<>"{}|\\^`\[\]]+$'
+    return bool(re.match(pattern, url))
+
 # Turkish Cities List
 TURKISH_CITIES = [
     'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Aksaray', 'Amasya', 'Ankara', 'Antalya',
