@@ -1045,7 +1045,7 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         if restriction.get('uid') == current_user['uid']:
             until = restriction.get('until')
             if until and until > datetime.utcnow():
-                raise HTTPException(status_code=403, detail=f"Mesaj gönderme yetkiniz kısıtlandı")
+                raise HTTPException(status_code=403, detail="Mesaj gönderme yetkiniz kısıtlandı")
 
     if current_user['uid'] not in subgroup.get('members', []):
         raise HTTPException(status_code=403, detail="Bu grubun üyesi değilsiniz")
@@ -2086,7 +2086,7 @@ async def moderator_ban_user(subgroup_id: str, user_id: str, data: dict, current
         "timestamp": datetime.utcnow()
     })
     
-    return {"message": f"Kullanıcı 30 dakika banlandı", "expiresAt": ban_until.isoformat()}
+    return {"message": "Kullanıcı 30 dakika banlandı", "expiresAt": ban_until.isoformat()}
 
 @api_router.post("/subgroups/{subgroup_id}/mod/kick/{user_id}")
 async def moderator_kick_user(subgroup_id: str, user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
