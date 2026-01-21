@@ -1034,7 +1034,8 @@ async def get_subgroup_messages(subgroup_id: str, current_user: dict = Depends(g
     return messages
 
 @api_router.post("/subgroups/{subgroup_id}/messages")
-async def send_subgroup_message(subgroup_id: str, message_data: dict, current_user: dict = Depends(get_current_user)):
+@limiter.limit("60/minute")  # Rate limiting - dakikada 60 mesaj
+async def send_subgroup_message(request: Request, subgroup_id: str, message_data: dict, current_user: dict = Depends(get_current_user)):
     subgroup = await db.subgroups.find_one({"id": subgroup_id})
     if not subgroup:
         raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
@@ -1053,6 +1054,9 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
     user = await db.users.find_one({"uid": current_user['uid']})
     sender_name = f"{user['firstName']} {user['lastName']}"
     message_type = message_data.get('type', 'text')
+    
+    # Input sanitization - XSS ve injection koruması
+    content = sanitize_input(message_data.get('content', ''), max_length=10000)
 
     new_message = {
         "id": str(uuid.uuid4()),
@@ -1061,7 +1065,7 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
         "senderName": sender_name,
         "senderProfileImage": user.get('profileImageUrl'),
         "senderOccupation": user.get('occupation', ''),
-        "content": message_data.get('content', ''),
+        "content": content,
         "type": message_type,
         "mediaUrl": message_data.get('mediaUrl'),
         "replyTo": message_data.get('replyTo'),
@@ -1090,7 +1094,7 @@ async def send_subgroup_message(subgroup_id: str, message_data: dict, current_us
             subgroup_id, 
             current_user['uid'], 
             sender_name, 
-            message_data.get('content', ''),
+            content,
             message_type
         )
     except Exception as e:
