@@ -4974,45 +4974,30 @@ async def notify_service_inquiry(service_owner_id: str, inquirer_id: str, inquir
     )
 
 # ============================================
-# MEMBERSHIP SYSTEM - Üyelik Sistemi
+# MEMBERSHIP SYSTEM - Üyelik Sistemi (YAKINDA)
 # ============================================
 
 @api_router.get("/membership/status")
 async def get_membership_status(current_user: dict = Depends(get_current_user)):
-    """Kullanıcının üyelik durumunu getir"""
-    user = await db.users.find_one({"uid": current_user['uid']})
-    if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
-    
-    membership = user.get('membership', {})
-    membership_type = membership.get('type', 'free')
-    expires_at = membership.get('expiresAt')
-    
-    # Süre dolmuş mu kontrol et
-    is_active = True
-    if membership_type == 'premium' and expires_at:
-        if isinstance(expires_at, str):
-            expires_at = datetime.fromisoformat(expires_at.replace('Z', '+00:00'))
-        if expires_at < datetime.utcnow():
-            is_active = False
-            membership_type = 'free'
-    
+    """Kullanıcının üyelik durumunu getir - Şu an herkes ücretsiz"""
     return {
-        "type": membership_type,
-        "isActive": is_active,
-        "isPremium": membership_type == 'premium' and is_active,
-        "expiresAt": expires_at.isoformat() if expires_at else None,
-        "showAds": membership_type != 'premium' or not is_active,
+        "type": "free",
+        "isActive": True,
+        "isPremium": False,
+        "expiresAt": None,
+        "showAds": True,
+        "comingSoon": True,
+        "message": "Premium üyelik yakında geliyor!",
         "features": {
-            "noAds": membership_type == 'premium' and is_active,
-            "prioritySupport": membership_type == 'premium' and is_active,
-            "unlimitedMessages": membership_type == 'premium' and is_active,
+            "noAds": False,
+            "prioritySupport": False,
+            "unlimitedMessages": True,
         }
     }
 
 @api_router.get("/membership/plans")
 async def get_membership_plans():
-    """Mevcut üyelik planlarını getir"""
+    """Üyelik planları - Yakında"""
     return {
         "plans": [
             {
@@ -5027,207 +5012,42 @@ async def get_membership_plans():
                     "Hizmet paylaşımı",
                     "Reklam destekli"
                 ],
-                "highlighted": False
+                "highlighted": False,
+                "available": True
             },
             {
-                "id": "premium_yearly",
-                "name": "Premium (Yıllık)",
-                "price": 600,
-                "priceText": "600₺ / Yıl",
-                "originalPrice": 840,
-                "discount": "29% İndirim",
+                "id": "premium",
+                "name": "Premium",
+                "price": 0,
+                "priceText": "Yakında",
                 "duration": "yearly",
                 "features": [
                     "Reklamsız deneyim",
                     "Öncelikli destek",
-                    "Sınırsız mesajlaşma",
                     "Özel rozetler",
                     "Erken erişim özellikleri"
                 ],
-                "highlighted": True
+                "highlighted": True,
+                "available": False,
+                "comingSoon": True
             }
         ],
-        "testMode": PAYTR_TEST_MODE == '1'
+        "comingSoon": True,
+        "message": "Premium üyelik yakında kullanıma sunulacak!"
     }
 
 @api_router.post("/membership/purchase")
 async def initiate_purchase(data: dict, current_user: dict = Depends(get_current_user)):
-    """Satın alma işlemini başlat (PayTR veya Test Modu)"""
-    plan_id = data.get('planId', 'premium_yearly')
-    
-    user = await db.users.find_one({"uid": current_user['uid']})
-    if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
-    
-    # Fiyat belirleme
-    if plan_id == 'premium_yearly':
-        amount = 60000  # 600.00 TL
-        duration_days = 365
-    else:
-        amount = 7000  # 70.00 TL
-        duration_days = 30
-    
-    # Sipariş oluştur
-    order_id = str(uuid.uuid4())
-    order = {
-        "id": order_id,
-        "userId": current_user['uid'],
-        "userEmail": user.get('email', ''),
-        "planId": plan_id,
-        "amount": amount,
-        "currency": "TRY",
-        "status": "pending",
-        "durationDays": duration_days,
-        "createdAt": datetime.utcnow()
-    }
-    
-    await db.orders.insert_one(order)
-    
-    # Test modunda ise direkt başarılı dön
-    if PAYTR_TEST_MODE == '1':
-        return {
-            "orderId": order_id,
-            "testMode": True,
-            "message": "Test modunda. Gerçek ödeme yapılmayacak.",
-            "confirmUrl": f"/api/membership/confirm-test/{order_id}"
-        }
-    
-    # PayTR token oluşturma (Production)
-    merchant_oid = order_id
-    email = user.get('email', 'test@test.com')
-    payment_amount = amount
-    user_basket = base64.b64encode(json.dumps([["Premium Üyelik", str(amount/100), 1]]).encode()).decode()
-    user_ip = "127.0.0.1"
-    timeout_limit = "30"
-    test_mode = PAYTR_TEST_MODE
-    no_installment = "1"
-    max_installment = "0"
-    currency = "TL"
-    
-    # Hash oluştur
-    hash_str = f"{PAYTR_MERCHANT_ID}{user_ip}{merchant_oid}{email}{payment_amount}{user_basket}{no_installment}{max_installment}{currency}{test_mode}"
-    paytr_token = base64.b64encode(
-        hmac.new(
-            PAYTR_MERCHANT_KEY.encode(), 
-            f"{hash_str}{PAYTR_MERCHANT_SALT}".encode(), 
-            hashlib.sha256
-        ).digest()
-    ).decode()
-    
-    return {
-        "orderId": order_id,
-        "testMode": False,
-        "paytrToken": paytr_token,
-        "merchantOid": merchant_oid,
-        "amount": payment_amount
-    }
-
-@api_router.post("/membership/confirm-test/{order_id}")
-async def confirm_test_purchase(order_id: str, current_user: dict = Depends(get_current_user)):
-    """Test modunda satın almayı onayla"""
-    if PAYTR_TEST_MODE != '1':
-        raise HTTPException(status_code=400, detail="Bu endpoint sadece test modunda çalışır")
-    
-    order = await db.orders.find_one({"id": order_id, "userId": current_user['uid']})
-    if not order:
-        raise HTTPException(status_code=404, detail="Sipariş bulunamadı")
-    
-    if order['status'] == 'completed':
-        raise HTTPException(status_code=400, detail="Bu sipariş zaten tamamlanmış")
-    
-    # Siparişi tamamla
-    await db.orders.update_one(
-        {"id": order_id},
-        {"$set": {"status": "completed", "completedAt": datetime.utcnow()}}
+    """Satın alma - Yakında"""
+    raise HTTPException(
+        status_code=400, 
+        detail="Premium üyelik yakında kullanıma sunulacak! Şu an tüm özellikler ücretsiz."
     )
-    
-    # Kullanıcının üyeliğini güncelle
-    expires_at = datetime.utcnow() + timedelta(days=order['durationDays'])
-    await db.users.update_one(
-        {"uid": current_user['uid']},
-        {"$set": {
-            "membership": {
-                "type": "premium",
-                "planId": order['planId'],
-                "expiresAt": expires_at,
-                "purchasedAt": datetime.utcnow(),
-                "orderId": order_id
-            }
-        }}
-    )
-    
-    return {
-        "success": True,
-        "message": "Premium üyelik aktifleştirildi!",
-        "expiresAt": expires_at.isoformat()
-    }
-
-@api_router.post("/membership/paytr-callback")
-async def paytr_callback(request: Request):
-    """PayTR ödeme bildirimi (Production için)"""
-    form_data = await request.form()
-    
-    merchant_oid = form_data.get('merchant_oid')
-    status = form_data.get('status')
-    total_amount = form_data.get('total_amount')
-    hash_val = form_data.get('hash')
-    
-    # Hash doğrulama
-    expected_hash = base64.b64encode(
-        hmac.new(
-            PAYTR_MERCHANT_KEY.encode(),
-            f"{merchant_oid}{PAYTR_MERCHANT_SALT}{status}{total_amount}".encode(),
-            hashlib.sha256
-        ).digest()
-    ).decode()
-    
-    if hash_val != expected_hash:
-        return {"status": "FAIL", "message": "Hash doğrulama hatası"}
-    
-    order = await db.orders.find_one({"id": merchant_oid})
-    if not order:
-        return {"status": "FAIL", "message": "Sipariş bulunamadı"}
-    
-    if status == 'success':
-        # Siparişi tamamla
-        await db.orders.update_one(
-            {"id": merchant_oid},
-            {"$set": {"status": "completed", "completedAt": datetime.utcnow()}}
-        )
-        
-        # Kullanıcının üyeliğini güncelle
-        expires_at = datetime.utcnow() + timedelta(days=order['durationDays'])
-        await db.users.update_one(
-            {"uid": order['userId']},
-            {"$set": {
-                "membership": {
-                    "type": "premium",
-                    "planId": order['planId'],
-                    "expiresAt": expires_at,
-                    "purchasedAt": datetime.utcnow(),
-                    "orderId": merchant_oid
-                }
-            }}
-        )
-    else:
-        await db.orders.update_one(
-            {"id": merchant_oid},
-            {"$set": {"status": "failed", "failedAt": datetime.utcnow()}}
-        )
-    
-    return "OK"
 
 @api_router.get("/membership/orders")
 async def get_user_orders(current_user: dict = Depends(get_current_user)):
-    """Kullanıcının sipariş geçmişini getir"""
-    orders = await db.orders.find({"userId": current_user['uid']}).sort("createdAt", -1).to_list(50)
-    
-    for order in orders:
-        if '_id' in order:
-            del order['_id']
-        order['amountText'] = f"{order['amount']/100:.2f}₺"
-    
-    return orders
+    """Kullanıcının sipariş geçmişi - Yakında"""
+    return []
 
 # Include the router in the main app
 app.include_router(api_router)
