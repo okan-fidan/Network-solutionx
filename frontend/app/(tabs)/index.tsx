@@ -25,6 +25,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { AdBanner } from '../../src/components/ads';
 import Toast from 'react-native-toast-message';
 import * as ImagePicker from 'expo-image-picker';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get('window');
 
