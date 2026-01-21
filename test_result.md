@@ -431,12 +431,24 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Bug Fixes and Pending Issues Resolution"
-    - "Poll Feature Testing"
-    - "Admin Panel Verification"
+    - "Moderator System API Testing"
+    - "Admin Panel Frontend Verification"
+    - "Push Notification Token Registration"
   stuck_tasks: []
   test_all: true
   test_priority: "high_first"
+
+  - task: "Moderator (Alt Yönetici) System APIs"
+    implemented: true
+    working: "needs_testing"
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "needs_testing"
+        agent: "main"
+        comment: "Moderatör sistemi backend endpoint'leri implement edildi. Test edilmesi gereken endpoint'ler: 1) GET /api/subgroups/{id}/my-role - Kullanıcının grup içindeki rolünü döndürür 2) GET /api/subgroups/{id}/moderators - Moderatör listesi 3) POST /api/subgroups/{id}/moderators/{userId} - Moderatör ekle (sadece admin) 4) DELETE /api/subgroups/{id}/moderators/{userId} - Moderatör çıkar 5) POST /api/subgroups/{id}/mod/delete-message/{messageId} - Moderatör mesaj silme 6) POST /api/subgroups/{id}/mod/ban/{userId} - 30 dakika ban (reason gerekli) 7) POST /api/subgroups/{id}/mod/kick/{userId} - Üye çıkarma (reason ve notes ile) 8) GET /api/subgroups/{id}/kick-reports - Kick raporları (sadece admin) 9) GET /api/subgroups/{id}/mod-logs - Moderasyon logları (sadece admin)"
 
 agent_communication:
   - agent: "testing"
