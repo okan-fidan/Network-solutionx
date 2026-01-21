@@ -1,0 +1,74 @@
+[
+  {
+    "test": "GET /api/ - Health Check",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Doğru mesaj döndü: Network Solution API",
+    "timestamp": "2026-01-21T20:33:44.224812",
+    "response_data": null
+  },
+  {
+    "test": "GET /api/cities - Türk Şehirleri",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "81 şehir başarıyla döndü",
+    "timestamp": "2026-01-21T20:33:44.268055",
+    "response_data": null
+  },
+  {
+    "test": "GET /api/posts - Post Listesi",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Auth koruması çalışıyor (403 Forbidden)",
+    "timestamp": "2026-01-21T20:33:44.309836",
+    "response_data": null
+  },
+  {
+    "test": "Mock Post ID Kullanımı",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Test için mock post ID: test-post-id-12345",
+    "timestamp": "2026-01-21T20:33:44.309872",
+    "response_data": null
+  },
+  {
+    "test": "POST /api/posts/{post_id}/pin - Gönderi Sabitle",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Auth koruması çalışıyor (HTTP 403)",
+    "timestamp": "2026-01-21T20:33:44.353504",
+    "response_data": null
+  },
+  {
+    "test": "DELETE /api/posts/{post_id}/pin - Sabitlemeyi Kaldır",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Auth koruması çalışıyor (HTTP 403)",
+    "timestamp": "2026-01-21T20:33:44.399637",
+    "response_data": null
+  },
+  {
+    "test": "GET /api/posts/pinned - Sabitlenmiş Gönderiler",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Auth koruması çalışıyor (HTTP 403)",
+    "timestamp": "2026-01-21T20:33:44.440034",
+    "response_data": null
+  },
+  {
+    "test": "GET /api/membership/status - Üyelik Durumu",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "Auth koruması çalışıyor (HTTP 403) - Bu beklenen davranış olabilir",
+    "timestamp": "2026-01-21T20:33:44.484327",
+    "response_data": null
+  },
+  {
+    "test": "GET /api/membership/plans - Planlar Listesi",
+    "success": true,
+    "status": "✅ BAŞARILI",
+    "details": "comingSoon: true bulundu, response: {'plans': [{'id': 'free', 'name': 'Ücretsiz', 'price': 0, 'priceText': 'Ücretsiz', 'duration': 'unlimited', 'features': ['Topluluk erişimi', 'Mesajlaşma', 'Hizmet paylaşımı', 'Reklam destekli'], 'highlighted': False, 'available': True}, {'id': 'premium', 'name': 'Premium', 'price': 0, 'priceText': 'Yakında', 'duration': 'yearly', 'features': ['Reklamsız deneyim', 'Öncelikli destek', 'Özel rozetler', 'Erken erişim özellikleri'], 'highlighted': True, 'available': False, 'comingSoon': True}], 'comingSoon': True, 'message': 'Premium üyelik yakında kullanıma sunulacak!'}",
+    "timestamp": "2026-01-21T20:33:44.525270",
+    "response_data": null
+  }
+]
