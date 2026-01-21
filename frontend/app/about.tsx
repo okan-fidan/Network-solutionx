@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image,
   Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -13,15 +12,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 
-const teamMembers = [
-  { name: 'Ahmet Yılmaz', role: 'Kurucu & CEO', avatar: 'AY' },
-  { name: 'Elif Kaya', role: 'CTO', avatar: 'EK' },
-  { name: 'Mehmet Demir', role: 'Tasarım Direktörü', avatar: 'MD' },
-];
-
 const stats = [
   { label: 'Kullanıcı', value: '10K+', icon: 'people' },
-  { label: 'Topluluk', value: '500+', icon: 'business' },
+  { label: 'Topluluk', value: '81', icon: 'business' },
   { label: 'Mesaj', value: '1M+', icon: 'chatbubbles' },
   { label: 'Etkinlik', value: '200+', icon: 'calendar' },
 ];
@@ -126,40 +119,24 @@ export default function AboutScreen() {
           </View>
         </View>
 
-        {/* Team */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>EKİBİMİZ</Text>
-          <View style={styles.teamGrid}>
-            {teamMembers.map((member, index) => (
-              <View key={index} style={styles.teamMember}>
-                <View style={styles.teamAvatar}>
-                  <Text style={styles.teamAvatarText}>{member.avatar}</Text>
-                </View>
-                <Text style={styles.teamName}>{member.name}</Text>
-                <Text style={styles.teamRole}>{member.role}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
         {/* Contact */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>İLETİŞİM</Text>
           
           <TouchableOpacity 
             style={styles.contactItem}
-            onPress={() => Linking.openURL('mailto:info@networksolution.com')}
+            onPress={() => Linking.openURL('mailto:info@networksolution.com.tr')}
           >
             <Ionicons name="mail" size={20} color="#6366f1" />
-            <Text style={styles.contactText}>info@networksolution.com</Text>
+            <Text style={styles.contactText}>info@networksolution.com.tr</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
             style={styles.contactItem}
-            onPress={() => Linking.openURL('https://networksolution.com')}
+            onPress={() => Linking.openURL('https://networksolution.com.tr')}
           >
             <Ionicons name="globe" size={20} color="#6366f1" />
-            <Text style={styles.contactText}>www.networksolution.com</Text>
+            <Text style={styles.contactText}>www.networksolution.com.tr</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -217,12 +194,6 @@ const styles = StyleSheet.create({
   featureContent: { flex: 1 },
   featureTitle: { fontSize: 15, fontWeight: '600', color: '#fff' },
   featureDesc: { fontSize: 13, color: '#6b7280', marginTop: 2 },
-  teamGrid: { flexDirection: 'row', justifyContent: 'space-around' },
-  teamMember: { alignItems: 'center' },
-  teamAvatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
-  teamAvatarText: { fontSize: 20, fontWeight: 'bold', color: '#fff' },
-  teamName: { fontSize: 14, fontWeight: '600', color: '#fff' },
-  teamRole: { fontSize: 12, color: '#6b7280', marginTop: 2 },
   contactItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, gap: 12 },
   contactText: { color: '#9ca3af', fontSize: 15 },
   legalSection: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 16, gap: 12 },
