@@ -1,0 +1,165 @@
+[
+  {
+    "method": "GET",
+    "endpoint": "/",
+    "status_code": 200,
+    "success": true,
+    "response_time": 0.117565,
+    "response": {
+      "message": "Network Solution API"
+    }
+  },
+  {
+    "method": "GET",
+    "endpoint": "/cities",
+    "status_code": 200,
+    "success": true,
+    "response_time": 0.042218,
+    "response": {
+      "cities": [
+        "Adana",
+        "Adıyaman",
+        "Afyonkarahisar",
+        "Ağrı",
+        "Aksaray",
+        "Amasya",
+        "Ankara",
+        "Antalya",
+        "Ardahan",
+        "Artvin",
+        "Aydın",
+        "Balıkesir",
+        "Bartın",
+        "Batman",
+        "Bayburt",
+        "Bilecik",
+        "Bingöl",
+        "Bitlis",
+        "Bolu",
+        "Burdur",
+        "Bursa",
+        "Çanakkale",
+        "Çankırı",
+        "Çorum",
+        "Denizli",
+        "Diyarbakır",
+        "Düzce",
+        "Edirne",
+        "Elazığ",
+        "Erzincan",
+        "Erzurum",
+        "Eskişehir",
+        "Gaziantep",
+        "Giresun",
+        "Gümüşhane",
+        "Hakkari",
+        "Hatay",
+        "Iğdır",
+        "Isparta",
+        "İstanbul",
+        "İzmir",
+        "Kahramanmaraş",
+        "Karabük",
+        "Karaman",
+        "Kars",
+        "Kastamonu",
+        "Kayseri",
+        "Kilis",
+        "Kırıkkale",
+        "Kırklareli",
+        "Kırşehir",
+        "Kocaeli",
+        "Konya",
+        "Kütahya",
+        "Malatya",
+        "Manisa",
+        "Mardin",
+        "Mersin",
+        "Muğla",
+        "Muş",
+        "Nevşehir",
+        "Niğde",
+        "Ordu",
+        "Osmaniye",
+        "Rize",
+        "Sakarya",
+        "Samsun",
+        "Şanlıurfa",
+        "Siirt",
+        "Sinop",
+        "Sivas",
+        "Şırnak",
+        "Tekirdağ",
+        "Tokat",
+        "Trabzon",
+        "Tunceli",
+        "Uşak",
+        "Van",
+        "Yalova",
+        "Yozgat",
+        "Zonguldak"
+      ]
+    }
+  },
+  {
+    "method": "PUT",
+    "endpoint": "/admin/subgroups/bulk-description",
+    "status_code": 403,
+    "success": true,
+    "response_time": 0.039886,
+    "response": {
+      "detail": "Not authenticated"
+    }
+  },
+  {
+    "method": "POST",
+    "endpoint": "/admin/generate-avatars",
+    "status_code": 403,
+    "success": true,
+    "response_time": 0.038373,
+    "response": {
+      "detail": "Not authenticated"
+    }
+  },
+  {
+    "method": "POST",
+    "endpoint": "/admin/generate-avatars",
+    "status_code": 403,
+    "success": true,
+    "response_time": 0.038974,
+    "response": {
+      "detail": "Not authenticated"
+    }
+  },
+  {
+    "method": "POST",
+    "endpoint": "/admin/generate-avatars",
+    "status_code": 403,
+    "success": true,
+    "response_time": 0.037998,
+    "response": {
+      "detail": "Not authenticated"
+    }
+  },
+  {
+    "method": "POST",
+    "endpoint": "/services",
+    "status_code": 403,
+    "success": true,
+    "response_time": 0.038827,
+    "response": {
+      "detail": "Not authenticated"
+    }
+  },
+  {
+    "method": "PUT",
+    "endpoint": "/user/profile",
+    "status_code": 403,
+    "success": true,
+    "response_time": 0.037378,
+    "response": {
+      "detail": "Not authenticated"
+    },
+    "warning": "Expected 401, got 403"
+  }
+]
