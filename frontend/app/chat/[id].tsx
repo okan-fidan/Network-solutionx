@@ -745,12 +745,13 @@ export default function PrivateChatScreen() {
                     {format(item.timestamp, 'HH:mm')}
                   </Text>
                   {isMe && (
-                    <Ionicons 
-                      name={item.read ? 'checkmark-done' : 'checkmark'} 
-                      size={14} 
-                      color={isMe ? 'rgba(255,255,255,0.7)' : colors.textSecondary} 
-                      style={{ marginLeft: 2 }}
-                    />
+                    <View style={styles.readReceipt}>
+                      <Ionicons 
+                        name={item.read ? 'checkmark-done' : 'checkmark'} 
+                        size={16} 
+                        color={item.read ? '#5eb5f7' : '#6e8aa5'}
+                      />
+                    </View>
                   )}
                 </View>
               </>
@@ -760,10 +761,10 @@ export default function PrivateChatScreen() {
           {hasReactions && (
             <View style={[styles.reactionsContainer, isMe && styles.reactionsContainerMe]}>
               {Object.entries(item.reactions || {}).map(([emoji, users]) => (
-                <View key={emoji} style={[styles.reactionBubble, { backgroundColor: colors.card }]}>
+                <View key={emoji} style={styles.reactionBubble}>
                   <Text style={styles.reactionEmoji}>{emoji}</Text>
                   {users.length > 1 && (
-                    <Text style={[styles.reactionCount, { color: colors.text }]}>{users.length}</Text>
+                    <Text style={styles.reactionCount}>{users.length}</Text>
                   )}
                 </View>
               ))}
