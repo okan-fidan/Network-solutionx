@@ -1699,15 +1699,30 @@ async def get_services(current_user: dict = Depends(get_current_user)):
 async def create_service(service: dict, current_user: dict = Depends(get_current_user)):
     user = await db.users.find_one({"uid": current_user['uid']})
 
+    # Resimler için validation (max 5 resim, her biri max 2MB)
+    images = service.get('images', [])
+    if len(images) > 5:
+        raise HTTPException(status_code=400, detail="En fazla 5 resim yükleyebilirsiniz")
+    
+    validated_images = []
+    for img in images:
+        if img and len(img) <= 2 * 1024 * 1024:  # Max 2MB per image
+            validated_images.append(img)
+
     new_service = {
         "id": str(uuid.uuid4()),
         "userId": current_user['uid'],
         "userName": f"{user['firstName']} {user['lastName']}",
-        "title": service['title'],
-        "description": service['description'],
+        "userProfileImage": user.get('profileImageUrl'),
+        "title": sanitize_input(service['title'], max_length=100),
+        "description": sanitize_input(service['description'], max_length=2000),
         "category": service['category'],
+        "price": service.get('price'),
         "city": user['city'],
         "contactPhone": user.get('phone', ''),
+        "images": validated_images,  # Hizmet resimleri
+        "rating": 0,
+        "reviewCount": 0,
         "timestamp": datetime.utcnow()
     }
 
