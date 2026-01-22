@@ -455,8 +455,19 @@ const styles = StyleSheet.create({
   attendingText: { color: '#10b981', fontSize: 12, fontWeight: '600' },
   fullBadge: { backgroundColor: 'rgba(239, 68, 68, 0.1)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
   fullText: { color: '#ef4444', fontSize: 12, fontWeight: '600' },
-  joinEventButton: { backgroundColor: '#6366f1', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  joinEventButton: { flexDirection: 'row', backgroundColor: '#6366f1', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, alignItems: 'center', gap: 6 },
   joinEventText: { color: '#fff', fontSize: 13, fontWeight: '600' },
+  
+  // Katılımcı Avatarları
+  eventAttendeesSection: { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#1f2937' },
+  attendeeAvatars: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  attendeeAvatar: { width: 32, height: 32, borderRadius: 16, borderWidth: 2, borderColor: '#111827', overflow: 'hidden' },
+  attendeeAvatarImage: { width: '100%', height: '100%' },
+  attendeeAvatarPlaceholder: { width: '100%', height: '100%', backgroundColor: '#6366f1', justifyContent: 'center', alignItems: 'center' },
+  attendeeAvatarInitial: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  attendeeAvatarExtra: { backgroundColor: '#374151', justifyContent: 'center', alignItems: 'center' },
+  attendeeExtraText: { color: '#fff', fontSize: 10, fontWeight: '700' },
+  attendeeCountText: { color: '#9ca3af', fontSize: 12 },
   
   // Empty State
   emptyState: { alignItems: 'center', paddingVertical: 64, paddingHorizontal: 32 },
