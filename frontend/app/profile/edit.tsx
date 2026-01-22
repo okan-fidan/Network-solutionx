@@ -316,6 +316,27 @@ export default function EditProfileScreen() {
           </View>
 
           <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Biyografi</Text>
+              <Text style={[styles.charCount, bio.length >= BIO_MAX_LENGTH && styles.charCountMax]}>
+                {bio.length}/{BIO_MAX_LENGTH}
+              </Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.bioInput]}
+              value={bio}
+              onChangeText={(text) => setBio(text.slice(0, BIO_MAX_LENGTH))}
+              placeholder="Kendinizi kısaca tanıtın..."
+              placeholderTextColor="#6b7280"
+              multiline
+              numberOfLines={4}
+              maxLength={BIO_MAX_LENGTH}
+              textAlignVertical="top"
+            />
+            <Text style={styles.hint}>Profilinizde görünecek kısa açıklama</Text>
+          </View>
+
+          <View style={styles.inputGroup}>
             <Text style={styles.label}>E-posta</Text>
             <View style={styles.disabledInput}>
               <Text style={styles.disabledText}>{userProfile?.email}</Text>
