@@ -238,6 +238,12 @@ export default function ProfileScreen() {
             <Text style={styles.name}>
               {userProfile?.firstName} {userProfile?.lastName}
             </Text>
+            
+            {/* Biyografi - Instagram tarzı */}
+            {userProfile?.bio && (
+              <Text style={styles.bio}>{userProfile.bio}</Text>
+            )}
+            
             <Text style={styles.email}>{userProfile?.email}</Text>
             
             <View style={styles.badgeRow}>
