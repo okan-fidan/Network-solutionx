@@ -79,19 +79,33 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
+      icon: 'calendar',
+      title: 'Etkinlik Yönetimi',
+      subtitle: 'Şehir etkinliklerini oluştur ve yönet',
+      route: '/admin/events',
+      color: '#f59e0b',
+      isNew: true,
+    },
+    {
       icon: 'color-wand',
       title: 'Toplu Ayarlar',
       subtitle: 'Açıklamaları ve avatarları toplu değiştir',
       route: '/admin/bulk-settings',
       color: '#ec4899',
-      isNew: true,
+    },
+    {
+      icon: 'school',
+      title: 'Mentor Başvuruları',
+      subtitle: 'Mentor başvurularını incele ve onayla',
+      route: '/admin/mentor-applications',
+      color: '#8b5cf6',
     },
     {
       icon: 'megaphone',
       title: 'Toplu Duyuru',
       subtitle: 'Tüm gruplara aynı anda duyuru gönder',
       route: '/admin/broadcast',
-      color: '#f59e0b',
+      color: '#3b82f6',
     },
     {
       icon: 'people',
@@ -112,7 +126,7 @@ export default function AdminDashboard() {
       title: 'İçerik Yönetimi',
       subtitle: 'Mesajları sil, sabitle',
       route: '/admin/content',
-      color: '#3b82f6',
+      color: '#14b8a6',
     },
     {
       icon: 'shield-checkmark',
@@ -126,21 +140,21 @@ export default function AdminDashboard() {
       title: 'Raporlar',
       subtitle: 'Kullanıcı ve içerik raporları',
       route: '/admin/reports',
-      color: '#8b5cf6',
+      color: '#f97316',
     },
     {
       icon: 'shield',
       title: 'Güvenlik Logları',
       subtitle: 'Şüpheli aktiviteleri izle',
       route: '/admin/security',
-      color: '#ec4899',
+      color: '#64748b',
     },
     {
       icon: 'globe',
       title: 'Web Sitesi',
       subtitle: 'networksolution.com.tr',
       route: 'https://networksolution.com.tr/',
-      color: '#14b8a6',
+      color: '#06b6d4',
       external: true,
     },
   ];
