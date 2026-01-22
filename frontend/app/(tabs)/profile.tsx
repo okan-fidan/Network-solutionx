@@ -483,6 +483,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#fff',
   },
+  bio: {
+    fontSize: 14,
+    color: '#e5e7eb',
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: 16,
+    maxWidth: 300,
+  },
   email: {
     fontSize: 14,
     color: '#a5b4fc',
