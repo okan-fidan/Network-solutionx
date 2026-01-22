@@ -38,6 +38,7 @@ interface Event {
   isAttending: boolean;
   isFull: boolean;
   maxAttendees?: number;
+  attendees?: { uid: string; name: string; profileImageUrl?: string }[];
 }
 
 type TabType = 'communities' | 'events';
