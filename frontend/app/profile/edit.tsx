@@ -119,6 +119,7 @@ export default function EditProfileScreen() {
         phone: phone.trim(),
         occupation: occupation.trim(),
         city: city,
+        bio: bio.trim(),
         profileImageUrl: profileImage,
       };
       
