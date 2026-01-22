@@ -43,11 +43,14 @@ export default function EditProfileScreen() {
   const [phone, setPhone] = useState(userProfile?.phone || '');
   const [occupation, setOccupation] = useState(userProfile?.occupation || '');
   const [city, setCity] = useState(userProfile?.city || '');
+  const [bio, setBio] = useState(userProfile?.bio || '');
   const [profileImage, setProfileImage] = useState(userProfile?.profileImageUrl || '');
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [citySearch, setCitySearch] = useState('');
+
+  const BIO_MAX_LENGTH = 150; // Instagram standardı
 
   const filteredCities = citySearch
     ? TURKISH_CITIES.filter(c => 
