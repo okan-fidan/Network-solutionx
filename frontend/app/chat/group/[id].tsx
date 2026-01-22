@@ -825,16 +825,28 @@ export default function GroupChatScreen() {
     const readCount = message.readBy?.length || 1;
     const deliveredCount = message.deliveredTo?.length || 0;
     
-    // Herkes okudu
+    // Herkes okudu - Telegram açık mavi
     if (readCount >= memberCount - 1 && memberCount > 1) {
-      return <Ionicons name="checkmark-done" size={14} color="#60a5fa" />;
+      return (
+        <View style={styles.readReceipt}>
+          <Ionicons name="checkmark-done" size={16} color="#5eb5f7" />
+        </View>
+      );
     }
-    // İletildi
+    // İletildi - çift tik gri
     if (deliveredCount > 0) {
-      return <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.6)" />;
+      return (
+        <View style={styles.readReceipt}>
+          <Ionicons name="checkmark-done" size={16} color="#6e8aa5" />
+        </View>
+      );
     }
-    // Gönderildi
-    return <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.6)" />;
+    // Gönderildi - tek tik gri
+    return (
+      <View style={styles.readReceipt}>
+        <Ionicons name="checkmark" size={16} color="#6e8aa5" />
+      </View>
+    );
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
