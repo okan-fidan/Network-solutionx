@@ -160,6 +160,10 @@ export default function CommunitiesScreen() {
 
   const renderEvent = ({ item }: { item: Event }) => {
     const { day, month } = formatDate(item.date);
+    const attendees = item.attendees || [];
+    const displayAttendees = attendees.slice(0, 5);
+    const extraCount = attendees.length > 5 ? attendees.length - 5 : 0;
+    
     return (
       <TouchableOpacity
         style={styles.eventCard}
@@ -184,14 +188,34 @@ export default function CommunitiesScreen() {
             <Ionicons name="location-outline" size={14} color="#6b7280" />
             <Text style={styles.eventMetaText} numberOfLines={1}>{item.city || item.location}</Text>
           </View>
-          <View style={styles.eventFooter}>
-            <View style={styles.attendeesInfo}>
-              <Ionicons name="people" size={14} color="#6b7280" />
-              <Text style={styles.attendeesText}>
-                {item.attendeeCount} katılımcı
-                {item.maxAttendees && ` / ${item.maxAttendees}`}
-              </Text>
+          
+          {/* Katılımcı Avatarları */}
+          <View style={styles.eventAttendeesSection}>
+            <View style={styles.attendeeAvatars}>
+              {displayAttendees.map((attendee, index) => (
+                <View key={attendee.uid} style={[styles.attendeeAvatar, { marginLeft: index > 0 ? -10 : 0, zIndex: 5 - index }]}>
+                  {attendee.profileImageUrl ? (
+                    <Image source={{ uri: attendee.profileImageUrl }} style={styles.attendeeAvatarImage} />
+                  ) : (
+                    <View style={styles.attendeeAvatarPlaceholder}>
+                      <Text style={styles.attendeeAvatarInitial}>{attendee.name?.charAt(0)?.toUpperCase() || '?'}</Text>
+                    </View>
+                  )}
+                </View>
+              ))}
+              {extraCount > 0 && (
+                <View style={[styles.attendeeAvatar, styles.attendeeAvatarExtra, { marginLeft: -10 }]}>
+                  <Text style={styles.attendeeExtraText}>+{extraCount}</Text>
+                </View>
+              )}
             </View>
+            <Text style={styles.attendeeCountText}>
+              {item.attendeeCount} kişi katılıyor
+              {item.maxAttendees && ` (${item.maxAttendees} kontenjan)`}
+            </Text>
+          </View>
+          
+          <View style={styles.eventFooter}>
             {item.isAttending ? (
               <View style={styles.attendingBadge}>
                 <Ionicons name="checkmark-circle" size={16} color="#10b981" />
@@ -206,6 +230,7 @@ export default function CommunitiesScreen() {
                 style={styles.joinEventButton}
                 onPress={() => handleJoinEvent(item.id)}
               >
+                <Ionicons name="add-circle" size={18} color="#fff" />
                 <Text style={styles.joinEventText}>Katıl</Text>
               </TouchableOpacity>
             )}
