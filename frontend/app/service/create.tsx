@@ -12,10 +12,12 @@ import {
   Platform,
   Modal,
   FlatList,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import api from '../../src/services/api';
 
 const CATEGORIES = [
@@ -33,16 +35,64 @@ const CATEGORIES = [
   { value: 'other', label: 'Diğer', icon: 'ellipsis-horizontal-outline' },
 ];
 
+const MAX_IMAGES = 5;
+
 export default function CreateServiceScreen() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('consulting');
   const [price, setPrice] = useState('');
+  const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const router = useRouter();
 
   const selectedCategory = CATEGORIES.find(c => c.value === category);
+
+  const pickImage = async () => {
+    if (images.length >= MAX_IMAGES) {
+      Alert.alert('Limit', `En fazla ${MAX_IMAGES} resim ekleyebilirsiniz`);
+      return;
+    }
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Fotoğraf seçmek için galeri izni gerekiyor.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets[0]?.base64) {
+      setUploadingImage(true);
+      try {
+        const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        
+        // Boyut kontrolü (max 500KB)
+        if (base64Image.length > 700000) {
+          Alert.alert('Hata', 'Resim çok büyük. Lütfen daha küçük bir resim seçin.');
+          return;
+        }
+        
+        setImages([...images, base64Image]);
+      } catch (error) {
+        Alert.alert('Hata', 'Resim yüklenemedi');
+      } finally {
+        setUploadingImage(false);
+      }
+    }
+  };
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
 
   const handleCreate = async () => {
     if (!title.trim() || !description.trim()) {
@@ -57,6 +107,7 @@ export default function CreateServiceScreen() {
         description: description.trim(),
         category,
         price: price ? parseFloat(price) : null,
+        images: images,
       });
       Alert.alert('Başarılı', 'Hizmetiniz eklendi!', [
         { text: 'Tamam', onPress: () => router.back() }
@@ -111,6 +162,51 @@ export default function CreateServiceScreen() {
         </View>
 
         <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
+          {/* Resim Ekleme Bölümü */}
+          <View style={styles.inputGroup}>
+            <View style={styles.labelRow}>
+              <Text style={styles.label}>Resimler</Text>
+              <Text style={styles.imageCount}>{images.length}/{MAX_IMAGES}</Text>
+            </View>
+            
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.imageScrollView}
+              contentContainerStyle={styles.imageScrollContent}
+            >
+              {images.map((img, index) => (
+                <View key={index} style={styles.imagePreviewContainer}>
+                  <Image source={{ uri: img }} style={styles.imagePreview} />
+                  <TouchableOpacity 
+                    style={styles.removeImageButton}
+                    onPress={() => removeImage(index)}
+                  >
+                    <Ionicons name="close-circle" size={24} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              
+              {images.length < MAX_IMAGES && (
+                <TouchableOpacity 
+                  style={styles.addImageButton}
+                  onPress={pickImage}
+                  disabled={uploadingImage}
+                >
+                  {uploadingImage ? (
+                    <ActivityIndicator size="small" color="#10b981" />
+                  ) : (
+                    <>
+                      <Ionicons name="camera-outline" size={32} color="#10b981" />
+                      <Text style={styles.addImageText}>Resim Ekle</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </ScrollView>
+            <Text style={styles.imageHint}>Hizmetinize ait en fazla 5 resim ekleyebilirsiniz</Text>
+          </View>
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Hizmet Başlığı</Text>
             <TextInput
@@ -201,72 +297,46 @@ export default function CreateServiceScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
-  headerTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
-  saveButton: { backgroundColor: '#10b981', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  saveButtonDisabled: { opacity: 0.5 },
-  saveButtonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
+  headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
+  saveButton: { backgroundColor: '#10b981', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
+  saveButtonDisabled: { backgroundColor: '#374151' },
+  saveButtonText: { color: '#fff', fontWeight: '600' },
   content: { flex: 1, padding: 16 },
   inputGroup: { marginBottom: 24 },
-  label: { color: '#9ca3af', fontSize: 14, fontWeight: '500', marginBottom: 8 },
-  input: { backgroundColor: '#1f2937', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, color: '#fff', fontSize: 16 },
+  label: { color: '#9ca3af', fontSize: 14, marginBottom: 8 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  imageCount: { color: '#6b7280', fontSize: 12 },
+  input: { backgroundColor: '#1f2937', borderRadius: 12, padding: 16, color: '#fff', fontSize: 16 },
   textArea: { minHeight: 120, textAlignVertical: 'top' },
-  priceInput: { flexDirection: 'row', alignItems: 'center' },
-  currency: { color: '#6b7280', fontSize: 18, marginLeft: 12 },
-
-  // Category Selector
-  categorySelector: { 
-    backgroundColor: '#1f2937', 
-    borderRadius: 12, 
-    paddingHorizontal: 16, 
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  categorySelectorContent: { flexDirection: 'row', alignItems: 'center' },
-  categorySelectorIcon: { 
-    width: 36, 
-    height: 36, 
-    borderRadius: 8, 
-    backgroundColor: 'rgba(16, 185, 129, 0.15)', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    marginRight: 12,
-  },
+  priceInput: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  currency: { fontSize: 20, color: '#6b7280', fontWeight: '600' },
+  
+  // Image styles
+  imageScrollView: { marginBottom: 8 },
+  imageScrollContent: { gap: 12 },
+  imagePreviewContainer: { position: 'relative' },
+  imagePreview: { width: 100, height: 100, borderRadius: 12 },
+  removeImageButton: { position: 'absolute', top: -8, right: -8, backgroundColor: '#0a0a0a', borderRadius: 12 },
+  addImageButton: { width: 100, height: 100, borderRadius: 12, borderWidth: 2, borderColor: '#374151', borderStyle: 'dashed', justifyContent: 'center', alignItems: 'center', backgroundColor: '#111827' },
+  addImageText: { color: '#10b981', fontSize: 12, marginTop: 4 },
+  imageHint: { color: '#6b7280', fontSize: 12 },
+  
+  // Category selector
+  categorySelector: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#1f2937', borderRadius: 12, padding: 16 },
+  categorySelectorContent: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  categorySelectorIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(16, 185, 129, 0.1)', justifyContent: 'center', alignItems: 'center' },
   categorySelectorText: { color: '#fff', fontSize: 16 },
-
+  
   // Modal
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
-  modalContainer: { backgroundColor: '#111827', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '70%' },
-  modalHeader: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    justifyContent: 'space-between', 
-    padding: 16, 
-    borderBottomWidth: 1, 
-    borderBottomColor: '#1f2937' 
-  },
-  modalTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'flex-end' },
+  modalContainer: { backgroundColor: '#111827', borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '70%' },
+  modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
+  modalTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
   categoryList: { padding: 16 },
-  categoryItem: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#1f2937',
-  },
-  categoryItemSelected: { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderWidth: 1, borderColor: '#10b981' },
-  categoryIcon: { 
-    width: 44, 
-    height: 44, 
-    borderRadius: 10, 
-    backgroundColor: '#374151', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    marginRight: 14,
-  },
+  categoryItem: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 12, marginBottom: 8, backgroundColor: '#1f2937' },
+  categoryItemSelected: { backgroundColor: 'rgba(16, 185, 129, 0.1)', borderWidth: 1, borderColor: '#10b981' },
+  categoryIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: '#374151', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
   categoryIconSelected: { backgroundColor: '#10b981' },
-  categoryLabel: { flex: 1, color: '#fff', fontSize: 16 },
-  categoryLabelSelected: { color: '#10b981', fontWeight: '600' },
+  categoryLabel: { flex: 1, color: '#9ca3af', fontSize: 16 },
+  categoryLabelSelected: { color: '#fff', fontWeight: '600' },
 });
