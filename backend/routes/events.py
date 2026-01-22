@@ -86,8 +86,23 @@ def setup_events_routes(db, get_current_user, check_global_admin):
         for event in events:
             if '_id' in event:
                 del event['_id']
-            event['attendeeCount'] = len(event.get('attendees', []))
-            event['isAttending'] = current_user['uid'] in event.get('attendees', [])
+            
+            # Katılımcı ID listesi
+            attendee_ids = event.get('attendees', [])
+            event['attendeeCount'] = len(attendee_ids)
+            event['isAttending'] = current_user['uid'] in attendee_ids
+            event['isFull'] = event.get('maxAttendees') and event['attendeeCount'] >= event['maxAttendees']
+            
+            # İlk 5 katılımcının bilgilerini getir
+            if attendee_ids:
+                attendees = await db.users.find({"uid": {"$in": attendee_ids[:5]}}).to_list(5)
+                event['attendees'] = [{
+                    "uid": a['uid'],
+                    "name": f"{a.get('firstName', '')} {a.get('lastName', '')}".strip(),
+                    "profileImageUrl": a.get('profileImageUrl')
+                } for a in attendees]
+            else:
+                event['attendees'] = []
         
         return events
     
