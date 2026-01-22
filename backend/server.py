@@ -3117,6 +3117,93 @@ async def admin_update_subgroup(subgroup_id: str, data: dict, current_user: dict
 
     return {"message": "Alt grup güncellendi"}
 
+# Toplu Grup Açıklaması Güncelleme - Tüm grupları aynı anda değiştir
+@api_router.put("/admin/subgroups/bulk-description")
+async def admin_bulk_update_description(data: dict, current_user: dict = Depends(get_current_user)):
+    """Tüm alt grupların açıklamasını toplu olarak güncelle"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    description_template = data.get('description', '')
+    community_id = data.get('communityId')  # Opsiyonel - belirli bir topluluğun grupları
+    
+    if not description_template:
+        raise HTTPException(status_code=400, detail="Açıklama metni gerekli")
+    
+    # Sanitize
+    description_template = sanitize_input(description_template, max_length=500)
+    
+    query = {}
+    if community_id:
+        query['communityId'] = community_id
+    
+    result = await db.subgroups.update_many(
+        query,
+        {"$set": {"description": description_template}}
+    )
+    
+    return {
+        "message": f"{result.modified_count} grup açıklaması güncellendi",
+        "updatedCount": result.modified_count
+    }
+
+# Otomatik Avatar Oluşturma - İsme göre renk ve harf
+@api_router.post("/admin/generate-avatars")
+async def admin_generate_avatars(data: dict, current_user: dict = Depends(get_current_user)):
+    """Tüm gruplar için isimlerine göre otomatik avatar oluştur"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    target = data.get('target', 'subgroups')  # 'subgroups' veya 'communities'
+    
+    # Renk paleti - modern ve profesyonel
+    colors = [
+        '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', 
+        '#10b981', '#14b8a6', '#06b6d4', '#3b82f6', '#6b7280'
+    ]
+    
+    updated_count = 0
+    
+    if target == 'subgroups' or target == 'all':
+        subgroups = await db.subgroups.find({}).to_list(1000)
+        for sg in subgroups:
+            name = sg.get('name', 'G')
+            # İsmin baş harfini al
+            initial = name[0].upper() if name else 'G'
+            # İsme göre tutarlı renk seç
+            color_index = sum(ord(c) for c in name) % len(colors)
+            color = colors[color_index]
+            
+            # SVG tabanlı avatar URL'i oluştur (placeholder API)
+            avatar_url = f"https://ui-avatars.com/api/?name={initial}&background={color[1:]}&color=fff&size=200&bold=true&font-size=0.5"
+            
+            await db.subgroups.update_one(
+                {"id": sg['id']},
+                {"$set": {"imageUrl": avatar_url, "avatarColor": color, "avatarInitial": initial}}
+            )
+            updated_count += 1
+    
+    if target == 'communities' or target == 'all':
+        communities = await db.communities.find({}).to_list(100)
+        for c in communities:
+            name = c.get('name', 'T')
+            initial = name[0].upper() if name else 'T'
+            color_index = sum(ord(char) for char in name) % len(colors)
+            color = colors[color_index]
+            
+            avatar_url = f"https://ui-avatars.com/api/?name={initial}&background={color[1:]}&color=fff&size=200&bold=true&font-size=0.5"
+            
+            await db.communities.update_one(
+                {"id": c['id']},
+                {"$set": {"imageUrl": avatar_url, "avatarColor": color, "avatarInitial": initial}}
+            )
+            updated_count += 1
+    
+    return {
+        "message": f"{updated_count} avatar oluşturuldu",
+        "updatedCount": updated_count
+    }
+
 # Delete subgroup (admin)
 @api_router.delete("/admin/subgroups/{subgroup_id}")
 async def admin_delete_subgroup(subgroup_id: str, current_user: dict = Depends(get_current_user)):
