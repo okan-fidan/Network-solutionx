@@ -346,8 +346,13 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
 
 @api_router.put("/user/profile")
 async def update_user_profile(updates: dict, current_user: dict = Depends(get_current_user)):
-    allowed_fields = ['firstName', 'lastName', 'phone', 'city', 'occupation', 'profileImageUrl']
+    allowed_fields = ['firstName', 'lastName', 'phone', 'city', 'occupation', 'profileImageUrl', 'bio']
     filtered_updates = {k: v for k, v in updates.items() if k in allowed_fields}
+    
+    # Biyografi için 150 karakter sınırı (Instagram standardı)
+    if 'bio' in filtered_updates and filtered_updates['bio']:
+        filtered_updates['bio'] = sanitize_input(filtered_updates['bio'][:150], max_length=150)
+    
     await db.users.update_one(
         {"uid": current_user['uid']},
         {"$set": filtered_updates}
