@@ -79,12 +79,19 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
+      icon: 'color-wand',
+      title: 'Toplu Ayarlar',
+      subtitle: 'Açıklamaları ve avatarları toplu değiştir',
+      route: '/admin/bulk-settings',
+      color: '#ec4899',
+      isNew: true,
+    },
+    {
       icon: 'megaphone',
       title: 'Toplu Duyuru',
       subtitle: 'Tüm gruplara aynı anda duyuru gönder',
       route: '/admin/broadcast',
       color: '#f59e0b',
-      isNew: true,
     },
     {
       icon: 'people',
