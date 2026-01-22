@@ -3635,6 +3635,363 @@ api_router.include_router(reviews_router)
 events_router = setup_events_routes(db, get_current_user, check_global_admin)
 api_router.include_router(events_router)
 
+# ============================================
+# MENTOR SİSTEMİ - Mentorluk Başvuruları
+# ============================================
+
+@api_router.get("/mentors")
+async def get_mentors(current_user: dict = Depends(get_current_user)):
+    """Tüm mentorları listele"""
+    mentors = await db.users.find({
+        "isMentor": True,
+        "mentorProfile.isActive": True
+    }).to_list(100)
+    
+    result = []
+    for mentor in mentors:
+        if mentor['uid'] != current_user['uid']:
+            result.append({
+                "uid": mentor['uid'],
+                "firstName": mentor.get('firstName', ''),
+                "lastName": mentor.get('lastName', ''),
+                "profileImageUrl": mentor.get('profileImageUrl'),
+                "occupation": mentor.get('occupation', ''),
+                "city": mentor.get('city', ''),
+                "bio": mentor.get('bio', ''),
+                "mentorProfile": mentor.get('mentorProfile', {}),
+                "totalMentees": len(mentor.get('mentees', [])),
+            })
+    return result
+
+@api_router.post("/mentors/apply")
+async def apply_as_mentor(data: dict, current_user: dict = Depends(get_current_user)):
+    """Mentor olmak için başvur"""
+    expertise = data.get('expertise', [])
+    experience = data.get('experience', '')
+    availability = data.get('availability', '')
+    
+    if not expertise or not experience:
+        raise HTTPException(status_code=400, detail="Uzmanlık alanları ve deneyim zorunludur")
+    
+    await db.users.update_one(
+        {"uid": current_user['uid']},
+        {"$set": {
+            "mentorApplication": {
+                "expertise": expertise,
+                "experience": sanitize_input(experience, max_length=1000),
+                "availability": availability,
+                "status": "pending",
+                "appliedAt": datetime.utcnow()
+            }
+        }}
+    )
+    
+    return {"message": "Mentor başvurunuz alındı. İncelendikten sonra size bildirim gönderilecek."}
+
+@api_router.post("/mentors/{mentor_id}/request")
+async def request_mentorship(mentor_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Bir mentordan mentorluk talep et"""
+    mentor = await db.users.find_one({"uid": mentor_id, "isMentor": True})
+    if not mentor:
+        raise HTTPException(status_code=404, detail="Mentor bulunamadı")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    
+    request = {
+        "id": str(uuid.uuid4()),
+        "mentorId": mentor_id,
+        "menteeId": current_user['uid'],
+        "menteeName": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+        "menteeImage": user.get('profileImageUrl'),
+        "message": sanitize_input(data.get('message', ''), max_length=500),
+        "topic": data.get('topic', 'Genel'),
+        "status": "pending",
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.mentor_requests.insert_one(request)
+    del request['_id']
+    
+    return {"message": "Mentorluk talebiniz gönderildi", "request": request}
+
+@api_router.get("/mentors/my-requests")
+async def get_my_mentor_requests(current_user: dict = Depends(get_current_user)):
+    """Kullanıcının gönderdiği mentorluk taleplerini getir"""
+    requests = await db.mentor_requests.find({"menteeId": current_user['uid']}).sort("createdAt", -1).to_list(50)
+    for r in requests:
+        if '_id' in r:
+            del r['_id']
+        # Mentor bilgilerini ekle
+        mentor = await db.users.find_one({"uid": r['mentorId']})
+        if mentor:
+            r['mentorName'] = f"{mentor.get('firstName', '')} {mentor.get('lastName', '')}".strip()
+            r['mentorImage'] = mentor.get('profileImageUrl')
+    return requests
+
+@api_router.get("/mentors/incoming-requests")
+async def get_incoming_mentor_requests(current_user: dict = Depends(get_current_user)):
+    """Mentora gelen talepleri getir"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user.get('isMentor'):
+        raise HTTPException(status_code=403, detail="Mentor değilsiniz")
+    
+    requests = await db.mentor_requests.find({"mentorId": current_user['uid'], "status": "pending"}).sort("createdAt", -1).to_list(50)
+    for r in requests:
+        if '_id' in r:
+            del r['_id']
+    return requests
+
+@api_router.put("/mentors/requests/{request_id}")
+async def respond_to_mentor_request(request_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mentorluk talebine yanıt ver (kabul/red)"""
+    action = data.get('action')  # 'accept' or 'reject'
+    
+    request = await db.mentor_requests.find_one({"id": request_id, "mentorId": current_user['uid']})
+    if not request:
+        raise HTTPException(status_code=404, detail="Talep bulunamadı")
+    
+    if action == 'accept':
+        await db.mentor_requests.update_one(
+            {"id": request_id},
+            {"$set": {"status": "accepted", "respondedAt": datetime.utcnow()}}
+        )
+        # Mentee'yi mentor'un listesine ekle
+        await db.users.update_one(
+            {"uid": current_user['uid']},
+            {"$addToSet": {"mentees": request['menteeId']}}
+        )
+        return {"message": "Mentorluk talebi kabul edildi"}
+    else:
+        await db.mentor_requests.update_one(
+            {"id": request_id},
+            {"$set": {"status": "rejected", "respondedAt": datetime.utcnow()}}
+        )
+        return {"message": "Mentorluk talebi reddedildi"}
+
+# ============================================
+# GAMIFICATION - Seviye ve Puan Sistemi
+# ============================================
+
+LEVEL_THRESHOLDS = [
+    {"level": 1, "name": "Yeni Başlayan", "minPoints": 0, "icon": "🌱"},
+    {"level": 2, "name": "Keşifçi", "minPoints": 100, "icon": "🔍"},
+    {"level": 3, "name": "Aktif Üye", "minPoints": 300, "icon": "⭐"},
+    {"level": 4, "name": "Katkıcı", "minPoints": 600, "icon": "💪"},
+    {"level": 5, "name": "Uzman", "minPoints": 1000, "icon": "🎯"},
+    {"level": 6, "name": "Lider", "minPoints": 1500, "icon": "👑"},
+    {"level": 7, "name": "Mentor", "minPoints": 2500, "icon": "🎓"},
+    {"level": 8, "name": "Efsane", "minPoints": 5000, "icon": "🏆"},
+]
+
+POINT_ACTIONS = {
+    "post_created": 10,
+    "comment_added": 5,
+    "like_received": 2,
+    "message_sent": 1,
+    "event_created": 50,
+    "event_attended": 20,
+    "mentor_session": 100,
+    "badge_earned": 50,
+    "profile_completed": 30,
+    "first_connection": 15,
+}
+
+def get_level_for_points(points: int) -> dict:
+    """Puana göre seviye hesapla"""
+    current_level = LEVEL_THRESHOLDS[0]
+    for level in LEVEL_THRESHOLDS:
+        if points >= level['minPoints']:
+            current_level = level
+        else:
+            break
+    return current_level
+
+@api_router.get("/gamification/my-stats")
+async def get_my_gamification_stats(current_user: dict = Depends(get_current_user)):
+    """Kullanıcının puan ve seviye bilgilerini getir"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    points = user.get('gamificationPoints', 0)
+    current_level = get_level_for_points(points)
+    
+    # Sonraki seviye için gereken puan
+    next_level = None
+    for level in LEVEL_THRESHOLDS:
+        if level['minPoints'] > points:
+            next_level = level
+            break
+    
+    progress = 0
+    if next_level:
+        prev_threshold = current_level['minPoints']
+        next_threshold = next_level['minPoints']
+        progress = ((points - prev_threshold) / (next_threshold - prev_threshold)) * 100
+    else:
+        progress = 100  # Max level
+    
+    return {
+        "points": points,
+        "level": current_level['level'],
+        "levelName": current_level['name'],
+        "levelIcon": current_level['icon'],
+        "nextLevel": next_level,
+        "progress": round(progress, 1),
+        "badges": user.get('badges', []),
+        "badgeCount": len(user.get('badges', [])),
+    }
+
+@api_router.get("/gamification/leaderboard")
+async def get_leaderboard(current_user: dict = Depends(get_current_user)):
+    """Puan sıralaması"""
+    users = await db.users.find({}).sort("gamificationPoints", -1).limit(50).to_list(50)
+    
+    leaderboard = []
+    for i, user in enumerate(users):
+        points = user.get('gamificationPoints', 0)
+        level = get_level_for_points(points)
+        leaderboard.append({
+            "rank": i + 1,
+            "uid": user['uid'],
+            "name": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+            "profileImageUrl": user.get('profileImageUrl'),
+            "points": points,
+            "level": level['level'],
+            "levelName": level['name'],
+            "levelIcon": level['icon'],
+            "isCurrentUser": user['uid'] == current_user['uid']
+        })
+    
+    return leaderboard
+
+@api_router.post("/gamification/add-points")
+async def add_gamification_points(data: dict, current_user: dict = Depends(get_current_user)):
+    """Puan ekle (sistem içi kullanım)"""
+    action = data.get('action')
+    points = POINT_ACTIONS.get(action, 0)
+    
+    if points > 0:
+        await db.users.update_one(
+            {"uid": current_user['uid']},
+            {"$inc": {"gamificationPoints": points}}
+        )
+    
+    return {"pointsAdded": points}
+
+# Admin Etkinlik Yönetimi
+@api_router.post("/admin/events")
+async def admin_create_event(data: dict, current_user: dict = Depends(get_current_user)):
+    """Admin etkinlik oluşturma"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    
+    event = {
+        "id": str(uuid.uuid4()),
+        "title": sanitize_input(data.get('title', ''), max_length=200),
+        "description": sanitize_input(data.get('description', ''), max_length=2000),
+        "date": data.get('date'),
+        "time": data.get('time'),
+        "location": sanitize_input(data.get('location', ''), max_length=300),
+        "city": data.get('city'),
+        "communityId": data.get('communityId'),
+        "isOnline": data.get('isOnline', False),
+        "meetingLink": data.get('meetingLink'),
+        "maxAttendees": data.get('maxAttendees'),
+        "imageUrl": data.get('imageUrl'),
+        "createdBy": current_user['uid'],
+        "createdByName": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+        "isAdminEvent": True,
+        "attendees": [],
+        "isCancelled": False,
+        "createdAt": datetime.utcnow()
+    }
+    
+    await db.events.insert_one(event)
+    del event['_id']
+    
+    return {"message": "Etkinlik oluşturuldu", "event": event}
+
+@api_router.get("/admin/events")
+async def admin_get_all_events(current_user: dict = Depends(get_current_user)):
+    """Tüm etkinlikleri listele (admin)"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    events = await db.events.find({}).sort("date", -1).to_list(200)
+    for event in events:
+        if '_id' in event:
+            del event['_id']
+        event['attendeeCount'] = len(event.get('attendees', []))
+    
+    return events
+
+@api_router.delete("/admin/events/{event_id}")
+async def admin_delete_event(event_id: str, current_user: dict = Depends(get_current_user)):
+    """Etkinlik sil (admin)"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    result = await db.events.delete_one({"id": event_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Etkinlik bulunamadı")
+    
+    return {"message": "Etkinlik silindi"}
+
+# Admin Mentor Yönetimi
+@api_router.get("/admin/mentor-applications")
+async def admin_get_mentor_applications(current_user: dict = Depends(get_current_user)):
+    """Bekleyen mentor başvurularını getir"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    users = await db.users.find({"mentorApplication.status": "pending"}).to_list(100)
+    applications = []
+    for user in users:
+        applications.append({
+            "uid": user['uid'],
+            "name": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip(),
+            "email": user.get('email'),
+            "profileImageUrl": user.get('profileImageUrl'),
+            "occupation": user.get('occupation'),
+            "application": user.get('mentorApplication')
+        })
+    return applications
+
+@api_router.put("/admin/mentor-applications/{user_id}")
+async def admin_review_mentor_application(user_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mentor başvurusunu onayla/reddet"""
+    if not await check_global_admin(current_user):
+        raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
+    
+    action = data.get('action')  # 'approve' or 'reject'
+    
+    if action == 'approve':
+        user = await db.users.find_one({"uid": user_id})
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {
+                "isMentor": True,
+                "mentorProfile": {
+                    "isActive": True,
+                    "expertise": user.get('mentorApplication', {}).get('expertise', []),
+                    "experience": user.get('mentorApplication', {}).get('experience', ''),
+                    "availability": user.get('mentorApplication', {}).get('availability', ''),
+                    "approvedAt": datetime.utcnow()
+                },
+                "mentorApplication.status": "approved"
+            }}
+        )
+        return {"message": "Mentor başvurusu onaylandı"}
+    else:
+        await db.users.update_one(
+            {"uid": user_id},
+            {"$set": {"mentorApplication.status": "rejected"}}
+        )
+        return {"message": "Mentor başvurusu reddedildi"}
+
 # Import and setup 2FA routes
 from routes.auth_2fa import setup_auth_routes
 auth_router = setup_auth_routes(db, get_current_user)
