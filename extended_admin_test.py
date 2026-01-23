@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 # Server configuration
-BASE_URL = "https://membership-moderator.preview.emergentagent.com/api"
+BASE_URL = "https://free-connect-6.preview.emergentagent.com/api"
 
 def test_extended_admin_functionality():
     """Test admin endpoints with more comprehensive scenarios"""
