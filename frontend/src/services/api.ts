@@ -86,7 +86,8 @@ export const subgroupApi = {
   join: (id: string) => api.post(`/api/subgroups/${id}/join`),
   requestJoin: (id: string) => api.post(`/api/subgroups/${id}/request-join`),
   leave: (id: string) => api.post(`/api/subgroups/${id}/leave`),
-  getMessages: (id: string) => api.get(`/api/subgroups/${id}/messages`),
+  getMessages: (id: string, skip: number = 0, limit: number = 200) => 
+    api.get(`/api/subgroups/${id}/messages?skip=${skip}&limit=${limit}`),
   sendMessage: (id: string, data: any) => api.post(`/api/subgroups/${id}/messages`, data),
   markAsRead: (id: string) => api.put(`/api/subgroups/${id}/read`),
   getPendingRequests: (id: string) => api.get(`/api/subgroups/${id}/pending-requests`),
