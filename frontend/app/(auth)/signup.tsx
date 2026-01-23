@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { sendEmailVerification } from 'firebase/auth';
+import { auth } from '../../src/config/firebase';
 
 export default function SignupScreen() {
   const [email, setEmail] = useState('');
