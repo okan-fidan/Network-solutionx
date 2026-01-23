@@ -24,6 +24,7 @@ interface Community {
   city: string;
   memberCount: number;
   isMember: boolean;
+  imageUrl?: string;
 }
 
 interface Event {
