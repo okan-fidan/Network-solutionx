@@ -134,7 +134,11 @@ export default function LoginScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.header}>
-            <Ionicons name="people" size={80} color="#6366f1" />
+            <Image 
+              source={{ uri: LOGO_URL }} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Network Solution</Text>
             <Text style={styles.subtitle}>Girişimcilerin Buluşma Noktası</Text>
           </View>
