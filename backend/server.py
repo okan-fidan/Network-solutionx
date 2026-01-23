@@ -4595,7 +4595,7 @@ async def delete_conversation(conversation_id: str, current_user: dict = Depends
 # ============ WhatsApp Benzeri Mesaj Özellikleri ============
 
 @api_router.delete("/conversations/{conversation_id}/messages/{message_id}")
-async def delete_message(conversation_id: str, message_id: str, delete_for_all: bool = False, current_user: dict = Depends(get_current_user)):
+async def delete_dm_message(conversation_id: str, message_id: str, delete_for_all: bool = False, current_user: dict = Depends(get_current_user)):
     """Mesajı sil - sadece kendim için veya herkes için"""
     conversation = await db.conversations.find_one({
         "id": conversation_id,
