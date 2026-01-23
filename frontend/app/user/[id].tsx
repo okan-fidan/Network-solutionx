@@ -60,12 +60,26 @@ export default function UserProfileScreen() {
     }
   };
 
-  const handleMessage = () => {
+  const handleMessage = async () => {
     if (userId === user?.uid) {
       Alert.alert('Bilgi', 'Kendinize mesaj gönderemezsiniz');
       return;
     }
-    router.push(`/chat/${userId}`);
+    
+    try {
+      // Önce conversation başlat
+      const response = await fetch('/api/conversations/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ otherUserId: userId })
+      });
+      
+      // conversationApi yoksa doğrudan chat sayfasına git
+      router.push(`/chat/${userId}`);
+    } catch (error) {
+      console.error('Error starting conversation:', error);
+      router.push(`/chat/${userId}`);
+    }
   };
 
   if (loading) {
