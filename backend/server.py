@@ -344,6 +344,20 @@ async def get_user_profile(current_user: dict = Depends(get_current_user)):
         del user['_id']
     return user
 
+# Başka bir kullanıcının profilini getir
+@api_router.get("/users/{uid}")
+async def get_user_by_id(uid: str, current_user: dict = Depends(get_current_user)):
+    """Belirtilen kullanıcının profilini getir"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    # Hassas bilgileri çıkar
+    safe_fields = ['uid', 'firstName', 'lastName', 'city', 'occupation', 'profileImageUrl', 'bio', 'isAdmin', 'createdAt', 'communities']
+    safe_user = {k: user.get(k) for k in safe_fields if k in user}
+    
+    return safe_user
+
 @api_router.put("/user/profile")
 async def update_user_profile(updates: dict, current_user: dict = Depends(get_current_user)):
     allowed_fields = ['firstName', 'lastName', 'phone', 'city', 'occupation', 'profileImageUrl', 'bio']
