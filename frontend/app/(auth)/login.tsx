@@ -17,15 +17,49 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { auth } from '../../src/config/firebase';
-import { reload } from 'firebase/auth';
+import { reload, sendPasswordResetEmail } from 'firebase/auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const { signIn } = useAuth();
   const router = useRouter();
+
+  // Şifremi Unuttum fonksiyonu
+  const handleForgotPassword = async () => {
+    if (!email || !email.includes('@')) {
+      Alert.alert('Hata', 'Lütfen geçerli bir email adresi girin');
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      Alert.alert(
+        'Email Gönderildi ✉️',
+        `${email} adresine şifre sıfırlama linki gönderildi. Lütfen gelen kutunuzu kontrol edin.`,
+        [{ text: 'Tamam' }]
+      );
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      let message = 'Şifre sıfırlama emaili gönderilemedi';
+      
+      if (error?.code === 'auth/user-not-found') {
+        message = 'Bu email adresiyle kayıtlı kullanıcı bulunamadı';
+      } else if (error?.code === 'auth/invalid-email') {
+        message = 'Geçersiz email adresi';
+      } else if (error?.code === 'auth/too-many-requests') {
+        message = 'Çok fazla deneme yaptınız. Lütfen birkaç dakika bekleyin.';
+      }
+      
+      Alert.alert('Hata', message);
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     console.log('=== handleLogin called ===');
