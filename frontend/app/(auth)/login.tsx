@@ -192,6 +192,19 @@ export default function LoginScreen() {
                 <Text style={styles.linkText}>Kayıt Ol</Text>
               </TouchableOpacity>
             </View>
+
+            {/* Şifremi Unuttum */}
+            <TouchableOpacity 
+              style={styles.forgotPassword} 
+              onPress={handleForgotPassword}
+              disabled={resetLoading}
+            >
+              {resetLoading ? (
+                <ActivityIndicator size="small" color="#6366f1" />
+              ) : (
+                <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
+              )}
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
