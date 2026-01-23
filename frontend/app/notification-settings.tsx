@@ -3,68 +3,47 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  ScrollView,
   Switch,
-  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../src/services/api';
 
 interface NotificationSettings {
-  // Genel
-  pushEnabled: boolean;
-  emailEnabled: boolean;
-  soundEnabled: boolean;
-  vibrationEnabled: boolean;
-  
-  // Mesajlar
-  directMessages: boolean;
-  groupMessages: boolean;
-  mentions: boolean;
-  
-  // Aktivite
+  messages: boolean;
   likes: boolean;
   comments: boolean;
-  newFollowers: boolean;
-  
-  // Topluluk
-  announcements: boolean;
+  follows: boolean;
+  mentions: boolean;
   events: boolean;
-  newMembers: boolean;
-  
-  // Sessiz Saatler
+  announcements: boolean;
+  emailNotifications: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: string;
   quietHoursEnd: string;
 }
 
-const DEFAULT_SETTINGS: NotificationSettings = {
-  pushEnabled: true,
-  emailEnabled: false,
-  soundEnabled: true,
-  vibrationEnabled: true,
-  directMessages: true,
-  groupMessages: true,
-  mentions: true,
-  likes: true,
-  comments: true,
-  newFollowers: true,
-  announcements: true,
-  events: true,
-  newMembers: false,
-  quietHoursEnabled: false,
-  quietHoursStart: '22:00',
-  quietHoursEnd: '08:00',
-};
-
 export default function NotificationSettingsScreen() {
   const router = useRouter();
-  const [settings, setSettings] = useState<NotificationSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState<NotificationSettings>({
+    messages: true,
+    likes: true,
+    comments: true,
+    follows: true,
+    mentions: true,
+    events: true,
+    announcements: true,
+    emailNotifications: false,
+    quietHoursEnabled: false,
+    quietHoursStart: '22:00',
+    quietHoursEnd: '08:00',
+  });
 
   useEffect(() => {
     loadSettings();
@@ -72,10 +51,8 @@ export default function NotificationSettingsScreen() {
 
   const loadSettings = async () => {
     try {
-      const saved = await AsyncStorage.getItem('notification_settings');
-      if (saved) {
-        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(saved) });
-      }
+      const response = await api.get('/api/user/notification-settings');
+      setSettings({ ...settings, ...response.data });
     } catch (error) {
       console.error('Error loading notification settings:', error);
     } finally {
@@ -83,228 +60,271 @@ export default function NotificationSettingsScreen() {
     }
   };
 
-  const updateSetting = async (key: keyof NotificationSettings, value: boolean | string) => {
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    
+  const saveSettings = async (newSettings: NotificationSettings) => {
+    setSaving(true);
     try {
-      await AsyncStorage.setItem('notification_settings', JSON.stringify(newSettings));
-      // Backend'e de kaydet
-      await api.put('/api/user/notification-settings', newSettings).catch(() => {});
+      await api.put('/api/user/notification-settings', newSettings);
+      setSettings(newSettings);
     } catch (error) {
       console.error('Error saving notification settings:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const SettingRow = ({ 
-    icon, 
-    title, 
-    subtitle, 
-    value, 
-    onValueChange,
-    color = '#6366f1'
-  }: { 
-    icon: string; 
-    title: string; 
-    subtitle?: string;
-    value: boolean; 
-    onValueChange: (value: boolean) => void;
-    color?: string;
-  }) => (
-    <View style={styles.settingRow}>
-      <View style={[styles.settingIcon, { backgroundColor: `${color}20` }]}>
-        <Ionicons name={icon as any} size={20} color={color} />
-      </View>
-      <View style={styles.settingInfo}>
-        <Text style={styles.settingTitle}>{title}</Text>
-        {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
-      </View>
-      <Switch
-        value={value}
-        onValueChange={onValueChange}
-        trackColor={{ false: '#374151', true: '#6366f1' }}
-        thumbColor="#fff"
-      />
-    </View>
-  );
+  const toggleSetting = (key: keyof NotificationSettings) => {
+    const newSettings = { ...settings, [key]: !settings[key] };
+    setSettings(newSettings);
+    saveSettings(newSettings);
+  };
 
-  const SectionHeader = ({ title }: { title: string }) => (
-    <Text style={styles.sectionHeader}>{title}</Text>
-  );
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6366f1" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Bildirim Ayarları</Text>
-        <View style={{ width: 40 }} />
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.content}>
-        {/* Genel */}
-        <SectionHeader title="Genel" />
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        {/* Bildirim Türleri */}
+        <Text style={styles.sectionTitle}>Bildirim Türleri</Text>
         <View style={styles.section}>
-          <SettingRow
-            icon="notifications"
-            title="Push Bildirimleri"
-            subtitle="Anlık bildirimler al"
-            value={settings.pushEnabled}
-            onValueChange={(v) => updateSetting('pushEnabled', v)}
-          />
-          <SettingRow
-            icon="mail"
-            title="Email Bildirimleri"
-            subtitle="Önemli güncellemeler için email al"
-            value={settings.emailEnabled}
-            onValueChange={(v) => updateSetting('emailEnabled', v)}
-            color="#10b981"
-          />
-          <SettingRow
-            icon="volume-high"
-            title="Ses"
-            subtitle="Bildirim sesi"
-            value={settings.soundEnabled}
-            onValueChange={(v) => updateSetting('soundEnabled', v)}
-            color="#f59e0b"
-          />
-          <SettingRow
-            icon="phone-portrait"
-            title="Titreşim"
-            subtitle="Titreşimli bildirim"
-            value={settings.vibrationEnabled}
-            onValueChange={(v) => updateSetting('vibrationEnabled', v)}
-            color="#8b5cf6"
-          />
-        </View>
-
-        {/* Mesajlar */}
-        <SectionHeader title="Mesajlar" />
-        <View style={styles.section}>
-          <SettingRow
+          <SettingItem
             icon="chatbubble"
-            title="Direkt Mesajlar"
-            subtitle="Birebir mesaj bildirimleri"
-            value={settings.directMessages}
-            onValueChange={(v) => updateSetting('directMessages', v)}
+            iconColor="#10b981"
+            title="Mesajlar"
+            description="Yeni mesaj bildirimleri"
+            value={settings.messages}
+            onToggle={() => toggleSetting('messages')}
           />
-          <SettingRow
-            icon="chatbubbles"
-            title="Grup Mesajları"
-            subtitle="Grup sohbet bildirimleri"
-            value={settings.groupMessages}
-            onValueChange={(v) => updateSetting('groupMessages', v)}
-            color="#10b981"
-          />
-          <SettingRow
-            icon="at"
-            title="Bahsetmeler"
-            subtitle="Birisi sizi etiketlediğinde"
-            value={settings.mentions}
-            onValueChange={(v) => updateSetting('mentions', v)}
-            color="#f59e0b"
-          />
-        </View>
-
-        {/* Aktivite */}
-        <SectionHeader title="Aktivite" />
-        <View style={styles.section}>
-          <SettingRow
+          <SettingItem
             icon="heart"
+            iconColor="#ef4444"
             title="Beğeniler"
-            subtitle="Gönderileriniz beğenildiğinde"
+            description="Gönderilerinize gelen beğeniler"
             value={settings.likes}
-            onValueChange={(v) => updateSetting('likes', v)}
-            color="#ef4444"
+            onToggle={() => toggleSetting('likes')}
           />
-          <SettingRow
-            icon="chatbubble-outline"
+          <SettingItem
+            icon="chatbubble-ellipses"
+            iconColor="#3b82f6"
             title="Yorumlar"
-            subtitle="Gönderilerinize yorum yapıldığında"
+            description="Gönderilerinize gelen yorumlar"
             value={settings.comments}
-            onValueChange={(v) => updateSetting('comments', v)}
-            color="#3b82f6"
+            onToggle={() => toggleSetting('comments')}
           />
-          <SettingRow
+          <SettingItem
             icon="person-add"
-            title="Yeni Takipçiler"
-            subtitle="Birisi sizi takip ettiğinde"
-            value={settings.newFollowers}
-            onValueChange={(v) => updateSetting('newFollowers', v)}
-            color="#8b5cf6"
+            iconColor="#8b5cf6"
+            title="Takipler"
+            description="Yeni takipçi bildirimleri"
+            value={settings.follows}
+            onToggle={() => toggleSetting('follows')}
+          />
+          <SettingItem
+            icon="at"
+            iconColor="#f59e0b"
+            title="Bahsetmeler"
+            description="Sizden bahsedildiğinde"
+            value={settings.mentions}
+            onToggle={() => toggleSetting('mentions')}
+          />
+          <SettingItem
+            icon="calendar"
+            iconColor="#ec4899"
+            title="Etkinlikler"
+            description="Yeni etkinlik bildirimleri"
+            value={settings.events}
+            onToggle={() => toggleSetting('events')}
+          />
+          <SettingItem
+            icon="megaphone"
+            iconColor="#06b6d4"
+            title="Duyurular"
+            description="Topluluk duyuruları"
+            value={settings.announcements}
+            onToggle={() => toggleSetting('announcements')}
+            isLast
           />
         </View>
 
-        {/* Topluluk */}
-        <SectionHeader title="Topluluk" />
+        {/* Email Bildirimleri */}
+        <Text style={styles.sectionTitle}>Email Bildirimleri</Text>
         <View style={styles.section}>
-          <SettingRow
-            icon="megaphone"
-            title="Duyurular"
-            subtitle="Topluluk duyuruları"
-            value={settings.announcements}
-            onValueChange={(v) => updateSetting('announcements', v)}
-            color="#ec4899"
-          />
-          <SettingRow
-            icon="calendar"
-            title="Etkinlikler"
-            subtitle="Yeni etkinlik bildirimleri"
-            value={settings.events}
-            onValueChange={(v) => updateSetting('events', v)}
-            color="#14b8a6"
-          />
-          <SettingRow
-            icon="people"
-            title="Yeni Üyeler"
-            subtitle="Topluluğa yeni üye katıldığında"
-            value={settings.newMembers}
-            onValueChange={(v) => updateSetting('newMembers', v)}
-            color="#6b7280"
+          <SettingItem
+            icon="mail"
+            iconColor="#6366f1"
+            title="Email Özeti"
+            description="Günlük/haftalık email özeti"
+            value={settings.emailNotifications}
+            onToggle={() => toggleSetting('emailNotifications')}
+            isLast
           />
         </View>
 
         {/* Sessiz Saatler */}
-        <SectionHeader title="Sessiz Saatler" />
+        <Text style={styles.sectionTitle}>Sessiz Saatler</Text>
         <View style={styles.section}>
-          <SettingRow
+          <SettingItem
             icon="moon"
-            title="Sessiz Saatler"
-            subtitle={settings.quietHoursEnabled ? `${settings.quietHoursStart} - ${settings.quietHoursEnd}` : 'Devre dışı'}
+            iconColor="#9ca3af"
+            title="Sessiz Mod"
+            description={settings.quietHoursEnabled 
+              ? `${settings.quietHoursStart} - ${settings.quietHoursEnd} arası bildirim yok`
+              : "Belirli saatlerde bildirimleri sustur"
+            }
             value={settings.quietHoursEnabled}
-            onValueChange={(v) => updateSetting('quietHoursEnabled', v)}
-            color="#1f2937"
+            onToggle={() => toggleSetting('quietHoursEnabled')}
+            isLast
           />
-          {settings.quietHoursEnabled && (
-            <View style={styles.quietHoursInfo}>
-              <Ionicons name="information-circle" size={18} color="#6b7280" />
-              <Text style={styles.quietHoursText}>
-                {settings.quietHoursStart} - {settings.quietHoursEnd} arası bildirimler sessize alınacak
-              </Text>
-            </View>
-          )}
         </View>
 
-        <View style={{ height: 40 }} />
+        {/* Info */}
+        <View style={styles.infoBox}>
+          <Ionicons name="information-circle" size={20} color="#6b7280" />
+          <Text style={styles.infoText}>
+            Bildirim ayarlarınız anlık olarak kaydedilir. Değişiklikler hemen uygulanır.
+          </Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+// Setting Item Component
+const SettingItem = ({ 
+  icon, 
+  iconColor, 
+  title, 
+  description, 
+  value, 
+  onToggle,
+  isLast = false 
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  title: string;
+  description: string;
+  value: boolean;
+  onToggle: () => void;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.settingItem, !isLast && styles.settingItemBorder]}>
+    <View style={[styles.settingIcon, { backgroundColor: iconColor + '20' }]}>
+      <Ionicons name={icon} size={20} color={iconColor} />
+    </View>
+    <View style={styles.settingContent}>
+      <Text style={styles.settingTitle}>{title}</Text>
+      <Text style={styles.settingDescription}>{description}</Text>
+    </View>
+    <Switch
+      value={value}
+      onValueChange={onToggle}
+      trackColor={{ false: '#374151', true: '#6366f1' }}
+      thumbColor={value ? '#fff' : '#9ca3af'}
+    />
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0a0a0a' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
-  backButton: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '600', color: '#fff' },
-  content: { flex: 1 },
-  sectionHeader: { color: '#9ca3af', fontSize: 13, fontWeight: '600', textTransform: 'uppercase', marginTop: 24, marginBottom: 8, paddingHorizontal: 16 },
-  section: { backgroundColor: '#111827', marginHorizontal: 16, borderRadius: 12, overflow: 'hidden' },
-  settingRow: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1, borderBottomColor: '#1f2937' },
-  settingIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 12 },
-  settingInfo: { flex: 1 },
-  settingTitle: { color: '#fff', fontSize: 15, fontWeight: '500' },
-  settingSubtitle: { color: '#6b7280', fontSize: 13, marginTop: 2 },
-  quietHoursInfo: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 8, backgroundColor: '#1f2937' },
-  quietHoursText: { color: '#9ca3af', fontSize: 13, flex: 1 },
+  container: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1f2937',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  content: {
+    flex: 1,
+    padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#9ca3af',
+    marginBottom: 12,
+    marginTop: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  section: {
+    backgroundColor: '#1f2937',
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  settingItemBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#374151',
+  },
+  settingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  settingContent: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  settingDescription: {
+    fontSize: 13,
+    color: '#9ca3af',
+    marginTop: 2,
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#1f293750',
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+    marginBottom: 32,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#9ca3af',
+    lineHeight: 20,
+  },
 });
