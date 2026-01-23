@@ -11,6 +11,7 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,6 +19,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { auth } from '../../src/config/firebase';
 import { reload, sendPasswordResetEmail } from 'firebase/auth';
+
+// Logo URL
+const LOGO_URL = 'https://customer-assets.emergentagent.com/job_free-connect-6/artifacts/ae8wq3ei_IMG_20260123_224234.png';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
