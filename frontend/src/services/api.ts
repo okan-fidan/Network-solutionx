@@ -88,6 +88,7 @@ export const subgroupApi = {
   leave: (id: string) => api.post(`/api/subgroups/${id}/leave`),
   getMessages: (id: string) => api.get(`/api/subgroups/${id}/messages`),
   sendMessage: (id: string, data: any) => api.post(`/api/subgroups/${id}/messages`, data),
+  markAsRead: (id: string) => api.put(`/api/subgroups/${id}/read`),
   getPendingRequests: (id: string) => api.get(`/api/subgroups/${id}/pending-requests`),
   approveRequest: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/approve/${userId}`),
   rejectRequest: (subgroupId: string, userId: string) => api.post(`/api/subgroups/${subgroupId}/reject/${userId}`),
