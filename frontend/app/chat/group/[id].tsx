@@ -1076,8 +1076,8 @@ export default function GroupChatScreen() {
               </TouchableOpacity>
             )}
             
-            {/* Sil (kendi mesajları veya admin) */}
-            {(selectedMessage?.senderId === user?.uid || isGroupAdmin) && (
+            {/* Sil (kendi mesajları, grup admini veya global admin) */}
+            {(selectedMessage?.senderId === user?.uid || isGroupAdmin || userProfile?.isAdmin) && (
               <TouchableOpacity 
                 style={[styles.actionItem, styles.deleteAction]}
                 onPress={() => selectedMessage && showDeleteOptions(selectedMessage)}
