@@ -114,6 +114,38 @@ export default function EditProfileScreen() {
     }
   };
 
+  // Beceri ekleme
+  const addSkill = () => {
+    if (newSkill.trim() && skills.length < SKILLS_MAX) {
+      const trimmedSkill = newSkill.trim().substring(0, SKILL_MAX_LENGTH);
+      if (!skills.includes(trimmedSkill)) {
+        setSkills([...skills, trimmedSkill]);
+        setNewSkill('');
+      }
+    }
+  };
+
+  // Beceri silme
+  const removeSkill = (skillToRemove: string) => {
+    setSkills(skills.filter(s => s !== skillToRemove));
+  };
+
+  // İş deneyimi ekleme
+  const addExperience = (exp: any) => {
+    if (editingExperience) {
+      setWorkExperience(workExperience.map(e => e.id === editingExperience.id ? exp : e));
+      setEditingExperience(null);
+    } else {
+      setWorkExperience([...workExperience, { ...exp, id: Date.now().toString() }]);
+    }
+    setShowAddExperience(false);
+  };
+
+  // İş deneyimi silme
+  const removeExperience = (id: string) => {
+    setWorkExperience(workExperience.filter(e => e.id !== id));
+  };
+
   const handleSave = async () => {
     if (!firstName.trim() || !lastName.trim()) {
       showToast.error('Hata', 'Ad ve soyad zorunludur');
@@ -135,6 +167,9 @@ export default function EditProfileScreen() {
         city: city,
         bio: bio.trim(),
         profileImageUrl: profileImage,
+        skills: skills,
+        workExperience: workExperience,
+        socialLinks: socialLinks,
       };
       
       console.log('Updating profile with:', updateData);
