@@ -1009,7 +1009,7 @@ async def get_subgroup_links(subgroup_id: str, current_user: dict = Depends(get_
                     "timestamp": msg['timestamp'].isoformat() if msg.get('timestamp') else None,
                     "senderName": msg.get('senderName', 'Bilinmeyen')
                 })
-            except:
+            except Exception:
                 pass
     
     return links[:30]
