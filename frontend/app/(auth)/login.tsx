@@ -293,4 +293,14 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  forgotPassword: {
+    alignItems: 'center',
+    marginTop: 16,
+    padding: 12,
+  },
+  forgotPasswordText: {
+    color: '#9ca3af',
+    fontSize: 14,
+    textDecorationLine: 'underline',
+  },
 });
