@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../src/contexts/AuthContext';
+import { auth } from '../../src/config/firebase';
+import { reload } from 'firebase/auth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
