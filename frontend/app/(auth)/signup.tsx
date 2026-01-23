@@ -229,6 +229,12 @@ const styles = StyleSheet.create({
   header: {
     marginTop: 24,
     marginBottom: 32,
+    alignItems: 'center',
+  },
+  logo: {
+    width: 100,
+    height: 100,
+    marginBottom: 16,
   },
   title: {
     fontSize: 32,
