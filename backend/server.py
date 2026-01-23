@@ -1584,8 +1584,11 @@ async def create_post(request: Request, post: dict, current_user: dict = Depends
         "userProfileImage": user.get('profileImageUrl'),
         "content": content,
         "imageUrl": post.get('imageUrl'),
+        "videoUrl": post.get('videoUrl'),  # Video desteği
+        "mediaType": post.get('mediaType', 'text'),  # 'text', 'image', 'video'
         "location": location,
         "mentions": post.get('mentions', []),
+        "hashtags": post.get('hashtags', []),  # Hashtag desteği
         "likes": [],
         "comments": [],
         "shares": 0,
