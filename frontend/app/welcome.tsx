@@ -337,6 +337,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
+    paddingTop: 80,
+    paddingBottom: 20,
   },
   content: {
     alignItems: 'center',
