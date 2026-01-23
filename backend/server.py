@@ -4371,6 +4371,31 @@ async def get_conversation_messages(conversation_id: str, skip: int = 0, limit: 
     
     return list(reversed(result))
 
+@api_router.put("/conversations/{conversation_id}/read")
+async def mark_conversation_as_read(conversation_id: str, current_user: dict = Depends(get_current_user)):
+    """Konuşmayı okundu olarak işaretle"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    # Tüm okunmamış mesajları okundu olarak işaretle
+    await db.dm_messages.update_many(
+        {"conversationId": conversation_id, "senderId": {"$ne": current_user['uid']}, "read": False},
+        {"$set": {"read": True, "readAt": datetime.utcnow()}}
+    )
+    
+    # Okunmamış sayısını sıfırla
+    await db.conversations.update_one(
+        {"id": conversation_id}, 
+        {"$set": {f"unreadCount.{current_user['uid']}": 0}}
+    )
+    
+    return {"message": "Konuşma okundu olarak işaretlendi"}
+
 @api_router.post("/conversations/{conversation_id}/messages")
 async def send_conversation_message(conversation_id: str, data: dict, current_user: dict = Depends(get_current_user)):
     """Konuşmaya mesaj gönder"""
