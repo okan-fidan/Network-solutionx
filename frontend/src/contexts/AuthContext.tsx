@@ -54,6 +54,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
+        // Email doğrulama kontrolü
+        await reload(firebaseUser);
+        if (!firebaseUser.emailVerified) {
+          // Email doğrulanmamış
+          setUserProfile({ needsEmailVerification: true } as any);
+          setLoading(false);
+          return;
+        }
+        
         try {
           const response = await api.get('/api/user/profile');
           setUserProfile(response.data);
