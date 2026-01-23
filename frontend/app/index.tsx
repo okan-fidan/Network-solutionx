@@ -11,6 +11,8 @@ export default function Index() {
     if (!loading) {
       if (!user) {
         router.replace('/(auth)/login');
+      } else if (userProfile?.needsEmailVerification) {
+        router.replace('/(auth)/verify-email');
       } else if (userProfile?.needsRegistration) {
         router.replace('/(auth)/register-profile');
       } else {
