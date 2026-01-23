@@ -216,12 +216,8 @@ export default function GroupChatScreen() {
   const markMessagesAsRead = async () => {
     if (!groupId || !user?.uid) return;
     try {
-      const unreadMessages = messages.filter(
-        m => m.senderId !== user.uid && !m.readBy?.includes(user.uid)
-      );
-      for (const msg of unreadMessages) {
-        await api.post(`/api/messages/${msg.id}/status`, { status: 'read' });
-      }
+      // Yeni markAsRead API'sini kullan
+      await subgroupApi.markAsRead(groupId);
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
