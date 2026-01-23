@@ -2450,7 +2450,7 @@ async def report_message(message_id: str, data: dict, current_user: dict = Depen
 # ==================== MEMBER PROFILES ====================
 
 @api_router.get("/users/{user_id}/profile")
-async def get_user_profile(user_id: str, current_user: dict = Depends(get_current_user)):
+async def get_other_user_profile(user_id: str, current_user: dict = Depends(get_current_user)):
     """Kullanıcı profilini getir"""
     user = await db.users.find_one({"uid": user_id})
     if not user:
