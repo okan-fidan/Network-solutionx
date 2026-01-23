@@ -208,6 +208,13 @@ export default function PrivateChatScreen() {
           location: msg.location,
         }));
       setMessages(formattedMessages);
+      
+      // Konuşmayı okundu olarak işaretle
+      try {
+        await conversationApi.markAsRead(conversationId);
+      } catch (e) {
+        // Sessizce devam et
+      }
     } catch (error) {
       console.error('Error loading messages:', error);
     }
