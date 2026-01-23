@@ -237,11 +237,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
+  logo: {
+    width: 120,
+    height: 120,
+    marginBottom: 8,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop: 16,
+    marginTop: 8,
   },
   subtitle: {
     fontSize: 16,
