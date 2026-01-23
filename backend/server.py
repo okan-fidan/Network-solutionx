@@ -161,12 +161,23 @@ async def create_default_subgroups(community_id: str, community_name: str, creat
     subgroup_ids = []
     for sg_data in DEFAULT_SUBGROUPS:
         subgroup_id = str(uuid.uuid4())
+        
+        # Alt gruba uygun resim seç
+        sg_name = sg_data['name']
+        image_url = SUBGROUP_IMAGES.get(sg_name)
+        if not image_url:
+            # Fallback: İsme göre avatar
+            initial = sg_name[0].upper()
+            colors = ['#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', '#10b981', '#14b8a6', '#06b6d4', '#3b82f6']
+            color = colors[sum(ord(c) for c in sg_name) % len(colors)]
+            image_url = f"https://ui-avatars.com/api/?name={initial}&background={color[1:]}&color=fff&size=200&bold=true"
+        
         new_subgroup = {
             "id": subgroup_id,
             "communityId": community_id,
             "name": f"{community_name} - {sg_data['name']}",
             "description": sg_data['description'],
-            "imageUrl": None,
+            "imageUrl": image_url,
             "groupAdmins": [],
             "members": [],
             "bannedUsers": [],
