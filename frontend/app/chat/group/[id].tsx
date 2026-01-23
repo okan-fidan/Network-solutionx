@@ -128,6 +128,10 @@ export default function GroupChatScreen() {
   // Akıllı yanıtlar
   const [smartReplies, setSmartReplies] = useState<string[]>([]);
   const [loadingSmartReplies, setLoadingSmartReplies] = useState(false);
+  // Eski mesajları yükleme (Telegram benzeri)
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [messageSkip, setMessageSkip] = useState(0);
   // Tepki (Reaction) için state'ler
   const [showReactionPicker, setShowReactionPicker] = useState(false);
   const [reactionTargetMessage, setReactionTargetMessage] = useState<Message | null>(null);
