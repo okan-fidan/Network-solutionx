@@ -55,8 +55,21 @@ export default function SignupScreen() {
     try {
       console.log('Calling signUp...');
       await signUp(email, password);
-      console.log('signUp successful! Navigating to register-profile...');
-      router.replace('/(auth)/register-profile');
+      console.log('signUp successful!');
+      
+      // Email doğrulama gönder
+      if (auth.currentUser) {
+        try {
+          await sendEmailVerification(auth.currentUser);
+          console.log('Verification email sent!');
+        } catch (verifyError) {
+          console.log('Could not send verification email:', verifyError);
+        }
+      }
+      
+      // Doğrulama sayfasına yönlendir
+      console.log('Navigating to verify-email...');
+      router.replace('/(auth)/verify-email');
       console.log('Navigation called');
     } catch (error: any) {
       console.error('Signup error:', error);
