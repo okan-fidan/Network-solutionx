@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword, 
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User
+  User,
+  reload
 } from 'firebase/auth';
 import api, { userApi } from '../services/api';
 import { 
@@ -28,6 +29,7 @@ interface UserProfile {
   isAdmin: boolean;
   communities: string[];
   needsRegistration?: boolean;
+  needsEmailVerification?: boolean;
 }
 
 interface AuthContextType {
