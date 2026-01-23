@@ -1068,11 +1068,12 @@ async def remove_member_from_subgroup(subgroup_id: str, user_id: str, current_us
 # ==================== MESSAGES ====================
 
 @api_router.get("/subgroups/{subgroup_id}/messages")
-async def get_subgroup_messages(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+async def get_subgroup_messages(subgroup_id: str, skip: int = 0, limit: int = 200, current_user: dict = Depends(get_current_user)):
+    """Grup mesajlarını getir - Telegram gibi tüm geçmiş mesajlar görülebilir"""
     messages = await db.messages.find({
         "groupId": subgroup_id,
         "deletedForEveryone": {"$ne": True}
-    }).sort("timestamp", -1).limit(100).to_list(100)
+    }).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
 
     # Gönderenlerin bilgilerini toplu al
     sender_ids = list(set(msg.get('senderId') for msg in messages if msg.get('senderId')))
