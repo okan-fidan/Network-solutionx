@@ -4963,62 +4963,6 @@ async def get_user_status(user_id: str, current_user: dict = Depends(get_current
     }
 
 # ============================================
-# PUSH NOTIFICATIONS
-# ============================================
-
-@api_router.post("/users/push-token")
-async def save_push_token(data: dict, current_user: dict = Depends(get_current_user)):
-    """Expo push notification token'ını kaydet"""
-    token = data.get("token")
-    if not token:
-        raise HTTPException(status_code=400, detail="Push token gerekli")
-    
-    await db.users.update_one(
-        {"uid": current_user['uid']},
-        {"$set": {"expoPushToken": token, "pushTokenUpdatedAt": datetime.utcnow()}}
-    )
-    
-    return {"message": "Push token kaydedildi"}
-
-@api_router.get("/notifications")
-async def get_notifications(skip: int = 0, limit: int = 50, current_user: dict = Depends(get_current_user)):
-    """Kullanıcının bildirimlerini getir"""
-    notifications = await db.notifications.find(
-        {"userId": current_user['uid']}
-    ).sort("createdAt", -1).skip(skip).limit(limit).to_list(limit)
-    
-    result = []
-    for notif in notifications:
-        if "_id" in notif:
-            del notif["_id"]
-        result.append(notif)
-    
-    return result
-
-@api_router.put("/notifications/{notification_id}/read")
-async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
-    """Bildirimi okundu olarak işaretle"""
-    result = await db.notifications.update_one(
-        {"id": notification_id, "userId": current_user['uid']},
-        {"$set": {"read": True, "readAt": datetime.utcnow()}}
-    )
-    
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Bildirim bulunamadı")
-    
-    return {"message": "Bildirim okundu olarak işaretlendi"}
-
-@api_router.put("/notifications/read-all")
-async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
-    """Tüm bildirimleri okundu olarak işaretle"""
-    await db.notifications.update_many(
-        {"userId": current_user['uid'], "read": False},
-        {"$set": {"read": True, "readAt": datetime.utcnow()}}
-    )
-    
-    return {"message": "Tüm bildirimler okundu olarak işaretlendi"}
-
-# ============================================
 # MEDIA UPLOAD FOR DM
 # ============================================
 
