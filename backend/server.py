@@ -3699,9 +3699,9 @@ async def typing(sid, data):
         }, room=room, skip_sid=sid)
 
 # Import and setup additional routes
-from routes.badges import setup_badges_routes, badges_router
-from routes.reviews import setup_reviews_routes, reviews_router
-from routes.events import setup_events_routes, events_router
+from routes.badges import setup_badges_routes
+from routes.reviews import setup_reviews_routes
+from routes.events import setup_events_routes
 
 # Setup badges routes
 badges_router = setup_badges_routes(db, get_current_user, check_global_admin)
