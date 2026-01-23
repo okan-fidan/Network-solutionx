@@ -401,9 +401,10 @@ export default function GroupChatScreen() {
 
   const showDeleteOptions = (message: Message) => {
     const isMe = message.senderId === user?.uid;
+    const isAdmin = userProfile?.isAdmin || isGroupAdmin;
     
-    if (isMe) {
-      // Kendi mesajım - iki seçenek göster
+    if (isMe || isAdmin) {
+      // Kendi mesajım veya admin - iki seçenek göster
       Alert.alert(
         'Mesajı Sil',
         'Bu mesajı nasıl silmek istiyorsunuz?',
@@ -421,7 +422,7 @@ export default function GroupChatScreen() {
         ]
       );
     } else {
-      // Başkasının mesajı - sadece benden sil
+      // Normal kullanıcı başkasının mesajı - sadece benden sil
       Alert.alert(
         'Mesajı Sil',
         'Bu mesaj sizin için silinecek.',
