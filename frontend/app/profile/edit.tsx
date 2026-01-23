@@ -392,13 +392,262 @@ export default function EditProfileScreen() {
             </View>
             <Text style={styles.hint}>E-posta adresi değiştirilemez</Text>
           </View>
+
+          {/* Beceriler (Skills) */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Beceriler ({skills.length}/{SKILLS_MAX})</Text>
+            <View style={styles.skillsContainer}>
+              {skills.map((skill, index) => (
+                <View key={index} style={styles.skillTag}>
+                  <Text style={styles.skillText}>{skill}</Text>
+                  <TouchableOpacity onPress={() => removeSkill(skill)}>
+                    <Ionicons name="close-circle" size={18} color="#9ca3af" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+            {skills.length < SKILLS_MAX && (
+              <View style={styles.addSkillRow}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  value={newSkill}
+                  onChangeText={setNewSkill}
+                  placeholder="Beceri ekle (ör: React Native)"
+                  placeholderTextColor="#6b7280"
+                  maxLength={SKILL_MAX_LENGTH}
+                  onSubmitEditing={addSkill}
+                />
+                <TouchableOpacity style={styles.addSkillButton} onPress={addSkill}>
+                  <Ionicons name="add" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+            <Text style={styles.hint}>Uzmanlık alanlarınızı ekleyin (max 10)</Text>
+          </View>
+
+          {/* İş Deneyimi */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>İş Deneyimi</Text>
+            {workExperience.map((exp, index) => (
+              <View key={exp.id || index} style={styles.experienceCard}>
+                <View style={styles.experienceHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.experienceTitle}>{exp.title}</Text>
+                    <Text style={styles.experienceCompany}>{exp.company}</Text>
+                    <Text style={styles.experienceDate}>
+                      {exp.startDate} - {exp.current ? 'Devam ediyor' : exp.endDate}
+                    </Text>
+                  </View>
+                  <TouchableOpacity onPress={() => removeExperience(exp.id)}>
+                    <Ionicons name="trash-outline" size={20} color="#ef4444" />
+                  </TouchableOpacity>
+                </View>
+                {exp.description && (
+                  <Text style={styles.experienceDescription}>{exp.description}</Text>
+                )}
+              </View>
+            ))}
+            <TouchableOpacity 
+              style={styles.addExperienceButton}
+              onPress={() => setShowAddExperience(true)}
+            >
+              <Ionicons name="add-circle-outline" size={24} color="#6366f1" />
+              <Text style={styles.addExperienceText}>İş Deneyimi Ekle</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Sosyal Medya */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Sosyal Medya</Text>
+            <View style={styles.socialInputRow}>
+              <View style={styles.socialIcon}>
+                <Ionicons name="logo-linkedin" size={20} color="#0077b5" />
+              </View>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={socialLinks.linkedin || ''}
+                onChangeText={(text) => setSocialLinks({...socialLinks, linkedin: text})}
+                placeholder="LinkedIn profil linki"
+                placeholderTextColor="#6b7280"
+              />
+            </View>
+            <View style={styles.socialInputRow}>
+              <View style={styles.socialIcon}>
+                <Ionicons name="logo-instagram" size={20} color="#e4405f" />
+              </View>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={socialLinks.instagram || ''}
+                onChangeText={(text) => setSocialLinks({...socialLinks, instagram: text})}
+                placeholder="Instagram kullanıcı adı"
+                placeholderTextColor="#6b7280"
+              />
+            </View>
+            <View style={styles.socialInputRow}>
+              <View style={styles.socialIcon}>
+                <Ionicons name="globe-outline" size={20} color="#6366f1" />
+              </View>
+              <TextInput
+                style={[styles.input, { flex: 1 }]}
+                value={socialLinks.website || ''}
+                onChangeText={(text) => setSocialLinks({...socialLinks, website: text})}
+                placeholder="Web siteniz"
+                placeholderTextColor="#6b7280"
+              />
+            </View>
+          </View>
         </View>
       </ScrollView>
+
+      {/* İş Deneyimi Ekleme Modal */}
+      <Modal
+        visible={showAddExperience}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowAddExperience(false)}
+      >
+        <ExperienceForm 
+          onSave={addExperience}
+          onClose={() => setShowAddExperience(false)}
+          initialData={editingExperience}
+        />
+      </Modal>
 
       <CityPickerModal />
     </SafeAreaView>
   );
 }
+
+// İş Deneyimi Formu
+const ExperienceForm = ({ onSave, onClose, initialData }: any) => {
+  const [title, setTitle] = useState(initialData?.title || '');
+  const [company, setCompany] = useState(initialData?.company || '');
+  const [startDate, setStartDate] = useState(initialData?.startDate || '');
+  const [endDate, setEndDate] = useState(initialData?.endDate || '');
+  const [current, setCurrent] = useState(initialData?.current || false);
+  const [description, setDescription] = useState(initialData?.description || '');
+
+  const handleSave = () => {
+    if (!title.trim() || !company.trim()) {
+      return;
+    }
+    onSave({
+      id: initialData?.id,
+      title: title.trim(),
+      company: company.trim(),
+      startDate,
+      endDate: current ? null : endDate,
+      current,
+      description: description.trim()
+    });
+  };
+
+  return (
+    <View style={expStyles.overlay}>
+      <View style={expStyles.container}>
+        <View style={expStyles.header}>
+          <Text style={expStyles.title}>İş Deneyimi Ekle</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Ionicons name="close" size={24} color="#9ca3af" />
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView style={expStyles.form}>
+          <View style={expStyles.inputGroup}>
+            <Text style={expStyles.label}>Pozisyon *</Text>
+            <TextInput
+              style={expStyles.input}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Yazılım Geliştirici"
+              placeholderTextColor="#6b7280"
+            />
+          </View>
+          
+          <View style={expStyles.inputGroup}>
+            <Text style={expStyles.label}>Şirket *</Text>
+            <TextInput
+              style={expStyles.input}
+              value={company}
+              onChangeText={setCompany}
+              placeholder="ABC Teknoloji"
+              placeholderTextColor="#6b7280"
+            />
+          </View>
+          
+          <View style={expStyles.row}>
+            <View style={[expStyles.inputGroup, { flex: 1 }]}>
+              <Text style={expStyles.label}>Başlangıç</Text>
+              <TextInput
+                style={expStyles.input}
+                value={startDate}
+                onChangeText={setStartDate}
+                placeholder="2020"
+                placeholderTextColor="#6b7280"
+              />
+            </View>
+            <View style={[expStyles.inputGroup, { flex: 1, marginLeft: 12 }]}>
+              <Text style={expStyles.label}>Bitiş</Text>
+              <TextInput
+                style={[expStyles.input, current && { opacity: 0.5 }]}
+                value={endDate}
+                onChangeText={setEndDate}
+                placeholder="2023"
+                placeholderTextColor="#6b7280"
+                editable={!current}
+              />
+            </View>
+          </View>
+          
+          <TouchableOpacity 
+            style={expStyles.checkboxRow}
+            onPress={() => setCurrent(!current)}
+          >
+            <View style={[expStyles.checkbox, current && expStyles.checkboxChecked]}>
+              {current && <Ionicons name="checkmark" size={16} color="#fff" />}
+            </View>
+            <Text style={expStyles.checkboxLabel}>Hala burada çalışıyorum</Text>
+          </TouchableOpacity>
+          
+          <View style={expStyles.inputGroup}>
+            <Text style={expStyles.label}>Açıklama</Text>
+            <TextInput
+              style={[expStyles.input, { minHeight: 80 }]}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Yaptığınız işleri kısaca açıklayın..."
+              placeholderTextColor="#6b7280"
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+        </ScrollView>
+        
+        <TouchableOpacity style={expStyles.saveButton} onPress={handleSave}>
+          <Text style={expStyles.saveButtonText}>Kaydet</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+};
+
+const expStyles = StyleSheet.create({
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' },
+  container: { backgroundColor: '#1f2937', borderTopLeftRadius: 20, borderTopRightRadius: 20, maxHeight: '80%' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16, borderBottomWidth: 1, borderBottomColor: '#374151' },
+  title: { fontSize: 18, fontWeight: '600', color: '#fff' },
+  form: { padding: 16 },
+  inputGroup: { marginBottom: 16 },
+  label: { color: '#9ca3af', fontSize: 14, marginBottom: 8 },
+  input: { backgroundColor: '#374151', borderRadius: 12, padding: 14, color: '#fff', fontSize: 16 },
+  row: { flexDirection: 'row' },
+  checkboxRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  checkbox: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: '#6366f1', justifyContent: 'center', alignItems: 'center', marginRight: 12 },
+  checkboxChecked: { backgroundColor: '#6366f1' },
+  checkboxLabel: { color: '#e5e7eb', fontSize: 15 },
+  saveButton: { backgroundColor: '#6366f1', margin: 16, padding: 16, borderRadius: 12, alignItems: 'center' },
+  saveButtonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+});
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
