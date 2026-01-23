@@ -759,4 +759,100 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 12,
   },
+  // Skills styles
+  skillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  skillTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#6366f120',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  skillText: {
+    color: '#6366f1',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  addSkillRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  addSkillButton: {
+    backgroundColor: '#6366f1',
+    width: 50,
+    height: 50,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Experience styles
+  experienceCard: {
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+  experienceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  experienceTitle: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  experienceCompany: {
+    color: '#6366f1',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  experienceDate: {
+    color: '#9ca3af',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  experienceDescription: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  addExperienceButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#6366f1',
+    borderRadius: 12,
+    borderStyle: 'dashed',
+    gap: 8,
+  },
+  addExperienceText: {
+    color: '#6366f1',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+  // Social styles
+  socialInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 12,
+  },
+  socialIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#1f2937',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 });
