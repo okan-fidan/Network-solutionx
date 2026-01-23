@@ -40,7 +40,19 @@ export default function LoginScreen() {
     try {
       console.log('Calling signIn...');
       await signIn(email, password);
-      console.log('signIn successful, navigating to tabs...');
+      console.log('signIn successful');
+      
+      // Email doğrulama kontrolü
+      if (auth.currentUser) {
+        await reload(auth.currentUser);
+        if (!auth.currentUser.emailVerified) {
+          console.log('Email not verified, redirecting to verify-email...');
+          router.replace('/(auth)/verify-email');
+          return;
+        }
+      }
+      
+      console.log('Email verified, navigating to tabs...');
       router.replace('/(tabs)');
       console.log('Navigation called');
     } catch (error: any) {
