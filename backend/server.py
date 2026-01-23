@@ -3211,13 +3211,13 @@ async def admin_bulk_update_description(data: dict, current_user: dict = Depends
 # Otomatik Avatar Oluşturma - İsme göre renk ve harf
 @api_router.post("/admin/generate-avatars")
 async def admin_generate_avatars(data: dict, current_user: dict = Depends(get_current_user)):
-    """Tüm gruplar için isimlerine göre otomatik avatar oluştur"""
+    """Tüm gruplar için isimlerine göre otomatik avatar/resim oluştur"""
     if not await check_global_admin(current_user):
         raise HTTPException(status_code=403, detail="Admin yetkisi gerekiyor")
     
-    target = data.get('target', 'subgroups')  # 'subgroups' veya 'communities'
+    target = data.get('target', 'all')  # 'subgroups', 'communities' veya 'all'
     
-    # Renk paleti - modern ve profesyonel
+    # Renk paleti - modern ve profesyonel (fallback için)
     colors = [
         '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f59e0b', 
         '#10b981', '#14b8a6', '#06b6d4', '#3b82f6', '#6b7280'
@@ -3229,18 +3229,24 @@ async def admin_generate_avatars(data: dict, current_user: dict = Depends(get_cu
         subgroups = await db.subgroups.find({}).to_list(1000)
         for sg in subgroups:
             name = sg.get('name', 'G')
-            # İsmin baş harfini al
-            initial = name[0].upper() if name else 'G'
-            # İsme göre tutarlı renk seç
-            color_index = sum(ord(c) for c in name) % len(colors)
-            color = colors[color_index]
             
-            # SVG tabanlı avatar URL'i oluştur (placeholder API)
-            avatar_url = f"https://ui-avatars.com/api/?name={initial}&background={color[1:]}&color=fff&size=200&bold=true&font-size=0.5"
+            # Alt grup tipine göre resim seç
+            image_url = None
+            for sg_type, img_url in SUBGROUP_IMAGES.items():
+                if sg_type in name:
+                    image_url = img_url
+                    break
+            
+            # Eğer uygun resim bulunamadıysa, avatar oluştur
+            if not image_url:
+                initial = name[0].upper() if name else 'G'
+                color_index = sum(ord(c) for c in name) % len(colors)
+                color = colors[color_index]
+                image_url = f"https://ui-avatars.com/api/?name={initial}&background={color[1:]}&color=fff&size=200&bold=true&font-size=0.5"
             
             await db.subgroups.update_one(
                 {"id": sg['id']},
-                {"$set": {"imageUrl": avatar_url, "avatarColor": color, "avatarInitial": initial}}
+                {"$set": {"imageUrl": image_url}}
             )
             updated_count += 1
     
@@ -3248,20 +3254,33 @@ async def admin_generate_avatars(data: dict, current_user: dict = Depends(get_cu
         communities = await db.communities.find({}).to_list(100)
         for c in communities:
             name = c.get('name', 'T')
-            initial = name[0].upper() if name else 'T'
-            color_index = sum(ord(char) for char in name) % len(colors)
-            color = colors[color_index]
+            city = c.get('city', '')
             
-            avatar_url = f"https://ui-avatars.com/api/?name={initial}&background={color[1:]}&color=fff&size=200&bold=true&font-size=0.5"
+            # Şehre göre resim seç
+            image_url = CITY_IMAGES.get(city)
+            
+            # Eğer şehir resmi yoksa, genel girişimcilik resmi
+            if not image_url:
+                # Genel business/entrepreneur resimleri
+                general_images = [
+                    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&h=400&fit=crop",  # Team meeting
+                    "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=400&fit=crop",  # Business growth
+                    "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=400&fit=crop",  # Collaboration
+                    "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&h=400&fit=crop",  # Business meeting
+                    "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=400&fit=crop",  # Startup team
+                ]
+                # Şehir ismine göre tutarlı resim seç
+                image_index = sum(ord(c) for c in city) % len(general_images) if city else 0
+                image_url = general_images[image_index]
             
             await db.communities.update_one(
                 {"id": c['id']},
-                {"$set": {"imageUrl": avatar_url, "avatarColor": color, "avatarInitial": initial}}
+                {"$set": {"imageUrl": image_url}}
             )
             updated_count += 1
     
     return {
-        "message": f"{updated_count} avatar oluşturuldu",
+        "message": f"{updated_count} topluluk için resim güncellendi",
         "updatedCount": updated_count
     }
 
