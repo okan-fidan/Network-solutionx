@@ -430,6 +430,7 @@ const styles = StyleSheet.create({
   // Community Card
   communityCard: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16 },
   communityIcon: { width: 52, height: 52, borderRadius: 14, justifyContent: 'center', alignItems: 'center' },
+  communityImage: { width: 52, height: 52, borderRadius: 14 },
   communityInfo: { flex: 1, marginLeft: 14 },
   communityName: { fontSize: 16, fontWeight: '600', marginBottom: 4 },
   communityMeta: { flexDirection: 'row', alignItems: 'center', gap: 4 },
