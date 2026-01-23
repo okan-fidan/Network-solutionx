@@ -61,16 +61,25 @@ export default function SignupScreen() {
       if (auth.currentUser) {
         try {
           await sendEmailVerification(auth.currentUser);
-          console.log('Verification email sent!');
-        } catch (verifyError) {
+          console.log('Verification email sent to:', auth.currentUser.email);
+          Alert.alert(
+            'Kayıt Başarılı! ✉️',
+            `${email} adresine doğrulama emaili gönderildi. Lütfen gelen kutunuzu (ve spam klasörünü) kontrol edin.`,
+            [{ text: 'Tamam', onPress: () => router.replace('/(auth)/verify-email') }]
+          );
+        } catch (verifyError: any) {
           console.log('Could not send verification email:', verifyError);
+          // Hata olsa bile devam et, verify-email sayfasında tekrar deneyebilir
+          Alert.alert(
+            'Kayıt Başarılı',
+            'Hesabınız oluşturuldu ancak doğrulama emaili gönderilemedi. Sonraki sayfada tekrar deneyebilirsiniz.',
+            [{ text: 'Tamam', onPress: () => router.replace('/(auth)/verify-email') }]
+          );
         }
+      } else {
+        // currentUser yoksa yine de verify-email sayfasına git
+        router.replace('/(auth)/verify-email');
       }
-      
-      // Doğrulama sayfasına yönlendir
-      console.log('Navigating to verify-email...');
-      router.replace('/(auth)/verify-email');
-      console.log('Navigation called');
     } catch (error: any) {
       console.error('Signup error:', error);
       let message = 'Kayıt yapılamadı';
