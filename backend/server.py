@@ -1195,33 +1195,6 @@ async def send_subgroup_message(request: Request, subgroup_id: str, message_data
     
     return new_message
 
-@api_router.delete("/subgroups/{subgroup_id}/messages/{message_id}")
-async def delete_subgroup_message(subgroup_id: str, message_id: str, current_user: dict = Depends(get_current_user)):
-    """Grup mesajını sil"""
-    message = await db.messages.find_one({"id": message_id, "groupId": subgroup_id})
-    if not message:
-        raise HTTPException(status_code=404, detail="Mesaj bulunamadı")
-
-    # Check if user owns the message
-    if message['senderId'] != current_user['uid']:
-        # Check if user is admin
-        user = await db.users.find_one({"uid": current_user['uid']})
-        is_global_admin = user.get('isAdmin', False) or user.get('email', '').lower() == ADMIN_EMAIL.lower()
-        
-        subgroup = await db.subgroups.find_one({"id": subgroup_id})
-        is_group_admin = current_user['uid'] in subgroup.get('groupAdmins', []) if subgroup else False
-        
-        if not is_global_admin and not is_group_admin:
-            raise HTTPException(status_code=403, detail="Bu mesajı silme yetkiniz yok")
-
-    await db.messages.update_one(
-        {"id": message_id},
-        {"$set": {"deletedForEveryone": True, "content": "Bu mesaj silindi", "isDeleted": True}}
-    )
-    
-    await sio.emit('message_deleted', {"messageId": message_id}, room=subgroup_id)
-    return {"message": "Mesaj silindi"}
-
 @api_router.put("/subgroups/{subgroup_id}/messages/{message_id}")
 async def edit_subgroup_message(subgroup_id: str, message_id: str, data: dict, current_user: dict = Depends(get_current_user)):
     """Grup mesajını düzenle"""
