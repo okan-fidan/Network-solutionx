@@ -124,6 +124,11 @@ export default function SignupScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
+            <Image 
+              source={{ uri: LOGO_URL }} 
+              style={styles.logo}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>Kayıt Ol</Text>
             <Text style={styles.subtitle}>Girişimci topluluğuna katılın</Text>
           </View>
