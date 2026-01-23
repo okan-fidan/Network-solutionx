@@ -1545,13 +1545,21 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
 
 @api_router.get("/posts")
 async def get_posts(current_user: dict = Depends(get_current_user)):
-    posts = await db.posts.find().sort("timestamp", -1).limit(50).to_list(50)
+    # Yeniden eskiye sıralı gönderiler - timestamp veya createdAt alanına göre
+    posts = await db.posts.find().sort([("timestamp", -1), ("createdAt", -1)]).limit(50).to_list(50)
+    
+    # Timestamp'i olmayan gönderiler için createdAt'i kullan
     for post in posts:
         if '_id' in post:
             del post['_id']
         post['isLiked'] = current_user['uid'] in post.get('likes', [])
         post['likeCount'] = len(post.get('likes', []))
         post['commentCount'] = len(post.get('comments', []))
+        
+        # Timestamp yoksa createdAt'i kullan
+        if not post.get('timestamp') and post.get('createdAt'):
+            post['timestamp'] = post['createdAt']
+    
     return posts
 
 @api_router.post("/posts")
