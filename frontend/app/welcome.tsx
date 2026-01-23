@@ -5,9 +5,9 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  FlatList,
-  Animated,
+  ScrollView,
   StatusBar,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -95,10 +95,9 @@ const slides: OnboardingSlide[] = [
   },
 ];
 
-export default function OnboardingScreen() {
+export default function WelcomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const flatListRef = useRef<FlatList>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
   const router = useRouter();
 
   const handleSkip = async () => {
@@ -108,194 +107,131 @@ export default function OnboardingScreen() {
 
   const handleNext = async () => {
     if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
+      const nextIndex = currentIndex + 1;
+      scrollViewRef.current?.scrollTo({ x: nextIndex * width, animated: true });
+      setCurrentIndex(nextIndex);
     } else {
       await AsyncStorage.setItem('onboarding_completed', 'true');
       router.replace('/(auth)/login');
     }
   };
 
-  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => {
-    const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-    
-    const scale = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.8, 1, 0.8],
-      extrapolate: 'clamp',
-    });
-
-    const opacity = scrollX.interpolate({
-      inputRange,
-      outputRange: [0.4, 1, 0.4],
-      extrapolate: 'clamp',
-    });
-
-    const translateY = scrollX.interpolate({
-      inputRange,
-      outputRange: [50, 0, 50],
-      extrapolate: 'clamp',
-    });
-
-    return (
-      <View style={styles.slide}>
-        <Animated.View style={[styles.content, { opacity, transform: [{ scale }, { translateY }] }]}>
-          {/* Animated Icon */}
-          <LinearGradient
-            colors={item.iconBg}
-            style={styles.iconContainer}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <Ionicons name={item.icon} size={64} color="#fff" />
-          </LinearGradient>
-
-          {/* Title */}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title}>{item.title}</Text>
-            <Text style={styles.highlight}>{item.highlight}</Text>
-          </View>
-
-          {/* Description */}
-          <Text style={styles.description}>{item.description}</Text>
-
-          {/* Features */}
-          <View style={styles.featuresContainer}>
-            {item.features.map((feature, idx) => (
-              <Animated.View 
-                key={idx} 
-                style={[
-                  styles.featureItem,
-                  {
-                    opacity: scrollX.interpolate({
-                      inputRange,
-                      outputRange: [0, 1, 0],
-                      extrapolate: 'clamp',
-                    }),
-                    transform: [{
-                      translateX: scrollX.interpolate({
-                        inputRange,
-                        outputRange: [50 * (idx + 1), 0, -50 * (idx + 1)],
-                        extrapolate: 'clamp',
-                      }),
-                    }],
-                  }
-                ]}
-              >
-                <View style={[styles.featureIcon, { backgroundColor: item.iconBg[0] + '20' }]}>
-                  <Ionicons name={feature.icon} size={20} color={item.iconBg[0]} />
-                </View>
-                <Text style={styles.featureText}>{feature.text}</Text>
-              </Animated.View>
-            ))}
-          </View>
-        </Animated.View>
-      </View>
-    );
+  const handleScroll = (event: any) => {
+    const offsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(offsetX / width);
+    if (index !== currentIndex && index >= 0 && index < slides.length) {
+      setCurrentIndex(index);
+    }
   };
 
-  const renderPagination = () => {
-    return (
-      <View style={styles.pagination}>
-        {slides.map((_, index) => {
-          const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-          
-          const dotWidth = scrollX.interpolate({
-            inputRange,
-            outputRange: [8, 24, 8],
-            extrapolate: 'clamp',
-          });
-
-          const dotOpacity = scrollX.interpolate({
-            inputRange,
-            outputRange: [0.4, 1, 0.4],
-            extrapolate: 'clamp',
-          });
-
-          return (
-            <Animated.View
-              key={index}
-              style={[
-                styles.dot,
-                {
-                  width: dotWidth,
-                  opacity: dotOpacity,
-                  backgroundColor: currentIndex === index ? '#6366f1' : '#6b7280',
-                },
-              ]}
-            />
-          );
-        })}
-      </View>
-    );
-  };
+  const currentSlide = slides[currentIndex];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Background Gradient */}
+      {/* Background */}
       <LinearGradient
-        colors={['#0a0a0a', '#1a1a2e', '#0a0a0a']}
+        colors={['#0f0f1a', '#1a1a2e', '#0f0f1a']}
         style={StyleSheet.absoluteFill}
       />
 
-      {/* Skip Button */}
-      <SafeAreaView edges={['top']} style={styles.header}>
-        <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-          <Ionicons name="close" size={28} color="#9ca3af" />
-        </TouchableOpacity>
-        <Text style={styles.pageIndicator}>{currentIndex + 1} / {slides.length}</Text>
-      </SafeAreaView>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Ionicons name="close" size={26} color="#9ca3af" />
+          </TouchableOpacity>
+          <Text style={styles.pageIndicator}>{currentIndex + 1} / {slides.length}</Text>
+        </View>
 
-      {/* Slides */}
-      <Animated.FlatList
-        ref={flatListRef}
-        data={slides}
-        renderItem={renderSlide}
-        keyExtractor={(item) => item.id}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        bounces={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
-          { useNativeDriver: true }
-        )}
-        onMomentumScrollEnd={(event) => {
-          const index = Math.round(event.nativeEvent.contentOffset.x / width);
-          setCurrentIndex(index);
-        }}
-        scrollEventThrottle={16}
-      />
+        {/* Content */}
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          onMomentumScrollEnd={handleScroll}
+          scrollEventThrottle={16}
+          style={styles.scrollView}
+        >
+          {slides.map((slide, index) => (
+            <View key={slide.id} style={styles.slide}>
+              {/* Icon */}
+              <LinearGradient
+                colors={slide.iconBg}
+                style={styles.iconContainer}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+              >
+                <Ionicons name={slide.icon} size={56} color="#fff" />
+              </LinearGradient>
 
-      {/* Bottom Section */}
-      <SafeAreaView edges={['bottom']} style={styles.bottomSection}>
-        {renderPagination()}
-        
-        <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.8}>
-          <LinearGradient
-            colors={['#6366f1', '#4f46e5']}
-            style={styles.nextButtonGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          >
-            <Text style={styles.nextButtonText}>
-              {currentIndex === slides.length - 1 ? 'Başlayalım!' : 'Devam Et'}
-            </Text>
-            <Ionicons 
-              name={currentIndex === slides.length - 1 ? 'rocket' : 'arrow-forward'} 
-              size={22} 
-              color="#fff" 
-            />
-          </LinearGradient>
-        </TouchableOpacity>
+              {/* Title */}
+              <Text style={styles.title}>{slide.title}</Text>
+              <Text style={[styles.highlight, { color: slide.iconBg[0] }]}>{slide.highlight}</Text>
 
-        {currentIndex === slides.length - 1 && (
-          <Text style={styles.alreadyMember}>
-            Zaten üye misiniz?{' '}
-            <Text style={styles.loginLink} onPress={handleSkip}>Giriş Yapın</Text>
-          </Text>
-        )}
+              {/* Description */}
+              <Text style={styles.description}>{slide.description}</Text>
+
+              {/* Features */}
+              <View style={styles.featuresContainer}>
+                {slide.features.map((feature, idx) => (
+                  <View key={idx} style={styles.featureItem}>
+                    <View style={[styles.featureIcon, { backgroundColor: slide.iconBg[0] + '20' }]}>
+                      <Ionicons name={feature.icon} size={20} color={slide.iconBg[0]} />
+                    </View>
+                    <Text style={styles.featureText}>{feature.text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+
+        {/* Bottom Section */}
+        <View style={styles.bottomSection}>
+          {/* Pagination Dots */}
+          <View style={styles.pagination}>
+            {slides.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  index === currentIndex ? styles.dotActive : styles.dotInactive,
+                ]}
+              />
+            ))}
+          </View>
+
+          {/* Next Button */}
+          <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.8}>
+            <LinearGradient
+              colors={currentSlide.iconBg}
+              style={styles.nextButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.nextButtonText}>
+                {currentIndex === slides.length - 1 ? 'Başlayalım!' : 'Devam Et'}
+              </Text>
+              <Ionicons 
+                name={currentIndex === slides.length - 1 ? 'rocket' : 'arrow-forward'} 
+                size={22} 
+                color="#fff" 
+              />
+            </LinearGradient>
+          </TouchableOpacity>
+
+          {/* Login Link on Last Slide */}
+          {currentIndex === slides.length - 1 && (
+            <TouchableOpacity onPress={handleSkip} style={styles.loginLinkContainer}>
+              <Text style={styles.alreadyMember}>
+                Zaten üye misiniz? <Text style={styles.loginLink}>Giriş Yapın</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -306,23 +242,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#0a0a0a',
   },
+  safeArea: {
+    flex: 1,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 8,
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+    paddingVertical: 12,
   },
   skipButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -331,71 +265,58 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  slide: {
-    width,
+  scrollView: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 80,
-    paddingBottom: 20,
   },
-  content: {
+  slide: {
+    width: width,
+    paddingHorizontal: 32,
     alignItems: 'center',
-    width: '100%',
+    justifyContent: 'center',
   },
   iconContainer: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 40,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.4,
-    shadowRadius: 40,
-    elevation: 20,
-  },
-  titleContainer: {
-    alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 32,
   },
   title: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '300',
     color: '#fff',
     textAlign: 'center',
   },
   highlight: {
-    fontSize: 36,
+    fontSize: 34,
     fontWeight: '800',
-    color: '#6366f1',
     textAlign: 'center',
+    marginBottom: 16,
   },
   description: {
     fontSize: 16,
     color: '#9ca3af',
     textAlign: 'center',
     lineHeight: 26,
-    marginBottom: 40,
-    paddingHorizontal: 10,
+    marginBottom: 32,
+    paddingHorizontal: 8,
   },
   featuresContainer: {
     width: '100%',
-    gap: 16,
+    gap: 12,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    borderRadius: 16,
-    gap: 14,
+    padding: 14,
+    borderRadius: 14,
+    gap: 12,
   },
   featureIcon: {
-    width: 44,
-    height: 44,
+    width: 42,
+    height: 42,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -408,38 +329,48 @@ const styles = StyleSheet.create({
   },
   bottomSection: {
     paddingHorizontal: 32,
-    paddingBottom: 20,
+    paddingBottom: 24,
   },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
     gap: 8,
   },
   dot: {
     height: 8,
     borderRadius: 4,
   },
+  dotActive: {
+    width: 24,
+    backgroundColor: '#6366f1',
+  },
+  dotInactive: {
+    width: 8,
+    backgroundColor: '#4b5563',
+  },
   nextButton: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
-    marginBottom: 16,
   },
   nextButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    paddingVertical: 16,
     gap: 10,
   },
   nextButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
   },
+  loginLinkContainer: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
   alreadyMember: {
-    textAlign: 'center',
     color: '#6b7280',
     fontSize: 14,
   },
