@@ -397,19 +397,50 @@ async def get_user_by_id(uid: str, current_user: dict = Depends(get_current_user
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
     
     # Hassas bilgileri çıkar
-    safe_fields = ['uid', 'firstName', 'lastName', 'city', 'occupation', 'profileImageUrl', 'bio', 'isAdmin', 'createdAt', 'communities']
+    safe_fields = ['uid', 'firstName', 'lastName', 'city', 'occupation', 'profileImageUrl', 'bio', 'isAdmin', 'createdAt', 'communities', 'skills', 'workExperience', 'socialLinks']
     safe_user = {k: user.get(k) for k in safe_fields if k in user}
     
     return safe_user
 
 @api_router.put("/user/profile")
 async def update_user_profile(updates: dict, current_user: dict = Depends(get_current_user)):
-    allowed_fields = ['firstName', 'lastName', 'phone', 'city', 'occupation', 'profileImageUrl', 'bio']
+    allowed_fields = ['firstName', 'lastName', 'phone', 'city', 'occupation', 'profileImageUrl', 'bio', 'skills', 'workExperience', 'socialLinks']
     filtered_updates = {k: v for k, v in updates.items() if k in allowed_fields}
     
     # Biyografi için 150 karakter sınırı (Instagram standardı)
     if 'bio' in filtered_updates and filtered_updates['bio']:
         filtered_updates['bio'] = sanitize_input(filtered_updates['bio'][:150], max_length=150)
+    
+    # Skills (beceriler) - max 10 beceri, her biri max 30 karakter
+    if 'skills' in filtered_updates:
+        skills = filtered_updates['skills']
+        if isinstance(skills, list):
+            filtered_updates['skills'] = [sanitize_input(s[:30], max_length=30) for s in skills[:10] if s]
+    
+    # Work Experience (iş deneyimi) - max 10 deneyim
+    if 'workExperience' in filtered_updates:
+        experiences = filtered_updates['workExperience']
+        if isinstance(experiences, list):
+            validated_exp = []
+            for exp in experiences[:10]:
+                if isinstance(exp, dict):
+                    validated_exp.append({
+                        "id": exp.get('id', str(uuid.uuid4())),
+                        "title": sanitize_input(exp.get('title', '')[:100], max_length=100),
+                        "company": sanitize_input(exp.get('company', '')[:100], max_length=100),
+                        "startDate": exp.get('startDate'),
+                        "endDate": exp.get('endDate'),
+                        "current": exp.get('current', False),
+                        "description": sanitize_input(exp.get('description', '')[:500], max_length=500)
+                    })
+            filtered_updates['workExperience'] = validated_exp
+    
+    # Social Links - max 5 link
+    if 'socialLinks' in filtered_updates:
+        links = filtered_updates['socialLinks']
+        if isinstance(links, dict):
+            allowed_socials = ['linkedin', 'twitter', 'instagram', 'website', 'github']
+            filtered_updates['socialLinks'] = {k: v for k, v in links.items() if k in allowed_socials}
     
     await db.users.update_one(
         {"uid": current_user['uid']},
