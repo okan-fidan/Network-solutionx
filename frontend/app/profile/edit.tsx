@@ -49,8 +49,22 @@ export default function EditProfileScreen() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [citySearch, setCitySearch] = useState('');
+  
+  // Yeni: Beceriler (Skills)
+  const [skills, setSkills] = useState<string[]>(userProfile?.skills || []);
+  const [newSkill, setNewSkill] = useState('');
+  
+  // Yeni: İş Deneyimi
+  const [workExperience, setWorkExperience] = useState<any[]>(userProfile?.workExperience || []);
+  const [showAddExperience, setShowAddExperience] = useState(false);
+  const [editingExperience, setEditingExperience] = useState<any>(null);
+  
+  // Yeni: Sosyal Medya Linkleri
+  const [socialLinks, setSocialLinks] = useState<any>(userProfile?.socialLinks || {});
 
   const BIO_MAX_LENGTH = 150; // Instagram standardı
+  const SKILLS_MAX = 10;
+  const SKILL_MAX_LENGTH = 30;
 
   const filteredCities = citySearch
     ? TURKISH_CITIES.filter(c => 
