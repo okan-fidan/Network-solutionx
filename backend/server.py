@@ -1050,7 +1050,36 @@ async def get_subgroup_messages(subgroup_id: str, current_user: dict = Depends(g
         if sender and not msg.get('senderOccupation'):
             msg['senderOccupation'] = sender.get('occupation', '')
 
+    # Okunmamış mesajları okundu olarak işaretle
+    await db.messages.update_many(
+        {
+            "groupId": subgroup_id,
+            "senderId": {"$ne": current_user['uid']},
+            "readBy": {"$nin": [current_user['uid']]}
+        },
+        {"$addToSet": {"readBy": current_user['uid']}}
+    )
+
     return messages
+
+@api_router.put("/subgroups/{subgroup_id}/read")
+async def mark_subgroup_as_read(subgroup_id: str, current_user: dict = Depends(get_current_user)):
+    """Grup mesajlarını okundu olarak işaretle"""
+    subgroup = await db.subgroups.find_one({"id": subgroup_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Alt grup bulunamadı")
+    
+    # Tüm okunmamış mesajları okundu olarak işaretle
+    await db.messages.update_many(
+        {
+            "groupId": subgroup_id,
+            "senderId": {"$ne": current_user['uid']},
+            "readBy": {"$nin": [current_user['uid']]}
+        },
+        {"$addToSet": {"readBy": current_user['uid']}}
+    )
+    
+    return {"message": "Mesajlar okundu olarak işaretlendi"}
 
 @api_router.post("/subgroups/{subgroup_id}/messages")
 @limiter.limit("60/minute")  # Rate limiting - dakikada 60 mesaj
