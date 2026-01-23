@@ -1855,13 +1855,63 @@ async def get_my_services(current_user: dict = Depends(get_current_user)):
 # ==================== NOTIFICATIONS ====================
 
 @api_router.get("/notifications")
-async def get_notifications(current_user: dict = Depends(get_current_user)):
-    """Kullanıcının bildirimlerini döner"""
-    notifications = await db.notifications.find({"userId": current_user['uid']}).sort("timestamp", -1).to_list(50)
+async def get_notifications(
+    current_user: dict = Depends(get_current_user),
+    type: str = None,  # Bildirim tipi filtresi: 'message', 'like', 'comment', 'follow', 'mention', 'event'
+    unread_only: bool = False  # Sadece okunmamışları getir
+):
+    """Kullanıcının bildirimlerini döner - filtreleme destekli"""
+    query = {"userId": current_user['uid']}
+    
+    # Tip filtresi
+    if type:
+        query["type"] = type
+    
+    # Sadece okunmamışlar
+    if unread_only:
+        query["isRead"] = False
+    
+    notifications = await db.notifications.find(query).sort("timestamp", -1).to_list(50)
     for notification in notifications:
         if '_id' in notification:
             del notification['_id']
     return notifications
+
+# Bildirim ayarları endpoint'i
+@api_router.get("/user/notification-settings")
+async def get_notification_settings(current_user: dict = Depends(get_current_user)):
+    """Kullanıcının bildirim ayarlarını getir"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    settings = user.get('notificationSettings', {
+        "messages": True,
+        "likes": True,
+        "comments": True,
+        "follows": True,
+        "mentions": True,
+        "events": True,
+        "announcements": True,
+        "emailNotifications": False,
+        "quietHoursEnabled": False,
+        "quietHoursStart": "22:00",
+        "quietHoursEnd": "08:00"
+    })
+    return settings
+
+@api_router.put("/user/notification-settings")
+async def update_notification_settings(settings: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının bildirim ayarlarını güncelle"""
+    allowed_settings = [
+        'messages', 'likes', 'comments', 'follows', 'mentions', 
+        'events', 'announcements', 'emailNotifications',
+        'quietHoursEnabled', 'quietHoursStart', 'quietHoursEnd'
+    ]
+    filtered_settings = {k: v for k, v in settings.items() if k in allowed_settings}
+    
+    await db.users.update_one(
+        {"uid": current_user['uid']},
+        {"$set": {"notificationSettings": filtered_settings}}
+    )
+    return {"message": "Bildirim ayarları güncellendi"}
 
 @api_router.put("/notifications/{notification_id}/read")
 async def mark_notification_read(notification_id: str, current_user: dict = Depends(get_current_user)):
@@ -1882,6 +1932,12 @@ async def mark_all_notifications_read(current_user: dict = Depends(get_current_u
         {"$set": {"isRead": True}}
     )
     return {"message": "Tüm bildirimler okundu olarak işaretlendi"}
+
+@api_router.delete("/notifications")
+async def clear_all_notifications(current_user: dict = Depends(get_current_user)):
+    """Tüm bildirimleri sil"""
+    await db.notifications.delete_many({"userId": current_user['uid']})
+    return {"message": "Tüm bildirimler silindi"}
 
 # ==================== PINNED MESSAGES ====================
 
