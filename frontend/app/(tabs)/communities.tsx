@@ -133,9 +133,17 @@ export default function CommunitiesScreen() {
       onPress={() => router.push(`/community/${item.id}`)}
       activeOpacity={0.7}
     >
-      <View style={[styles.communityIcon, { backgroundColor: item.isMember ? '#10b98120' : colors.primary + '20' }]}>
-        <Ionicons name="people" size={24} color={item.isMember ? '#10b981' : colors.primary} />
-      </View>
+      {/* Topluluk Resmi */}
+      {item.imageUrl ? (
+        <Image 
+          source={{ uri: item.imageUrl }} 
+          style={styles.communityImage}
+        />
+      ) : (
+        <View style={[styles.communityIcon, { backgroundColor: item.isMember ? '#10b98120' : colors.primary + '20' }]}>
+          <Ionicons name="people" size={24} color={item.isMember ? '#10b981' : colors.primary} />
+        </View>
+      )}
       <View style={styles.communityInfo}>
         <Text style={[styles.communityName, { color: colors.text }]} numberOfLines={1}>{item.name}</Text>
         <View style={styles.communityMeta}>
