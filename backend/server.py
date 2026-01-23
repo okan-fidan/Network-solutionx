@@ -201,12 +201,27 @@ async def initialize_city_communities():
         if not existing:
             announcement_id = str(uuid.uuid4())
             community_id = str(uuid.uuid4())
+            
+            # Şehre göre resim seç
+            city_image = CITY_IMAGES.get(city)
+            if not city_image:
+                # Genel business resimleri
+                general_images = [
+                    "https://images.unsplash.com/photo-1556761175-5973dc0f32e7?w=400&h=400&fit=crop",
+                    "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=400&fit=crop",
+                    "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=400&fit=crop",
+                    "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&h=400&fit=crop",
+                    "https://images.unsplash.com/photo-1531482615713-2afd69097998?w=400&h=400&fit=crop",
+                ]
+                image_index = sum(ord(c) for c in city) % len(general_images)
+                city_image = general_images[image_index]
+            
             community = {
                 "id": community_id,
                 "name": f"{city} Girişimciler",
                 "description": f"{city} ilindeki girişimcilerin buluşma noktası",
                 "city": city,
-                "imageUrl": None,
+                "imageUrl": city_image,
                 "superAdmins": [],
                 "members": [],
                 "subGroups": [],
