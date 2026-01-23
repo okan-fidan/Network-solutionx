@@ -55,12 +55,30 @@ ADMIN_EMAIL = "metaticaretim@gmail.com"
 
 # Default subgroups for each community
 DEFAULT_SUBGROUPS = [
-    {"name": "Start", "description": "Yeni başlayanlar için başlangıç grubu", "isPublic": True, "requiresApproval": False},
-    {"name": "Gelişim", "description": "Gelişim odaklı girişimciler grubu", "isPublic": False},
-    {"name": "Master Mind", "description": "İleri seviye girişimciler için mastermind grubu", "isPublic": False},
-    {"name": "Değerlendirme", "description": "Performans ve ilerleme değerlendirme grubu", "isPublic": False},
-    {"name": "Duyurular", "description": "Topluluk duyuruları ve önemli bilgiler", "isPublic": True, "requiresApproval": False},
+    {"name": "Start", "description": "Yeni başlayanlar için başlangıç grubu", "isPublic": True, "requiresApproval": False, "imageKeyword": "startup-team"},
+    {"name": "Gelişim", "description": "Gelişim odaklı girişimciler grubu", "isPublic": False, "imageKeyword": "growth-business"},
+    {"name": "Master Mind", "description": "İleri seviye girişimciler için mastermind grubu", "isPublic": False, "imageKeyword": "leadership-meeting"},
+    {"name": "Değerlendirme", "description": "Performans ve ilerleme değerlendirme grubu", "isPublic": False, "imageKeyword": "analytics-chart"},
+    {"name": "Duyurular", "description": "Topluluk duyuruları ve önemli bilgiler", "isPublic": True, "requiresApproval": False, "imageKeyword": "announcement-megaphone"},
 ]
+
+# Topluluk konularına göre resim URL'leri
+SUBGROUP_IMAGES = {
+    "Start": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=400&h=400&fit=crop",
+    "Gelişim": "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=400&fit=crop",
+    "Master Mind": "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=400&h=400&fit=crop",
+    "Değerlendirme": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=400&fit=crop",
+    "Duyurular": "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=400&fit=crop",
+}
+
+# Şehir toplulukları için resimler (Türk şehirleri)
+CITY_IMAGES = {
+    "İstanbul": "https://images.unsplash.com/photo-1524231757912-21f4fe3a7200?w=400&h=400&fit=crop",
+    "Ankara": "https://images.unsplash.com/photo-1569094140464-f4e8be81c6a1?w=400&h=400&fit=crop",
+    "İzmir": "https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=400&h=400&fit=crop",
+    "Bursa": "https://images.unsplash.com/photo-1589824783299-e929c8a33a20?w=400&h=400&fit=crop",
+    "Antalya": "https://images.unsplash.com/photo-1593238739364-18cfde865065?w=400&h=400&fit=crop",
+}
 
 # ============================================
 # SECURITY UTILITIES - Güvenlik Araçları
