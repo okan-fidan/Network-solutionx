@@ -1,13 +1,11 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  ScrollView,
   StatusBar,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const { width, height } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
 
 interface OnboardingSlide {
   id: string;
@@ -34,7 +32,7 @@ const slides: OnboardingSlide[] = [
     iconBg: ['#6366f1', '#8b5cf6'],
     title: 'Girişimciliğin',
     highlight: 'Yeni Merkezi',
-    description: 'Türkiye\'nin en büyük girişimci ağına katılın. Binlerce girişimciyle tanışın, fikir alışverişi yapın.',
+    description: 'Türkiye\'nin en büyük girişimci ağına katılın. Binlerce girişimciyle tanışın!',
     features: [
       { icon: 'people', text: '10.000+ Aktif Girişimci' },
       { icon: 'location', text: '81 İlde Yerel Topluluklar' },
@@ -47,10 +45,10 @@ const slides: OnboardingSlide[] = [
     iconBg: ['#10b981', '#059669'],
     title: 'Bağlantı Kur,',
     highlight: 'İş Birliği Yap',
-    description: 'Şehrinizdeki girişimcilerle anlık mesajlaşın. Grup sohbetlerinde deneyimlerinizi paylaşın.',
+    description: 'Şehrinizdeki girişimcilerle anlık mesajlaşın ve deneyim paylaşın.',
     features: [
       { icon: 'flash', text: 'Anlık Mesajlaşma' },
-      { icon: 'people-circle', text: 'Özel Mastermind Grupları' },
+      { icon: 'people-circle', text: 'Mastermind Grupları' },
       { icon: 'notifications', text: 'Akıllı Bildirimler' },
     ],
   },
@@ -60,11 +58,11 @@ const slides: OnboardingSlide[] = [
     iconBg: ['#f59e0b', '#d97706'],
     title: 'Hizmetlerini',
     highlight: 'Tanıt & Keşfet',
-    description: 'Sunduğunuz hizmetleri sergileyin veya ihtiyacınız olan uzmanları bulun. İş fırsatlarını kaçırmayın!',
+    description: 'Sunduğunuz hizmetleri sergileyin veya ihtiyacınız olan uzmanları bulun!',
     features: [
       { icon: 'storefront', text: 'Hizmet Vitrini' },
       { icon: 'search', text: 'Uzman Arama' },
-      { icon: 'star', text: 'Değerlendirme Sistemi' },
+      { icon: 'star', text: 'Değerlendirmeler' },
     ],
   },
   {
@@ -73,11 +71,11 @@ const slides: OnboardingSlide[] = [
     iconBg: ['#ec4899', '#db2777'],
     title: 'Etkinliklere',
     highlight: 'Katıl & Öğren',
-    description: 'Online ve yüz yüze networking etkinlikleriyle çevrenizi genişletin. Her hafta yeni fırsatlar!',
+    description: 'Online ve yüz yüze networking etkinlikleriyle çevrenizi genişletin!',
     features: [
       { icon: 'videocam', text: 'Online Webinarlar' },
       { icon: 'cafe', text: 'Kahve Buluşmaları' },
-      { icon: 'trophy', text: 'Girişimci Yarışmaları' },
+      { icon: 'trophy', text: 'Yarışmalar' },
     ],
   },
   {
@@ -85,19 +83,18 @@ const slides: OnboardingSlide[] = [
     icon: 'sparkles',
     iconBg: ['#6366f1', '#4f46e5'],
     title: 'Hemen Başla,',
-    highlight: 'Ücretsiz!',
-    description: 'Tüm özellikler tamamen ücretsiz. Hemen kayıt olun ve girişimcilik yolculuğunuza güç katın!',
+    highlight: 'Tamamen Ücretsiz!',
+    description: 'Tüm özellikler ücretsiz. Hemen kayıt olun ve başlayın!',
     features: [
       { icon: 'checkmark-circle', text: '100% Ücretsiz' },
       { icon: 'shield-checkmark', text: 'Güvenli Platform' },
-      { icon: 'heart', text: 'Girişimciler İçin Tasarlandı' },
+      { icon: 'heart', text: 'Girişimciler İçin' },
     ],
   },
 ];
 
 export default function WelcomeScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const scrollViewRef = useRef<ScrollView>(null);
   const router = useRouter();
 
   const handleSkip = async () => {
@@ -107,30 +104,19 @@ export default function WelcomeScreen() {
 
   const handleNext = async () => {
     if (currentIndex < slides.length - 1) {
-      const nextIndex = currentIndex + 1;
-      scrollViewRef.current?.scrollTo({ x: nextIndex * width, animated: true });
-      setCurrentIndex(nextIndex);
+      setCurrentIndex(currentIndex + 1);
     } else {
       await AsyncStorage.setItem('onboarding_completed', 'true');
       router.replace('/(auth)/login');
     }
   };
 
-  const handleScroll = (event: any) => {
-    const offsetX = event.nativeEvent.contentOffset.x;
-    const index = Math.round(offsetX / width);
-    if (index !== currentIndex && index >= 0 && index < slides.length) {
-      setCurrentIndex(index);
-    }
-  };
-
-  const currentSlide = slides[currentIndex];
+  const slide = slides[currentIndex];
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Background */}
       <LinearGradient
         colors={['#0f0f1a', '#1a1a2e', '#0f0f1a']}
         style={StyleSheet.absoluteFill}
@@ -145,57 +131,46 @@ export default function WelcomeScreen() {
           <Text style={styles.pageIndicator}>{currentIndex + 1} / {slides.length}</Text>
         </View>
 
-        {/* Content */}
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={handleScroll}
-          scrollEventThrottle={16}
-          style={styles.scrollView}
-        >
-          {slides.map((slide, index) => (
-            <View key={slide.id} style={styles.slide}>
-              {/* Icon */}
-              <LinearGradient
-                colors={slide.iconBg}
-                style={styles.iconContainer}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-              >
-                <Ionicons name={slide.icon} size={56} color="#fff" />
-              </LinearGradient>
+        {/* Main Content */}
+        <View style={styles.content}>
+          {/* Icon */}
+          <LinearGradient
+            colors={slide.iconBg}
+            style={styles.iconContainer}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <Ionicons name={slide.icon} size={52} color="#fff" />
+          </LinearGradient>
 
-              {/* Title */}
-              <Text style={styles.title}>{slide.title}</Text>
-              <Text style={[styles.highlight, { color: slide.iconBg[0] }]}>{slide.highlight}</Text>
+          {/* Title */}
+          <Text style={styles.title}>{slide.title}</Text>
+          <Text style={[styles.highlight, { color: slide.iconBg[0] }]}>{slide.highlight}</Text>
 
-              {/* Description */}
-              <Text style={styles.description}>{slide.description}</Text>
+          {/* Description */}
+          <Text style={styles.description}>{slide.description}</Text>
 
-              {/* Features */}
-              <View style={styles.featuresContainer}>
-                {slide.features.map((feature, idx) => (
-                  <View key={idx} style={styles.featureItem}>
-                    <View style={[styles.featureIcon, { backgroundColor: slide.iconBg[0] + '20' }]}>
-                      <Ionicons name={feature.icon} size={20} color={slide.iconBg[0]} />
-                    </View>
-                    <Text style={styles.featureText}>{feature.text}</Text>
-                  </View>
-                ))}
+          {/* Features */}
+          <View style={styles.featuresContainer}>
+            {slide.features.map((feature, idx) => (
+              <View key={idx} style={styles.featureItem}>
+                <View style={[styles.featureIcon, { backgroundColor: slide.iconBg[0] + '20' }]}>
+                  <Ionicons name={feature.icon} size={18} color={slide.iconBg[0]} />
+                </View>
+                <Text style={styles.featureText}>{feature.text}</Text>
               </View>
-            </View>
-          ))}
-        </ScrollView>
+            ))}
+          </View>
+        </View>
 
         {/* Bottom Section */}
         <View style={styles.bottomSection}>
-          {/* Pagination Dots */}
+          {/* Pagination */}
           <View style={styles.pagination}>
             {slides.map((_, index) => (
-              <View
+              <TouchableOpacity
                 key={index}
+                onPress={() => setCurrentIndex(index)}
                 style={[
                   styles.dot,
                   index === currentIndex ? styles.dotActive : styles.dotInactive,
@@ -207,7 +182,7 @@ export default function WelcomeScreen() {
           {/* Next Button */}
           <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.8}>
             <LinearGradient
-              colors={currentSlide.iconBg}
+              colors={slide.iconBg}
               style={styles.nextButtonGradient}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
@@ -217,13 +192,12 @@ export default function WelcomeScreen() {
               </Text>
               <Ionicons 
                 name={currentIndex === slides.length - 1 ? 'rocket' : 'arrow-forward'} 
-                size={22} 
+                size={20} 
                 color="#fff" 
               />
             </LinearGradient>
           </TouchableOpacity>
 
-          {/* Login Link on Last Slide */}
           {currentIndex === slides.length - 1 && (
             <TouchableOpacity onPress={handleSkip} style={styles.loginLinkContainer}>
               <Text style={styles.alreadyMember}>
@@ -250,12 +224,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   skipButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -265,14 +239,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  scrollView: {
+  content: {
     flex: 1,
-  },
-  slide: {
-    width: width,
     paddingHorizontal: 28,
-    paddingTop: 20,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   iconContainer: {
     width: 100,
@@ -280,31 +251,31 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 28,
   },
   title: {
-    fontSize: 26,
+    fontSize: 28,
     fontWeight: '300',
     color: '#fff',
     textAlign: 'center',
   },
   highlight: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: 14,
   },
   description: {
     fontSize: 15,
     color: '#9ca3af',
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: 28,
     paddingHorizontal: 4,
   },
   featuresContainer: {
     width: '100%',
-    gap: 12,
+    gap: 10,
   },
   featureItem: {
     flexDirection: 'row',
@@ -315,27 +286,27 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   featureIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
+    width: 40,
+    height: 40,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
   featureText: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#e5e7eb',
     fontWeight: '500',
     flex: 1,
   },
   bottomSection: {
-    paddingHorizontal: 32,
-    paddingBottom: 24,
+    paddingHorizontal: 28,
+    paddingBottom: 20,
   },
   pagination: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 18,
     gap: 8,
   },
   dot: {
@@ -359,7 +330,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    gap: 10,
+    gap: 8,
   },
   nextButtonText: {
     color: '#fff',
@@ -367,7 +338,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   loginLinkContainer: {
-    marginTop: 16,
+    marginTop: 14,
     alignItems: 'center',
   },
   alreadyMember: {
