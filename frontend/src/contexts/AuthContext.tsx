@@ -131,8 +131,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signInWithEmailAndPassword(auth, email, password);
   };
 
-  const signUp = async (email: string, password: string) => {
-    await createUserWithEmailAndPassword(auth, email, password);
+  const signUp = async (email: string, password: string, gender?: string) => {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // Cinsiyeti backend'e kaydet
+    if (gender && userCredential.user) {
+      try {
+        const token = await userCredential.user.getIdToken();
+        await api.put('/api/user/profile', { gender }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (error) {
+        console.log('Gender save error:', error);
+      }
+    }
   };
 
   const signOut = async () => {
