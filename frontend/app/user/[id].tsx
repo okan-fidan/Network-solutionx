@@ -134,6 +134,11 @@ export default function UserProfileScreen() {
 
             <Text style={styles.name}>{profile.firstName} {profile.lastName}</Text>
             
+            {/* Bio */}
+            {profile.bio && (
+              <Text style={styles.bio}>{profile.bio}</Text>
+            )}
+            
             <View style={styles.badgeRow}>
               {profile.city && (
                 <View style={styles.badge}>
