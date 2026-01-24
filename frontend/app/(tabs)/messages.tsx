@@ -125,6 +125,7 @@ export default function MessagesScreen() {
               lastMessage: sg.lastMessage,
               lastMessageTime: sg.lastMessageTime,
               imageUrl: sg.imageUrl,
+              unreadCount: sg.unreadCount || 0,
             });
           }
         }
