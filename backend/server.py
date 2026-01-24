@@ -783,6 +783,14 @@ async def get_subgroup(subgroup_id: str, current_user: dict = Depends(get_curren
     subgroup['isGroupAdmin'] = current_user['uid'] in subgroup.get('groupAdmins', [])
     subgroup['hasPendingRequest'] = any(r.get('uid') == current_user['uid'] for r in subgroup.get('pendingRequests', []))
 
+    # Okunmamış mesaj sayısını hesapla
+    unread_count = await db.messages.count_documents({
+        "groupId": subgroup_id,
+        "senderId": {"$ne": current_user['uid']},
+        "readBy": {"$nin": [current_user['uid']]}
+    })
+    subgroup['unreadCount'] = unread_count
+
     community = await db.communities.find_one({"id": subgroup['communityId']})
     if community:
         subgroup['communityName'] = community['name']
