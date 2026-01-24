@@ -79,12 +79,19 @@ export default function AdminDashboard() {
 
   const menuItems = [
     {
+      icon: 'analytics',
+      title: 'Analytics Dashboard',
+      subtitle: 'Kullanıcı metrikleri, DAU, retention',
+      route: '/admin/analytics',
+      color: '#6366f1',
+      isNew: true,
+    },
+    {
       icon: 'calendar',
       title: 'Etkinlik Yönetimi',
       subtitle: 'Şehir etkinliklerini oluştur ve yönet',
       route: '/admin/events',
       color: '#f59e0b',
-      isNew: true,
     },
     {
       icon: 'color-wand',
