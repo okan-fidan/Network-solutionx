@@ -692,6 +692,9 @@ const createStyles = (colors: any, isDark: boolean) => StyleSheet.create({
     color: colors.text,
     flex: 1,
   },
+  chatNameUnread: {
+    fontWeight: '700',
+  },
   chatTime: {
     fontSize: 12,
     color: colors.textTertiary,
