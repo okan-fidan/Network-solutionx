@@ -186,11 +186,11 @@ class BackendTester:
         # 1. GET /api/notifications - Should require auth (403)
         self.test_endpoint("GET", "/notifications", 403, "GET /api/notifications (auth required)")
         
-        # 2. POST /api/users/push-token - Should require auth (403)
+        # 2. POST /api/user/push-token - Should require auth (403) - Fixed endpoint path
         push_token_data = {
             "token": "ExponentPushToken[test-token-123]"
         }
-        self.test_endpoint("POST", "/users/push-token", 403, "POST /api/users/push-token (auth required)", data=push_token_data)
+        self.test_endpoint("POST", "/user/push-token", 403, "POST /api/user/push-token (auth required)", data=push_token_data)
     
     def test_analytics_apis(self):
         """Test Analytics APIs from Turkish review request"""
