@@ -143,8 +143,9 @@ export default function MessagesScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadData();
-    }, [loadData])
+      // Sayfa her fokuslandığında yeniden yükle - unread count için kritik
+      loadData(true);
+    }, [user])
   );
 
   const onRefresh = useCallback(() => {
