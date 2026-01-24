@@ -261,6 +261,22 @@ export default function ProfileScreen() {
               )}
             </View>
 
+            {/* Beceriler - Profil üzerinde göster */}
+            {userProfile?.skills && userProfile.skills.length > 0 && (
+              <View style={styles.skillsRow}>
+                {userProfile.skills.slice(0, 4).map((skill: string, index: number) => (
+                  <View key={index} style={styles.skillBadge}>
+                    <Text style={styles.skillBadgeText}>{skill}</Text>
+                  </View>
+                ))}
+                {userProfile.skills.length > 4 && (
+                  <View style={styles.skillBadge}>
+                    <Text style={styles.skillBadgeText}>+{userProfile.skills.length - 4}</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Admin Badge */}
             {userProfile?.isAdmin && (
               <TouchableOpacity 
