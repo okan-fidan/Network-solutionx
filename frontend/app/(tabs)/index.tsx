@@ -318,9 +318,14 @@ export default function HomeScreen() {
         setShowWelcome(true);
       }
       
-      // Posts yükle
-      const postsResponse = await postApi.getAll();
-      const allPosts = postsResponse.data || [];
+      // Posts yükle - ilk sayfa
+      const postsResponse = await postApi.getAll(0, POSTS_PER_PAGE);
+      const postsData = postsResponse.data;
+      
+      // Yeni API formatı: { posts: [], total: number, hasMore: boolean }
+      const allPosts = postsData.posts || postsData || [];
+      setHasMorePosts(postsData.hasMore ?? true);
+      setCurrentPage(0);
       
       // Sabitlenmiş gönderileri ayır
       const pinned = allPosts.filter((p: any) => p.isPinned === true);
