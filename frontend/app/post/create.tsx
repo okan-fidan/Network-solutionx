@@ -327,12 +327,34 @@ export default function CreatePostScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {selectedVideo && (
+            <View style={styles.imagePreview}>
+              <Video
+                source={{ uri: selectedVideo }}
+                style={styles.selectedImage}
+                useNativeControls
+                resizeMode={ResizeMode.CONTAIN}
+                isLooping={false}
+              />
+              <TouchableOpacity
+                style={styles.removeImageButton}
+                onPress={() => setSelectedVideo(null)}
+              >
+                <Ionicons name="close-circle" size={28} color="#fff" />
+              </TouchableOpacity>
+              <View style={styles.videoBadge}>
+                <Ionicons name="videocam" size={16} color="#fff" />
+                <Text style={styles.videoBadgeText}>Video</Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
 
         <View style={styles.toolbar}>
-          <TouchableOpacity style={styles.toolbarButton} onPress={pickImage}>
-            <Ionicons name="image" size={24} color="#10b981" />
-            <Text style={styles.toolbarText}>Fotoğraf</Text>
+          <TouchableOpacity style={styles.toolbarButton} onPress={() => setShowMediaOptions(true)}>
+            <Ionicons name="images" size={24} color="#10b981" />
+            <Text style={styles.toolbarText}>Medya</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
