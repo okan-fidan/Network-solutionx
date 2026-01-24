@@ -108,10 +108,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "founder-connect"
-      }
+      "router": {}
     }
   }
 }
