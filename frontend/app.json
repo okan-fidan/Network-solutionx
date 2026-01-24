@@ -69,22 +69,6 @@
         }
       ],
       [
-        "expo-ads-admob",
-        {
-          "userTrackingPermission": "Kişiselleştirilmiş reklamlar göstermek için izninizi istiyoruz."
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/images/notification-icon.png",
-          "color": "#6366f1",
-          "sounds": [
-            "./assets/sounds/notification.wav"
-          ]
-        }
-      ],
-      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Yakındaki girişimcileri görmek için konum erişimi gerekli"
@@ -95,12 +79,6 @@
         {
           "photosPermission": "Profil fotoğrafı ve post paylaşımı için galeri erişimi gerekli",
           "cameraPermission": "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli"
-        }
-      ],
-      [
-        "expo-av",
-        {
-          "microphonePermission": "Sesli mesaj göndermek için mikrofon erişimi gerekli"
         }
       ]
     ],
