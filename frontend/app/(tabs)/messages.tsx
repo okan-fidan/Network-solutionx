@@ -282,8 +282,8 @@ export default function MessagesScreen() {
 
       <View style={styles.chatContent}>
         <View style={styles.chatHeader}>
-          <Text style={styles.chatName} numberOfLines={1}>{item.name}</Text>
-          <Text style={styles.chatTime}>
+          <Text style={[styles.chatName, (item.unreadCount || 0) > 0 && styles.chatNameUnread]} numberOfLines={1}>{item.name}</Text>
+          <Text style={[styles.chatTime, (item.unreadCount || 0) > 0 && styles.chatTimeUnread]}>
             {formatTime(item.lastMessageTime || '')}
           </Text>
         </View>
@@ -294,9 +294,16 @@ export default function MessagesScreen() {
           </Text>
         </View>
         <View style={styles.chatFooter}>
-          <Text style={styles.lastMessage} numberOfLines={1}>
+          <Text style={[styles.lastMessage, (item.unreadCount || 0) > 0 && styles.lastMessageUnread]} numberOfLines={1}>
             {item.lastMessage || `${item.memberCount} üye`}
           </Text>
+          {(item.unreadCount || 0) > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadText}>
+                {(item.unreadCount || 0) > 99 ? '99+' : item.unreadCount}
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
