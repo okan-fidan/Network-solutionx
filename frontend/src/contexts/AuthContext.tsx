@@ -16,6 +16,7 @@ import {
   addNotificationReceivedListener,
   addNotificationResponseReceivedListener
 } from '../services/notifications';
+import { setAnalyticsUserId, setAnalyticsUserProperties, trackEvent } from '../services/analytics';
 
 interface UserProfile {
   uid: string;
