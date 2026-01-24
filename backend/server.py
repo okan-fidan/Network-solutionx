@@ -5785,6 +5785,120 @@ async def get_user_orders(current_user: dict = Depends(get_current_user)):
     """Kullanıcının sipariş geçmişi - Yakında"""
     return []
 
+# ============================================
+# ANALYTICS SYSTEM - Kullanıcı Analitikleri
+# ============================================
+
+@api_router.post("/analytics/events")
+async def track_analytics_events(data: dict, current_user: dict = Depends(get_current_user)):
+    """Analitik olaylarını kaydet"""
+    events = data.get('events', [])
+    session_id = data.get('sessionId')
+    session_duration = data.get('sessionDuration', 0)
+    
+    # Events'i veritabanına kaydet
+    for event in events:
+        event_doc = {
+            "userId": current_user['uid'],
+            "event": event.get('event'),
+            "properties": event.get('properties', {}),
+            "timestamp": datetime.fromisoformat(event.get('timestamp', datetime.utcnow().isoformat()).replace('Z', '+00:00')) if event.get('timestamp') else datetime.utcnow(),
+            "sessionId": session_id,
+            "createdAt": datetime.utcnow()
+        }
+        await db.analytics_events.insert_one(event_doc)
+    
+    # Session bilgisini güncelle
+    if session_id:
+        await db.analytics_sessions.update_one(
+            {"sessionId": session_id},
+            {
+                "$set": {
+                    "userId": current_user['uid'],
+                    "lastActivity": datetime.utcnow(),
+                    "duration": session_duration
+                },
+                "$inc": {"eventCount": len(events)}
+            },
+            upsert=True
+        )
+    
+    return {"message": "Events tracked", "count": len(events)}
+
+@api_router.post("/analytics/user-properties")
+async def set_analytics_user_properties(data: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcı özelliklerini kaydet"""
+    properties = data.get('properties', {})
+    
+    await db.analytics_users.update_one(
+        {"userId": current_user['uid']},
+        {
+            "$set": {
+                **properties,
+                "updatedAt": datetime.utcnow()
+            },
+            "$setOnInsert": {"createdAt": datetime.utcnow()}
+        },
+        upsert=True
+    )
+    
+    return {"message": "User properties updated"}
+
+@api_router.get("/admin/analytics/dashboard")
+async def get_analytics_dashboard(current_user: dict = Depends(get_current_user)):
+    """Admin analytics dashboard"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user or (not user.get('isAdmin') and user.get('email', '').lower() != ADMIN_EMAIL.lower()):
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    # Son 7 günlük istatistikler
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    
+    # DAU (Daily Active Users)
+    dau_pipeline = [
+        {"$match": {"timestamp": {"$gte": seven_days_ago}}},
+        {"$group": {
+            "_id": {
+                "date": {"$dateToString": {"format": "%Y-%m-%d", "date": "$timestamp"}},
+                "userId": "$userId"
+            }
+        }},
+        {"$group": {
+            "_id": "$_id.date",
+            "uniqueUsers": {"$sum": 1}
+        }},
+        {"$sort": {"_id": 1}}
+    ]
+    dau_data = await db.analytics_events.aggregate(dau_pipeline).to_list(7)
+    
+    # Event sayıları
+    event_counts_pipeline = [
+        {"$match": {"timestamp": {"$gte": seven_days_ago}}},
+        {"$group": {"_id": "$event", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 10}
+    ]
+    event_counts = await db.analytics_events.aggregate(event_counts_pipeline).to_list(10)
+    
+    # Toplam kullanıcı sayısı
+    total_users = await db.users.count_documents({})
+    
+    # Aktif kullanıcı sayısı (son 24 saat)
+    one_day_ago = datetime.utcnow() - timedelta(days=1)
+    active_users = await db.analytics_events.distinct("userId", {"timestamp": {"$gte": one_day_ago}})
+    
+    # Yeni kullanıcılar (son 7 gün)
+    new_users = await db.users.count_documents({"createdAt": {"$gte": seven_days_ago}})
+    
+    return {
+        "dau": dau_data,
+        "eventCounts": event_counts,
+        "totalUsers": total_users,
+        "activeUsers24h": len(active_users),
+        "newUsersLast7Days": new_users,
+        "generatedAt": datetime.utcnow().isoformat()
+    }
+
 # Include the router in the main app
 app.include_router(api_router)
 
