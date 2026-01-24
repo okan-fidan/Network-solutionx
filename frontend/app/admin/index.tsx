@@ -102,10 +102,18 @@ export default function AdminDashboard() {
     },
     {
       icon: 'school',
-      title: 'Mentor Başvuruları',
-      subtitle: 'Mentor başvurularını incele ve onayla',
-      route: '/admin/mentor-applications',
+      title: 'Mentor Yönetimi',
+      subtitle: 'Mentorları onayla, reddet ve yönet',
+      route: '/admin/mentors',
       color: '#8b5cf6',
+      isNew: true,
+    },
+    {
+      icon: 'document-text',
+      title: 'Mentor Başvuruları',
+      subtitle: 'Mentor başvurularını incele',
+      route: '/admin/mentor-applications',
+      color: '#14b8a6',
     },
     {
       icon: 'megaphone',
