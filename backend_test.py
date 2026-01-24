@@ -265,29 +265,56 @@ class BackendTester:
         
         return self.passed_tests == self.total_tests
     
+    def test_server_connectivity(self):
+        """Test basic server connectivity"""
+        print("\n🌐 Testing Server Connectivity...")
+        
+        try:
+            response = self.session.get(f"{BASE_URL}/", timeout=10)
+            if response.status_code in [200, 404, 405]:  # Any response means server is up
+                self.log_test("Server Connectivity", "PASS", f"Server responding (Status: {response.status_code})")
+                return True
+            else:
+                self.log_test("Server Connectivity", "FAIL", f"Unexpected status: {response.status_code}")
+                return False
+        except Exception as e:
+            self.log_test("Server Connectivity", "FAIL", f"Cannot reach server: {str(e)}")
+            return False
+    
     def print_summary(self):
         """Print test summary"""
-        print("\n" + "=" * 60)
-        print("📊 TEST SONUÇLARI ÖZET")
-        print("=" * 60)
-        print(f"✅ Başarılı Testler: {self.passed_tests}")
-        print(f"❌ Başarısız Testler: {self.total_tests - self.passed_tests}")
-        print(f"📈 Toplam Testler: {self.total_tests}")
-        print(f"🎯 Başarı Oranı: {(self.passed_tests/self.total_tests)*100:.1f}%")
+        print("\n" + "=" * 70)
+        print("📊 COMPREHENSIVE TEST RESULTS SUMMARY")
+        print("=" * 70)
+        print(f"✅ Passed Tests: {self.passed_tests}")
+        print(f"❌ Failed Tests: {self.total_tests - self.passed_tests}")
+        print(f"📈 Total Tests: {self.total_tests}")
+        print(f"🎯 Success Rate: {(self.passed_tests/self.total_tests)*100:.1f}%")
         
         if self.passed_tests == self.total_tests:
-            print("\n🎉 TÜM TESTLER BAŞARILI!")
-            print("✅ Story endpoint'leri doğru korunuyor (403 Forbidden)")
-            print("✅ Notification endpoint'leri doğru korunuyor (403 Forbidden)")
-            print("✅ Temel endpoint'ler çalışıyor (200 OK)")
-            print("✅ Firebase authentication sistemi aktif")
-            print("✅ Hiç 500 hatası tespit edilmedi")
+            print("\n🎉 ALL TESTS PASSED! BACKEND READY FOR PLAY STORE RELEASE!")
+            print("✅ All Turkish review request endpoints verified")
+            print("✅ Authentication protection working correctly (403 Forbidden)")
+            print("✅ Basic connectivity endpoints working (200 OK)")
+            print("✅ Firebase authentication system active")
+            print("✅ No 500 server errors detected")
+            print("✅ Response status codes as expected")
+            print("✅ Error handling working correctly")
         else:
-            print("\n⚠️  BAZI TESTLER BAŞARISIZ!")
-            print("Başarısız testleri kontrol edin.")
+            print("\n⚠️  SOME TESTS FAILED!")
+            print("Review failed tests before Play Store release.")
+            
+            # Show failed tests
+            failed_tests = [t for t in self.test_results if t['status'] == 'FAIL']
+            if failed_tests:
+                print(f"\n❌ FAILED TESTS ({len(failed_tests)}):")
+                for test in failed_tests:
+                    print(f"  - {test['test']}: {test['details']}")
         
-        print(f"\n🕒 Test Zamanı: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"🌐 Test Edilen Sunucu: {BASE_URL}")
+        print(f"\n🕒 Test Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"🌐 Tested Server: {BASE_URL}")
+        print(f"👤 Admin Email: metaticaretim@gmail.com")
+        print("=" * 70)
 
 def main():
     """Main test runner"""
