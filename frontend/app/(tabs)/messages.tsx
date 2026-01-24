@@ -150,8 +150,8 @@ export default function MessagesScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    loadData();
-  }, [loadData]);
+    loadData(true);
+  }, [user]);
 
   const formatTime = (dateString: string) => {
     if (!dateString) return '';
