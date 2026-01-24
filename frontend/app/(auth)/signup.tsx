@@ -306,6 +306,42 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
+  genderContainer: {
+    marginTop: 8,
+  },
+  genderLabel: {
+    color: '#9ca3af',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  genderOptions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  genderOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1f2937',
+    borderRadius: 12,
+    paddingVertical: 16,
+    borderWidth: 1,
+    borderColor: '#374151',
+    gap: 8,
+  },
+  genderOptionSelected: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+  },
+  genderText: {
+    color: '#6b7280',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  genderTextSelected: {
+    color: '#fff',
+  },
   button: {
     backgroundColor: '#6366f1',
     height: 56,
