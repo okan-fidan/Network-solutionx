@@ -176,6 +176,7 @@ export default function CreatePostScreen() {
     setLoading(true);
     try {
       let imageUrl = null;
+      let videoUrl = null;
       
       // Eğer resim seçildiyse base64'e dönüştür
       if (selectedImage) {
@@ -192,10 +193,27 @@ export default function CreatePostScreen() {
           console.log('Image conversion error:', imgError);
         }
       }
+      
+      // Eğer video seçildiyse base64'e dönüştür
+      if (selectedVideo) {
+        try {
+          const response = await fetch(selectedVideo);
+          const blob = await response.blob();
+          const reader = new FileReader();
+          videoUrl = await new Promise((resolve, reject) => {
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (vidError) {
+          console.log('Video conversion error:', vidError);
+        }
+      }
 
       await postApi.create({
         content: content.trim(),
         imageUrl: imageUrl,
+        videoUrl: videoUrl,
         location: location,
         mentions: mentions,
       });
