@@ -441,6 +441,45 @@ export default function CreatePostScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Media Options Modal */}
+      <Modal visible={showMediaOptions} animationType="fade" transparent>
+        <TouchableOpacity 
+          style={styles.mediaOptionsOverlay}
+          activeOpacity={1}
+          onPress={() => setShowMediaOptions(false)}
+        >
+          <View style={styles.mediaOptionsContent}>
+            <Text style={styles.mediaOptionsTitle}>Medya Ekle</Text>
+            <TouchableOpacity style={styles.mediaOption} onPress={pickImage}>
+              <View style={[styles.mediaOptionIcon, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Ionicons name="image" size={24} color="#10b981" />
+              </View>
+              <View style={styles.mediaOptionInfo}>
+                <Text style={styles.mediaOptionTitle}>Fotoğraf</Text>
+                <Text style={styles.mediaOptionSubtitle}>Galeriden fotoğraf seç</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.mediaOption} onPress={pickVideo}>
+              <View style={[styles.mediaOptionIcon, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                <Ionicons name="videocam" size={24} color="#6366f1" />
+              </View>
+              <View style={styles.mediaOptionInfo}>
+                <Text style={styles.mediaOptionTitle}>Video</Text>
+                <Text style={styles.mediaOptionSubtitle}>60 saniyeye kadar video</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color="#6b7280" />
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.mediaOptionCancel}
+              onPress={() => setShowMediaOptions(false)}
+            >
+              <Text style={styles.mediaOptionCancelText}>İptal</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
