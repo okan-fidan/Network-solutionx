@@ -79,38 +79,140 @@ class BackendTester:
             self.log_test(test_name, "FAIL", f"Unexpected error: {str(e)}")
             return False
     
-    def test_story_apis(self):
-        """Test Story (Hikaye) API endpoints"""
-        print("\n🔍 Testing Story (Hikaye) APIs...")
+    def test_auth_user_apis(self):
+        """Test Auth & User APIs from Turkish review request"""
+        print("\n🔐 Testing Auth & User APIs...")
         
-        # Test GET /api/stories - Should require auth (403)
-        self.test_endpoint("GET", "/stories", 403, "GET /api/stories (auth required)")
-        
-        # Test POST /api/stories - Should require auth (403)
-        story_data = {
-            "content": "Test story content",
-            "mediaUrl": "https://example.com/image.jpg",
-            "type": "image"
+        # 1. POST /api/user/register - Should require auth (403)
+        user_data = {
+            "email": "test@example.com",
+            "firstName": "Test",
+            "lastName": "User",
+            "city": "İstanbul"
         }
-        self.test_endpoint("POST", "/stories", 403, "POST /api/stories (auth required)", data=story_data)
+        self.test_endpoint("POST", "/user/register", 403, "POST /api/user/register (auth required)", data=user_data)
         
-        # Test GET /api/stories/{user_id} - Should require auth (403)
-        test_user_id = "test_user_123"
-        self.test_endpoint("GET", f"/stories/{test_user_id}", 403, "GET /api/stories/{user_id} (auth required)")
+        # 2. GET /api/user/profile - Should require auth (403)
+        self.test_endpoint("GET", "/user/profile", 403, "GET /api/user/profile (auth required)")
         
-        # Test POST /api/stories/{story_id}/view - Should require auth (403)
-        test_story_id = "test_story_123"
-        self.test_endpoint("POST", f"/stories/{test_story_id}/view", 403, "POST /api/stories/{story_id}/view (auth required)")
-        
-        # Test DELETE /api/stories/{story_id} - Should require auth (403)
-        self.test_endpoint("DELETE", f"/stories/{test_story_id}", 403, "DELETE /api/stories/{story_id} (auth required)")
+        # 3. PUT /api/user/profile - Should require auth (403)
+        profile_data = {
+            "firstName": "Updated",
+            "lastName": "Name"
+        }
+        self.test_endpoint("PUT", "/user/profile", 403, "PUT /api/user/profile (auth required)", data=profile_data)
     
-    def test_notification_apis(self):
-        """Test Notification APIs"""
-        print("\n🔔 Testing Notification APIs...")
+    def test_communities_groups_apis(self):
+        """Test Communities & Groups APIs from Turkish review request"""
+        print("\n🏘️ Testing Communities & Groups APIs...")
         
-        # Test GET /api/notifications - Should require auth (403)
+        # 1. GET /api/communities - Should require auth (403)
+        self.test_endpoint("GET", "/communities", 403, "GET /api/communities (auth required)")
+        
+        # 2. GET /api/communities/{id} - Should require auth (403)
+        test_community_id = "test-community-123"
+        self.test_endpoint("GET", f"/communities/{test_community_id}", 403, "GET /api/communities/{id} (auth required)")
+        
+        # 3. POST /api/subgroups/{id}/join - Should require auth (403)
+        test_subgroup_id = "test-subgroup-123"
+        self.test_endpoint("POST", f"/subgroups/{test_subgroup_id}/join", 403, "POST /api/subgroups/{id}/join (auth required)")
+        
+        # 4. GET /api/subgroups/{id}/messages - Should require auth (403)
+        self.test_endpoint("GET", f"/subgroups/{test_subgroup_id}/messages", 403, "GET /api/subgroups/{id}/messages (auth required)")
+    
+    def test_messaging_apis(self):
+        """Test Messaging APIs from Turkish review request"""
+        print("\n💬 Testing Messaging APIs...")
+        
+        # 1. GET /api/conversations - Should require auth (403)
+        self.test_endpoint("GET", "/conversations", 403, "GET /api/conversations (auth required)")
+        
+        # 2. POST /api/conversations/start - Should require auth (403)
+        conversation_data = {
+            "otherUserId": "test-user-123"
+        }
+        self.test_endpoint("POST", "/conversations/start", 403, "POST /api/conversations/start (auth required)", data=conversation_data)
+        
+        # 3. POST /api/conversations/{id}/messages - Should require auth (403)
+        test_conversation_id = "test-conversation-123"
+        message_data = {
+            "content": "Test message",
+            "type": "text"
+        }
+        self.test_endpoint("POST", f"/conversations/{test_conversation_id}/messages", 403, "POST /api/conversations/{id}/messages (auth required)", data=message_data)
+        
+        # 4. PUT /api/conversations/{id}/read - Should require auth (403)
+        self.test_endpoint("PUT", f"/conversations/{test_conversation_id}/read", 403, "PUT /api/conversations/{id}/read (auth required)")
+    
+    def test_posts_feed_apis(self):
+        """Test Posts & Feed APIs from Turkish review request"""
+        print("\n📝 Testing Posts & Feed APIs...")
+        
+        # 1. GET /api/posts - Should require auth (403)
+        self.test_endpoint("GET", "/posts", 403, "GET /api/posts (auth required)")
+        
+        # 2. POST /api/posts - Should require auth (403)
+        post_data = {
+            "content": "Test post content",
+            "type": "text"
+        }
+        self.test_endpoint("POST", "/posts", 403, "POST /api/posts (auth required)", data=post_data)
+        
+        # 3. POST /api/posts/{id}/like - Should require auth (403)
+        test_post_id = "test-post-123"
+        self.test_endpoint("POST", f"/posts/{test_post_id}/like", 403, "POST /api/posts/{id}/like (auth required)")
+    
+    def test_services_apis(self):
+        """Test Services APIs from Turkish review request"""
+        print("\n🛠️ Testing Services APIs...")
+        
+        # 1. GET /api/services - Should require auth (403)
+        self.test_endpoint("GET", "/services", 403, "GET /api/services (auth required)")
+        
+        # 2. POST /api/services - Should require auth (403)
+        service_data = {
+            "title": "Test Service",
+            "description": "Test service description",
+            "price": 100
+        }
+        self.test_endpoint("POST", "/services", 403, "POST /api/services (auth required)", data=service_data)
+    
+    def test_notifications_apis(self):
+        """Test Notifications APIs from Turkish review request"""
+        print("\n🔔 Testing Notifications APIs...")
+        
+        # 1. GET /api/notifications - Should require auth (403)
         self.test_endpoint("GET", "/notifications", 403, "GET /api/notifications (auth required)")
+        
+        # 2. POST /api/users/push-token - Should require auth (403)
+        push_token_data = {
+            "token": "ExponentPushToken[test-token-123]"
+        }
+        self.test_endpoint("POST", "/users/push-token", 403, "POST /api/users/push-token (auth required)", data=push_token_data)
+    
+    def test_analytics_apis(self):
+        """Test Analytics APIs from Turkish review request"""
+        print("\n📊 Testing Analytics APIs...")
+        
+        # 1. POST /api/analytics/events - Should require auth (403)
+        analytics_data = {
+            "event": "test_event",
+            "data": {"test": True}
+        }
+        self.test_endpoint("POST", "/analytics/events", 403, "POST /api/analytics/events (auth required)", data=analytics_data)
+        
+        # 2. GET /api/admin/analytics/dashboard - Should require auth (403)
+        self.test_endpoint("GET", "/admin/analytics/dashboard", 403, "GET /api/admin/analytics/dashboard (auth required)")
+    
+    def test_admin_panel_apis(self):
+        """Test Admin Panel APIs from Turkish review request"""
+        print("\n👑 Testing Admin Panel APIs...")
+        
+        # 1. GET /api/admin/dashboard - Should require auth (403)
+        self.test_endpoint("GET", "/admin/dashboard", 403, "GET /api/admin/dashboard (auth required)")
+        
+        # 2. GET /api/admin/users - Should require auth (403)
+        self.test_endpoint("GET", "/admin/users", 403, "GET /api/admin/users (auth required)")
     
     def test_existing_apis(self):
         """Test existing APIs (smoke test)"""
