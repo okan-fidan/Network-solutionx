@@ -1594,9 +1594,17 @@ async def get_user(user_id: str, current_user: dict = Depends(get_current_user))
 # ==================== POSTS ====================
 
 @api_router.get("/posts")
-async def get_posts(current_user: dict = Depends(get_current_user)):
+async def get_posts(
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """Tüm gönderileri getir - yeni kullanıcılar da eski gönderileri görebilir"""
     # Yeniden eskiye sıralı gönderiler - timestamp veya createdAt alanına göre
-    posts = await db.posts.find().sort([("timestamp", -1), ("createdAt", -1)]).limit(50).to_list(50)
+    posts = await db.posts.find().sort([("timestamp", -1), ("createdAt", -1)]).skip(skip).limit(limit).to_list(limit)
+    
+    # Toplam post sayısı
+    total_count = await db.posts.count_documents({})
     
     # Timestamp'i olmayan gönderiler için createdAt'i kullan
     for post in posts:
@@ -1610,7 +1618,11 @@ async def get_posts(current_user: dict = Depends(get_current_user)):
         if not post.get('timestamp') and post.get('createdAt'):
             post['timestamp'] = post['createdAt']
     
-    return posts
+    return {
+        "posts": posts,
+        "total": total_count,
+        "hasMore": skip + limit < total_count
+    }
 
 @api_router.post("/posts")
 @limiter.limit("30/minute")  # Rate limiting - dakikada 30 post
