@@ -62,7 +62,7 @@ export default function MessagesScreen() {
   const { colors, isDark } = useTheme();
   const router = useRouter();
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (forceRefresh = false) => {
     if (!user) {
       setLoading(false);
       setRefreshing(false);
@@ -70,7 +70,7 @@ export default function MessagesScreen() {
       return;
     }
 
-    if (!initialLoadDone) {
+    if (!initialLoadDone && !forceRefresh) {
       setLoading(true);
     }
 
