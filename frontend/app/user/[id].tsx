@@ -24,8 +24,12 @@ interface UserProfile {
   city?: string;
   occupation?: string;
   profileImageUrl?: string;
+  bio?: string;
   isAdmin?: boolean;
   communities?: string[];
+  skills?: string[];
+  workExperience?: any[];
+  socialLinks?: any;
 }
 
 export default function UserProfileScreen() {
