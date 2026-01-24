@@ -226,6 +226,74 @@ export default function UserProfileScreen() {
           </View>
         </View>
 
+        {/* Beceriler */}
+        {profile.skills && profile.skills.length > 0 && (
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>Beceriler</Text>
+            <View style={styles.skillsContainer}>
+              {profile.skills.map((skill: string, index: number) => (
+                <View key={index} style={styles.skillTag}>
+                  <Text style={styles.skillText}>{skill}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* İş Deneyimi */}
+        {profile.workExperience && profile.workExperience.length > 0 && (
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>İş Deneyimi</Text>
+            {profile.workExperience.map((exp: any, index: number) => (
+              <View key={exp.id || index} style={styles.experienceCard}>
+                <View style={styles.experienceTimeline}>
+                  <View style={styles.timelineDot} />
+                  {index < profile.workExperience!.length - 1 && (
+                    <View style={styles.timelineLine} />
+                  )}
+                </View>
+                <View style={styles.experienceContent}>
+                  <Text style={styles.experienceTitle}>{exp.title}</Text>
+                  <Text style={styles.experienceCompany}>{exp.company}</Text>
+                  <Text style={styles.experienceDate}>
+                    {exp.startDate} - {exp.current ? 'Devam ediyor' : exp.endDate}
+                  </Text>
+                  {exp.description && (
+                    <Text style={styles.experienceDescription}>{exp.description}</Text>
+                  )}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Sosyal Medya */}
+        {profile.socialLinks && (profile.socialLinks.linkedin || profile.socialLinks.instagram || profile.socialLinks.website) && (
+          <View style={styles.infoSection}>
+            <Text style={styles.sectionTitle}>Sosyal Medya</Text>
+            <View style={styles.infoCard}>
+              {profile.socialLinks.linkedin && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="logo-linkedin" size={20} color="#0077b5" />
+                  <Text style={styles.infoText}>{profile.socialLinks.linkedin}</Text>
+                </View>
+              )}
+              {profile.socialLinks.instagram && (
+                <View style={styles.infoRow}>
+                  <Ionicons name="logo-instagram" size={20} color="#e4405f" />
+                  <Text style={styles.infoText}>@{profile.socialLinks.instagram}</Text>
+                </View>
+              )}
+              {profile.socialLinks.website && (
+                <View style={[styles.infoRow, { borderBottomWidth: 0 }]}>
+                  <Ionicons name="globe-outline" size={20} color="#6366f1" />
+                  <Text style={styles.infoText}>{profile.socialLinks.website}</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        )}
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
