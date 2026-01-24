@@ -1675,4 +1675,10 @@ const styles = StyleSheet.create({
   storyCaptionInput: { padding: 16, borderTopWidth: 1, borderTopColor: '#1f2937' },
   storyCaptionInputField: { color: '#fff', fontSize: 16, paddingVertical: 8, minHeight: 40 },
   storyNote: { color: '#9ca3af', fontSize: 12, textAlign: 'center', paddingBottom: 20 },
+
+  // Load More Styles
+  loadingMoreContainer: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 10 },
+  loadingMoreText: { color: '#9ca3af', fontSize: 14 },
+  noMorePostsContainer: { alignItems: 'center', paddingVertical: 30 },
+  noMorePostsText: { color: '#6b7280', fontSize: 14 },
 });
