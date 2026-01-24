@@ -72,10 +72,7 @@ export default function HelpScreen() {
   const handleContact = (method: string) => {
     switch (method) {
       case 'email':
-        Linking.openURL('mailto:destek@networksolution.com.tr');
-        break;
-      case 'phone':
-        Linking.openURL('tel:+905551234567');
+        Linking.openURL('mailto:metaticaretim@gmail.com');
         break;
       case 'web':
         Linking.openURL('https://networksolution.com.tr/');
