@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Founder Connect",
+    "slug": "founder-connect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "founderconnect",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -15,7 +15,11 @@
         "GADApplicationIdentifier": "ca-app-pub-4676051761874687~8110388870",
         "SKAdNetworkItems": [
           { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
-        ]
+        ],
+        "NSCameraUsageDescription": "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli",
+        "NSPhotoLibraryUsageDescription": "Profil fotoğrafı ve post paylaşımı için galeri erişimi gerekli",
+        "NSLocationWhenInUseUsageDescription": "Yakındaki girişimcileri görmek için konum erişimi gerekli",
+        "NSMicrophoneUsageDescription": "Sesli mesaj göndermek için mikrofon erişimi gerekli"
       }
     },
     "android": {
@@ -27,7 +31,18 @@
       "package": "com.founderconnect.app",
       "permissions": [
         "android.permission.INTERNET",
-        "android.permission.ACCESS_NETWORK_STATE"
+        "android.permission.ACCESS_NETWORK_STATE",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS"
       ],
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-4676051761874687~8110388870"
