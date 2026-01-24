@@ -14,12 +14,15 @@
       "infoPlist": {
         "GADApplicationIdentifier": "ca-app-pub-4676051761874687~8110388870",
         "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          }
         ],
         "NSCameraUsageDescription": "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli",
         "NSPhotoLibraryUsageDescription": "Profil fotoğrafı ve post paylaşımı için galeri erişimi gerekli",
         "NSLocationWhenInUseUsageDescription": "Yakındaki girişimcileri görmek için konum erişimi gerekli",
-        "NSMicrophoneUsageDescription": "Sesli mesaj göndermek için mikrofon erişimi gerekli"
+        "NSMicrophoneUsageDescription": "Sesli mesaj göndermek için mikrofon erişimi gerekli",
+        "NSUserTrackingUsageDescription": "Kişiselleştirilmiş reklamlar göstermek için izninizi istiyoruz."
       }
     },
     "android": {
@@ -42,7 +45,8 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ],
       "config": {
         "googleMobileAdsAppId": "ca-app-pub-4676051761874687~8110388870"
@@ -75,7 +79,9 @@
         {
           "icon": "./assets/images/notification-icon.png",
           "color": "#6366f1",
-          "sounds": ["./assets/sounds/notification.wav"]
+          "sounds": [
+            "./assets/sounds/notification.wav"
+          ]
         }
       ],
       [
@@ -100,6 +106,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "founder-connect"
+      }
     }
   }
 }
