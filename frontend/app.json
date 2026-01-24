@@ -12,17 +12,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.founderconnect.app",
       "infoPlist": {
-        "GADApplicationIdentifier": "ca-app-pub-4676051761874687~8110388870",
-        "SKAdNetworkItems": [
-          {
-            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
-          }
-        ],
         "NSCameraUsageDescription": "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli",
         "NSPhotoLibraryUsageDescription": "Profil fotoğrafı ve post paylaşımı için galeri erişimi gerekli",
         "NSLocationWhenInUseUsageDescription": "Yakındaki girişimcileri görmek için konum erişimi gerekli",
-        "NSMicrophoneUsageDescription": "Sesli mesaj göndermek için mikrofon erişimi gerekli",
-        "NSUserTrackingUsageDescription": "Kişiselleştirilmiş reklamlar göstermek için izninizi istiyoruz."
+        "NSMicrophoneUsageDescription": "Sesli mesaj göndermek için mikrofon erişimi gerekli"
       }
     },
     "android": {
