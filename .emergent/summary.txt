@@ -1,0 +1,176 @@
+<analysis>
+**original_problem_statement**: The user's initial high-level request was to fix all outstanding bugs and then enhance the application with a series of new, professional-grade features to prepare it for a production release.
+
+The specific features and fixes requested and worked on during this session include:
+1.  **Firebase Email Verification**: Implement a free email verification system for new user sign-ups.
+2.  **Password Reset Flow**: Ensure the Forgot Password feature is implemented and functional.
+3.  **Onboarding Experience**: Create a multi-page, animated, marketing-focused welcome screen for first-time users.
+4.  **Branding**: Add the user-provided logo to the Login and Signup pages.
+5.  **Chat History**: Allow new users joining a group to see the entire message history, similar to Telegram, and implement a load more feature.
+6.  **Critical Bug Fixes**:
+    *   Address the bug where tapping a user's profile in a chat leads to an error.
+    *   Fix the issue where the unread message count doesn't clear after reading messages.
+    *   Implement a Delete for Everyone option for group admins and fix the general message deletion functionality.
+7.  **Feed Sorting**: Ensure the main feed posts are sorted from newest to oldest.
+8.  **Code Quality**: Perform a full-stack code audit to find and fix critical issues, duplicate code, and linting errors.
+9.  **Community Images**: Automatically assign relevant images to communities and subgroups based on their names, instead of generic initial-based avatars.
+10. **Major Feature Expansion (The Play Store Ready push)**:
+    *   **Video Sharing**: Add support for sharing videos in the main feed.
+    *   **Enhanced Profiles**: Implement sections for Work Experience Timeline and Skill Tags.
+    *   **Notification Filtering**: Create a settings page for users to filter the types of notifications they receive.
+
+**User's preferred language**: Türkçe (Turkish). The next agent MUST respond in Turkish.
+
+**what currently exists?**
+The application has received significant feature upgrades and stability improvements.
+- A complete **Firebase email verification** flow is in place, including a dedicated verification screen and logic to handle unverified users.
+- A new, multi-page animated **onboarding/welcome screen** () has been created and is shown to users on their first launch.
+- The user's **logo** is now displayed on the login and signup screens.
+- The backend has been heavily **refactored**, removing dozens of duplicate functions and linting errors, making it more stable.
+- The **chat system** has been improved: backend endpoints now support loading older messages, and the group chat UI has been updated with logic for delete for everyone.
+- **Community visuals** have been enhanced; the backend now assigns relevant stock photos to communities and subgroups based on their names.
+- The backend has been prepared for the next wave of features, with new data models and API endpoints for **video posts, user skills, and work experience**.
+- The frontend has started implementing these new features, with significant changes to the profile editing screen.
+
+**Last working item**:
+-   **Last item agent was working**: Implementing the major feature expansion requested by the user: Video Sharing, Work Experience Timeline, Skill Tags, and Notification Filtering. The agent had completed the backend modifications and was in the middle of a major overhaul of the frontend, focusing on the  page and creating a new  page.
+-   **Status**: IN PROGRESS
+-   **Agent Testing Done**: N (Only partial backend linting was done)
+-   **Which testing method agent to use?**: both. A full end-to-end test will be required for this large feature set.
+    - **Backend**: Use  to verify all new and modified endpoints for profiles and posts.
+    - **Frontend**: Manual testing and  will be needed for all new UI components.
+-   **User Testing Done**: N
+
+**All Pending/In progress Issue list**:
+-   **Issue 1: (P1) Profile Link Navigation Bug in Chat.**
+    -   **Description**: A critical bug where tapping a user's avatar in a chat fails to navigate to their profile.
+    -   **Attempted fixes**: The agent correctly identified that the backend endpoint () and the frontend page () were missing. Both were created and the backend was updated. The code now appears to be correct.
+    -   **Why fix this issue and what will be achieved with the fix?**: This is a core social feature. Fixing it allows users to view profiles from chats, which is essential for networking.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+
+-   **Issue 2: (P2) Unread Message Count Doesn't Clear.**
+    -   **Description**: The unread message badge on the main messages tab doesn't reliably clear after a user reads the messages.
+    -   **Attempted fixes**: The agent added explicit  API endpoints for both direct and group chats and added the corresponding calls in the frontend when a chat screen is opened. This should resolve the issue.
+    -   **Why fix this issue and what will be be achieved with the fix?**: Fixes a major UX annoyance that misinforms users about new messages.
+    -   **Status**: USER VERIFICATION PENDING
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: frontend
+
+-   **Issue 3: (P3) Admin Panel Functionality is Unverified.**
+    -   **Description**: A recurring task. The admin panel has never been comprehensively tested end-to-end, despite numerous backend changes. Its functionality is unknown and potentially broken.
+    -   **Next debug checklist**: Log in as admin () and systematically test every button and feature on every admin screen ().
+    -   **Why fix this issue and what will be achieved with the fix?**: The app cannot be managed or moderated without a functional admin panel.
+    -   **Status**: NOT STARTED
+    -   **Is recurring issue?**: Y
+    -   **Should Test frontend/backend/both after fix?**: both
+
+**In progress Task List**:
+-   **Task 1: (P0) Finish Play Store Ready Feature Expansion**
+    -   **Description**: The user requested a batch of major features: Video Sharing, Work Experience Timeline, Skill Tags, and Notification Filtering.
+    -   **Where to resume**: The backend work is mostly done. The frontend work is mid-flight.
+        1.  **Video Sharing**: Create the UI for creating a new post with a video attachment. Modify the post component to render videos.
+        2.  **Work Experience & Skills**: The  page has been updated to collect this data. Now, the main profile view ( and ) needs to be updated to *display* this new information (e.g., a timeline component for experience, a tag cloud for skills).
+        3.  **Notification Filtering**: The page  has been created. It needs to be linked from a relevant place (e.g., a new Settings page or from the profile page). The logic to save and apply these settings needs to be fully implemented.
+    -   **What will be achieved with this?**: This will add significant value and professional polish to the application, aligning with the user's goal of a production-ready app.
+    -   **Status**: IN PROGRESS
+    -   **Should Test frontend/backend/both after fix?**: both
+    -   **Blocked on something**: No.
+
+**Upcoming and Future Tasks**
+-   **Upcoming Tasks**:
+    -   **(P1) Chat Enhancements**: Implement Voice Messages, GIF/Sticker support, and message search functionality.
+    -   **(P1) Service/Freelancer Enhancements**: Add a rating/review system and category filtering to the Services section.
+    -   **(P2) UI/UX Polish**: Implement an optional Light Theme, skeleton loading states, and more haptic feedback.
+-   **Future Tasks**:
+    -   Implement Polls and Location Sharing in chat.
+    -   Implement an algorithmic feed.
+    -   Implement the stubbed Group Media Page ().
+
+**Completed work in this session**
+-   **IMPLEMENTED**: Full-stack Firebase Email Verification flow.
+-   **IMPLEMENTED**: Forgot Password link and functionality on the login screen.
+-   **IMPLEMENTED**: A 5-page animated, marketing-style onboarding flow for new users ().
+-   **IMPLEMENTED**: User's logo on both Login and Signup pages.
+-   **IMPLEMENTED**: Automatic, relevant image assignment for all communities and subgroups on creation.
+-   **IMPLEMENTED**: Load more functionality for fetching older messages in chats.
+-   **FIXED**: Main feed post sorting is now correctly newest-to-oldest.
+-   **FIXED**: Group message deletion was improved with a Delete for Everyone option for admins and fixed logic for user-level deletion.
+-   **REFACTORED**: Performed a major cleanup of , removing over 10 linting errors and multiple critical duplicate function definitions.
+-   **STARTED**: Major feature expansion (Video, Skills, Timeline, Notifications).
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+-   **Firebase Auth**: Full implementation of Email/Password, Email Verification, and Password Reset.
+-   **Onboarding Flow**: Use of  to track first-time launch and  for a complex, animated, multi-page -based onboarding experience.
+-   **Backend Refactoring**: Identified and resolved critical issues like duplicate function definitions and bare  clauses in , significantly improving code stability.
+-   **Infinite Scroll / Load More**: Implemented pagination in chat ( parameter) to allow users to load older messages as they scroll up.
+-   **Complex Form Handling**: Extended the profile editing form to handle dynamic lists of objects for Work Experience and a tag-like input for Skills.
+
+**All files of reference**
+-   : Contains all business logic. Was heavily refactored and expanded.
+-   : The primary file currently being worked on for new profile features.
+-    & : These files **need to be updated** to display the new profile information.
+-   : The new onboarding flow.
+-   : The new, incomplete notification settings page.
+-   : Location of the bug fixes for message deletion and history loading.
+-    & : Contain the email verification and password reset flows.
+
+**Critical Info for New Agent**
+-   **Dili Türkçe Kullan**: You MUST communicate with the user in Turkish.
+-   **Top Priority (P0 Task)**: Your immediate goal is to **finish the Play Store Ready feature batch**. This is a multi-part task:
+    1.  Implement the UI for **video sharing** when creating a post.
+    2.  Update the user profile pages (, ) to **display the new Skills and Work Experience** data.
+    3.  **Finish the Notification Settings page** () and link it from a logical location (like a new general settings page accessible from the profile).
+-   **Verification Required**: After completing the features, you must guide the user to test the two major bug fixes: **profile navigation from chat** and the **unread message counter**.
+-   **Don't Forget the Admin Panel**: The request to perform a comprehensive, end-to-end test of the Admin Panel is still outstanding and should be addressed before considering the project done.
+
+**Last 10 User Messages and any pending HUMAN messages**
+-   **Msg 480 (IN PROGRESS)**: User requested a batch of major features: video sharing, work experience timeline, skill tags, notification filtering, and a final scan of all features to ensure the app is production-ready.
+-   **Msg 478 (COMPLETED)**: User asked for suggestions on how to improve existing features.
+-   **Msg 463 (COMPLETED)**: User requested that posts on the main feed be sorted from newest to oldest.
+-   **Msg 437 (COMPLETED)**: User reported that group message deletion was broken and requested a delete for everyone feature.
+-   **Msg 377 (COMPLETED)**: User requested a comprehensive, expert-level scan of the entire application to find and fix any remaining critical issues.
+-   **Msg 352 (COMPLETED)**: User requested that new members in a group should be able to see the entire message history, like Telegram.
+-   **Msg 321 (COMPLETED)**: User provided a logo and asked for it to be added to the login screen.
+-   **Msg 284 (COMPLETED)**: User requested a polished, multi-page, animated onboarding flow with marketing-oriented text.
+-   **Msg 282 (COMPLETED)**: User asked for a step-by-step explanation of the new user journey.
+-   **Msg 280 (RESOLVED)**: User noted that email delivery was a bit slow, but accepted that it was a limitation of the free Firebase service.
+
+**Project Health Check:**
+-   **Broken**:
+    -   None.
+-   **Incomplete/Stubbed**:
+    -   **Video Sharing**: Backend exists, but no frontend UI for uploading or viewing videos in posts.
+    -   **Profile Enhancements**: Data can be entered in , but it is not displayed on the actual profile pages.
+    -   **Notification Settings**: The page  exists but is not linked from anywhere and its functionality is not fully implemented.
+-   **Unverified**:
+    -   **Admin Panel**: Requires a full end-to-end test of all features.
+    -   **Profile Navigation from Chat**: The fix has been implemented but not confirmed by the user.
+    -   **Unread Message Count**: The fix has been implemented but not confirmed by the user.
+
+**3rd Party Integrations**
+-   Firebase (Authentication, Firestore, Storage)
+-   AdMob ()
+-   Multiple  libraries for native features.
+-   
+-    for animations.
+
+**Testing status**
+-   **Testing agent used after significant changes**: NO, not for the latest batch of features.
+-   **Troubleshoot agent used after agent stuck in loop**: NO.
+-   **Test files created**: None.
+-   **Known regressions**: None identified.
+
+**Credentials to test flow:**
+-   **Admin User**: Sign up with the email  to gain admin privileges.
+
+**What agent forgot to execute**
+-   The agent has consistently forgotten to perform a comprehensive end-to-end test of the Admin Panel, which was an item from the very first summary.
+-   The agent created the  page but forgot to create a link or button in the UI for the user to access it.
+-   The agent added fields for Skills and Work Experience to the edit profile page but forgot to update the main profile page to display this new information.
+
+</analysis>

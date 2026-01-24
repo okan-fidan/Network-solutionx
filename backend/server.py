@@ -5775,8 +5775,8 @@ app.include_router(api_router)
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8081",
-    "https://free-connect-6.preview.emergentagent.com",
-    "https://free-connect-6.preview.emergentagent.com",
+    "https://community-app-11.preview.emergentagent.com",
+    "https://community-app-11.preview.emergentagent.com",
     "exp://",  # Expo Go için
 ]
 

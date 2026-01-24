@@ -2,7 +2,7 @@
 """
 Backend API Test Suite - Turkish Review Request
 Testing Story APIs, Notification APIs, and existing endpoints
-Base URL: https://free-connect-6.preview.emergentagent.com/api
+Base URL: https://community-app-11.preview.emergentagent.com/api
 """
 
 import requests
@@ -11,7 +11,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://free-connect-6.preview.emergentagent.com/api"
+BASE_URL = "https://community-app-11.preview.emergentagent.com/api"
 TIMEOUT = 30
 
 class BackendTester:
