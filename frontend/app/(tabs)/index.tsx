@@ -376,6 +376,34 @@ export default function HomeScreen() {
     }
   }, []);
 
+  // Daha fazla post yükle
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMore || !hasMorePosts) return;
+    
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPage + 1;
+      const skip = nextPage * POSTS_PER_PAGE;
+      
+      const response = await postApi.getAll(skip, POSTS_PER_PAGE);
+      const postsData = response.data;
+      
+      const newPosts = postsData.posts || postsData || [];
+      
+      if (newPosts.length > 0) {
+        const unpinned = newPosts.filter((p: any) => !p.isPinned);
+        setPosts(prev => [...prev, ...unpinned]);
+        setCurrentPage(nextPage);
+      }
+      
+      setHasMorePosts(postsData.hasMore ?? (newPosts.length === POSTS_PER_PAGE));
+    } catch (error) {
+      console.error('Error loading more posts:', error);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [currentPage, hasMorePosts, loadingMore]);
+
   useEffect(() => {
     loadData();
   }, [loadData]);
