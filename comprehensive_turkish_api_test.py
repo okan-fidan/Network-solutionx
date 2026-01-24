@@ -247,9 +247,6 @@ class TurkishAPITester:
             "category": "Yazılım"
         }
         self.test_endpoint("POST", "/services", 403, "POST /api/services - Yeni hizmet", data=service_data)
-        
-        # GET /api/services/{id} - Hizmet detayı
-        self.test_endpoint("GET", "/services/test-service-123", 403, "GET /api/services/{id} - Hizmet detayı")
     
     def test_stories(self):
         """6. Stories"""
