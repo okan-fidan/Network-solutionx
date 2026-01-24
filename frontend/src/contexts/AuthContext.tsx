@@ -68,6 +68,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const response = await api.get('/api/user/profile');
           setUserProfile(response.data);
           
+          // Analytics: Kullanıcı kimliğini ve özelliklerini ayarla
+          setAnalyticsUserId(response.data.uid);
+          setAnalyticsUserProperties({
+            userId: response.data.uid,
+            city: response.data.city,
+            occupation: response.data.occupation,
+            isAdmin: response.data.isAdmin,
+          });
+          trackEvent('user_login');
+          
           // Push notification kaydı (sadece mobil cihazlarda)
           if (Platform.OS !== 'web') {
             try {
