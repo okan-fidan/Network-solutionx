@@ -216,7 +216,7 @@ class BackendTester:
     
     def test_existing_apis(self):
         """Test existing APIs (smoke test)"""
-        print("\n🚀 Testing Existing APIs (Smoke Test)...")
+        print("\n🚀 Testing Basic Connectivity & Health Check...")
         
         # Test GET /api/ - Should return 200 OK
         self.test_endpoint("GET", "/", 200, "GET /api/ (health check)")
@@ -234,42 +234,31 @@ class BackendTester:
                 self.log_test("GET /api/cities (81 Turkish cities)", "FAIL", f"Status: {response.status_code}")
         except Exception as e:
             self.log_test("GET /api/cities (81 Turkish cities)", "FAIL", f"Error: {str(e)}")
-        
-        # Test POST /api/posts/{post_id}/like - Should require auth (403)
-        test_post_id = "test_post_123"
-        self.test_endpoint("POST", f"/posts/{test_post_id}/like", 403, "POST /api/posts/{post_id}/like (auth required)")
-    
-    def test_server_connectivity(self):
-        """Test basic server connectivity"""
-        print("\n🌐 Testing Server Connectivity...")
-        
-        try:
-            response = self.session.get(BASE_URL, timeout=10)
-            if response.status_code in [200, 404, 405]:  # Any response means server is up
-                self.log_test("Server Connectivity", "PASS", f"Server responding (Status: {response.status_code})")
-                return True
-            else:
-                self.log_test("Server Connectivity", "FAIL", f"Unexpected status: {response.status_code}")
-                return False
-        except Exception as e:
-            self.log_test("Server Connectivity", "FAIL", f"Cannot reach server: {str(e)}")
-            return False
     
     def run_all_tests(self):
         """Run all test suites"""
-        print("🧪 BACKEND API TESTLERİ BAŞLATIYOR...")
+        print("🧪 COMPREHENSIVE BACKEND API TESTING FOR PLAY STORE RELEASE")
+        print("=" * 70)
         print(f"📍 Base URL: {BASE_URL}")
-        print("=" * 60)
+        print(f"🕒 Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print("📋 Testing all endpoints from Turkish review request")
+        print("=" * 70)
         
         # Test server connectivity first
         if not self.test_server_connectivity():
             print("\n❌ Server connectivity failed. Aborting tests.")
             return False
         
-        # Run all test suites
+        # Run all test suites from Turkish review request
         self.test_existing_apis()
-        self.test_story_apis()
-        self.test_notification_apis()
+        self.test_auth_user_apis()
+        self.test_communities_groups_apis()
+        self.test_messaging_apis()
+        self.test_posts_feed_apis()
+        self.test_services_apis()
+        self.test_notifications_apis()
+        self.test_analytics_apis()
+        self.test_admin_panel_apis()
         
         # Print summary
         self.print_summary()
