@@ -184,6 +184,39 @@ export default function SignupScreen() {
               />
             </View>
 
+            {/* Cinsiyet Seçimi */}
+            <View style={styles.genderContainer}>
+              <Text style={styles.genderLabel}>Cinsiyet</Text>
+              <View style={styles.genderOptions}>
+                <TouchableOpacity
+                  style={[styles.genderOption, gender === 'male' && styles.genderOptionSelected]}
+                  onPress={() => setGender('male')}
+                >
+                  <Ionicons 
+                    name="male" 
+                    size={24} 
+                    color={gender === 'male' ? '#fff' : '#6b7280'} 
+                  />
+                  <Text style={[styles.genderText, gender === 'male' && styles.genderTextSelected]}>
+                    Erkek
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.genderOption, gender === 'female' && styles.genderOptionSelected]}
+                  onPress={() => setGender('female')}
+                >
+                  <Ionicons 
+                    name="female" 
+                    size={24} 
+                    color={gender === 'female' ? '#fff' : '#6b7280'} 
+                  />
+                  <Text style={[styles.genderText, gender === 'female' && styles.genderTextSelected]}>
+                    Kadın
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
             <Pressable
               style={({ pressed }) => [
                 styles.button,
