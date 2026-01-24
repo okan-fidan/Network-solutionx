@@ -615,6 +615,16 @@ async def get_community(community_id: str, current_user: dict = Depends(get_curr
         sg['memberCount'] = len(sg.get('members', []))
         sg['isMember'] = current_user['uid'] in sg.get('members', [])
         sg['hasPendingRequest'] = any(r.get('uid') == current_user['uid'] for r in sg.get('pendingRequests', []))
+        # Okunmamış mesaj sayısını hesapla
+        if sg['isMember']:
+            unread_count = await db.messages.count_documents({
+                "groupId": sg['id'],
+                "senderId": {"$ne": current_user['uid']},
+                "readBy": {"$nin": [current_user['uid']]}
+            })
+            sg['unreadCount'] = unread_count
+        else:
+            sg['unreadCount'] = 0
     
     community['subGroupsList'] = subgroups
     return community
