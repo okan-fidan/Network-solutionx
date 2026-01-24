@@ -414,6 +414,38 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* İş Deneyimi */}
+        {userProfile?.workExperience && userProfile.workExperience.length > 0 && (
+          <View style={styles.experienceSection}>
+            <Text style={styles.sectionTitle}>İş Deneyimi</Text>
+            {userProfile.workExperience.slice(0, 3).map((exp: any, index: number) => (
+              <View key={exp.id || index} style={styles.experienceCard}>
+                <View style={styles.experienceTimeline}>
+                  <View style={styles.timelineDot} />
+                  {index < userProfile.workExperience.length - 1 && index < 2 && (
+                    <View style={styles.timelineLine} />
+                  )}
+                </View>
+                <View style={styles.experienceContent}>
+                  <Text style={styles.experienceTitle}>{exp.title}</Text>
+                  <Text style={styles.experienceCompany}>{exp.company}</Text>
+                  <Text style={styles.experienceDate}>
+                    {exp.startDate} - {exp.current ? 'Devam ediyor' : exp.endDate}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            {userProfile.workExperience.length > 3 && (
+              <TouchableOpacity 
+                style={styles.viewMoreButton}
+                onPress={() => router.push('/profile/edit')}
+              >
+                <Text style={styles.viewMoreText}>+{userProfile.workExperience.length - 3} daha fazla</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {/* Sign Out Button */}
         <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
           <Ionicons name="log-out-outline" size={22} color="#ef4444" />
