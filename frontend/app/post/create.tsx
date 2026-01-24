@@ -526,4 +526,18 @@ const styles = StyleSheet.create({
   userItemName: { flex: 1, color: '#fff', fontSize: 15 },
   emptyList: { padding: 32, alignItems: 'center' },
   emptyText: { color: '#6b7280', fontSize: 15 },
+  // Video styles
+  videoBadge: { position: 'absolute', bottom: 8, left: 8, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.7)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, gap: 4 },
+  videoBadgeText: { color: '#fff', fontSize: 12, fontWeight: '500' },
+  // Media options modal
+  mediaOptionsOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  mediaOptionsContent: { backgroundColor: '#1f2937', borderRadius: 20, width: '100%', maxWidth: 340, padding: 20 },
+  mediaOptionsTitle: { color: '#fff', fontSize: 18, fontWeight: '600', textAlign: 'center', marginBottom: 20 },
+  mediaOption: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#374151' },
+  mediaOptionIcon: { width: 48, height: 48, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  mediaOptionInfo: { flex: 1, marginLeft: 14 },
+  mediaOptionTitle: { color: '#fff', fontSize: 16, fontWeight: '500' },
+  mediaOptionSubtitle: { color: '#9ca3af', fontSize: 13, marginTop: 2 },
+  mediaOptionCancel: { marginTop: 16, padding: 14, backgroundColor: '#374151', borderRadius: 12, alignItems: 'center' },
+  mediaOptionCancelText: { color: '#9ca3af', fontSize: 15, fontWeight: '500' },
 });
