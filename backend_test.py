@@ -59,6 +59,8 @@ class BackendTester:
                 response = self.session.get(url, headers=headers)
             elif method.upper() == "POST":
                 response = self.session.post(url, headers=headers, json=data)
+            elif method.upper() == "PUT":
+                response = self.session.put(url, headers=headers, json=data)
             elif method.upper() == "DELETE":
                 response = self.session.delete(url, headers=headers)
             else:
