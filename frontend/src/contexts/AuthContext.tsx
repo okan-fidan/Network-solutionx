@@ -136,6 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
+    trackEvent('user_logout');
+    setAnalyticsUserId(null);
     await firebaseSignOut(auth);
     setUserProfile(null);
   };
