@@ -115,13 +115,7 @@ export default function HelpScreen() {
                 <Ionicons name="mail" size={24} color="#6366f1" />
               </View>
               <Text style={styles.contactLabel}>E-posta</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.contactItem} onPress={() => handleContact('phone')}>
-              <View style={[styles.contactIcon, { backgroundColor: 'rgba(16, 185, 129, 0.1)' }]}>
-                <Ionicons name="call" size={24} color="#10b981" />
-              </View>
-              <Text style={styles.contactLabel}>Telefon</Text>
+              <Text style={styles.contactEmail}>metaticaretim@gmail.com</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.contactItem} onPress={() => handleContact('web')}>
