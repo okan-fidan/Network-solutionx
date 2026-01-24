@@ -19,6 +19,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
+import { Video, ResizeMode } from 'expo-av';
 import { postApi, userListApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { incrementPostCount, shouldShowRatingPrompt, requestReview } from '../../src/utils/appRating';
@@ -33,6 +34,7 @@ interface User {
 export default function CreatePostScreen() {
   const [content, setContent] = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [location, setLocation] = useState<string | null>(null);
   const [loadingLocation, setLoadingLocation] = useState(false);
@@ -44,6 +46,9 @@ export default function CreatePostScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [mentions, setMentions] = useState<string[]>([]);
   const [mentionedUsers, setMentionedUsers] = useState<User[]>([]);
+  
+  // Media type selector
+  const [showMediaOptions, setShowMediaOptions] = useState(false);
   
   const { userProfile } = useAuth();
   const router = useRouter();
@@ -78,7 +83,30 @@ export default function CreatePostScreen() {
 
     if (!result.canceled && result.assets[0]) {
       setSelectedImage(result.assets[0].uri);
+      setSelectedVideo(null); // Video varsa kaldır
     }
+    setShowMediaOptions(false);
+  };
+
+  const pickVideo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Video seçmek için galeri izni gerekiyor.');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      quality: 0.7,
+      videoMaxDuration: 60, // 60 saniye max
+    });
+
+    if (!result.canceled && result.assets[0]) {
+      setSelectedVideo(result.assets[0].uri);
+      setSelectedImage(null); // Resim varsa kaldır
+    }
+    setShowMediaOptions(false);
   };
 
   const getLocation = async () => {
