@@ -22,6 +22,7 @@ import hashlib
 import hmac
 import re
 import html
+from content_moderation import moderate_content, filter_profanity, is_safe_content
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
