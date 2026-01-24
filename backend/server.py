@@ -5900,6 +5900,608 @@ async def get_analytics_dashboard(current_user: dict = Depends(get_current_user)
         "generatedAt": datetime.utcnow().isoformat()
     }
 
+# ============================================
+# CONTENT MODERATION - İçerik Moderasyonu
+# ============================================
+
+@api_router.post("/moderate/check")
+async def check_content(data: dict, current_user: dict = Depends(get_current_user)):
+    """İçeriği küfür, spam ve dolandırıcılık için kontrol et"""
+    text = data.get('text', '')
+    context = data.get('context', 'general')  # post, message, comment, service, profile
+    
+    result = moderate_content(text, context)
+    
+    # Eğer kritik içerik bulunduysa log'la
+    if result['severity'] == 'critical':
+        await db.moderation_logs.insert_one({
+            "userId": current_user['uid'],
+            "text": text[:500],  # İlk 500 karakter
+            "context": context,
+            "result": result,
+            "createdAt": datetime.utcnow()
+        })
+    
+    return result
+
+# ============================================
+# USER BADGES & RATING SYSTEM - Rozet ve Puanlama
+# ============================================
+
+BADGE_DEFINITIONS = {
+    "verified_seller": {
+        "name": "Güvenilir Satıcı",
+        "description": "5+ başarılı hizmet tamamladı",
+        "icon": "shield-checkmark",
+        "color": "#10b981",
+        "requirement": {"completed_services": 5}
+    },
+    "expert_mentor": {
+        "name": "Uzman Mentor",
+        "description": "20+ mentee'ye yardım etti",
+        "icon": "school",
+        "color": "#6366f1",
+        "requirement": {"mentoring_sessions": 20}
+    },
+    "top_contributor": {
+        "name": "Top Katkı Sağlayıcı",
+        "description": "100+ beğeni aldı",
+        "icon": "star",
+        "color": "#f59e0b",
+        "requirement": {"total_likes": 100}
+    },
+    "community_leader": {
+        "name": "Topluluk Lideri",
+        "description": "Bir topluluğun admini",
+        "icon": "people",
+        "color": "#8b5cf6",
+        "requirement": {"is_admin": True}
+    },
+    "early_adopter": {
+        "name": "Erken Kullanıcı",
+        "description": "İlk 1000 kullanıcı arasında",
+        "icon": "rocket",
+        "color": "#ec4899",
+        "requirement": {"user_number": 1000}
+    },
+    "networking_pro": {
+        "name": "Network Uzmanı",
+        "description": "50+ bağlantı kurdu",
+        "icon": "git-network",
+        "color": "#06b6d4",
+        "requirement": {"connections": 50}
+    },
+    "content_creator": {
+        "name": "İçerik Üreticisi",
+        "description": "50+ post paylaştı",
+        "icon": "create",
+        "color": "#f97316",
+        "requirement": {"posts": 50}
+    },
+    "five_star_rating": {
+        "name": "5 Yıldız",
+        "description": "Ortalama 5 yıldız puanı",
+        "icon": "star",
+        "color": "#eab308",
+        "requirement": {"avg_rating": 5.0}
+    }
+}
+
+@api_router.get("/badges/definitions")
+async def get_badge_definitions():
+    """Tüm rozet tanımlarını getir"""
+    return BADGE_DEFINITIONS
+
+@api_router.get("/users/{uid}/badges")
+async def get_user_badges(uid: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının rozetlerini getir"""
+    user = await db.users.find_one({"uid": uid})
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+    
+    badges = user.get('badges', [])
+    rating = user.get('rating', {'average': 0, 'count': 0})
+    
+    return {
+        "badges": badges,
+        "rating": rating,
+        "badgeDetails": [BADGE_DEFINITIONS.get(b, {}) for b in badges if b in BADGE_DEFINITIONS]
+    }
+
+@api_router.post("/users/{uid}/rate")
+async def rate_user(uid: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Kullanıcıyı puanla"""
+    if uid == current_user['uid']:
+        raise HTTPException(status_code=400, detail="Kendinizi puanlayamazsınız")
+    
+    rating_value = data.get('rating', 0)
+    comment = data.get('comment', '')
+    service_id = data.get('serviceId')
+    
+    if not 1 <= rating_value <= 5:
+        raise HTTPException(status_code=400, detail="Puan 1-5 arasında olmalı")
+    
+    # Moderasyon kontrolü
+    if comment:
+        mod_result = moderate_content(comment, 'comment')
+        if mod_result['should_block']:
+            raise HTTPException(status_code=400, detail="Yorumunuz uygunsuz içerik barındırıyor")
+        comment = mod_result['filtered_text']
+    
+    # Daha önce puanlama yapılmış mı kontrol et
+    existing = await db.ratings.find_one({
+        "raterId": current_user['uid'],
+        "targetId": uid,
+        "serviceId": service_id
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Bu kullanıcıyı zaten puanladınız")
+    
+    # Puanlamayı kaydet
+    rating_doc = {
+        "id": str(uuid.uuid4()),
+        "raterId": current_user['uid'],
+        "raterName": f"{current_user.get('firstName', '')} {current_user.get('lastName', '')}",
+        "targetId": uid,
+        "serviceId": service_id,
+        "rating": rating_value,
+        "comment": comment,
+        "createdAt": datetime.utcnow()
+    }
+    await db.ratings.insert_one(rating_doc)
+    
+    # Kullanıcının ortalama puanını güncelle
+    all_ratings = await db.ratings.find({"targetId": uid}).to_list(1000)
+    avg_rating = sum(r['rating'] for r in all_ratings) / len(all_ratings) if all_ratings else 0
+    
+    await db.users.update_one(
+        {"uid": uid},
+        {"$set": {
+            "rating": {
+                "average": round(avg_rating, 1),
+                "count": len(all_ratings)
+            }
+        }}
+    )
+    
+    # 5 yıldız rozetini kontrol et
+    if avg_rating >= 4.8 and len(all_ratings) >= 10:
+        await db.users.update_one(
+            {"uid": uid},
+            {"$addToSet": {"badges": "five_star_rating"}}
+        )
+    
+    return {"message": "Puanlama başarılı", "newAverage": round(avg_rating, 1)}
+
+@api_router.get("/users/{uid}/ratings")
+async def get_user_ratings(uid: str, current_user: dict = Depends(get_current_user)):
+    """Kullanıcının aldığı puanları getir"""
+    ratings = await db.ratings.find({"targetId": uid}).sort("createdAt", -1).to_list(50)
+    
+    for r in ratings:
+        if '_id' in r:
+            del r['_id']
+    
+    return ratings
+
+# ============================================
+# SERVICE CONTRACTS - Hizmet Sözleşmeleri
+# ============================================
+
+SERVICE_CONTRACT_TEMPLATE = """
+FREELANCE HİZMET SÖZLEŞMESİ
+
+Sözleşme No: {contract_id}
+Tarih: {date}
+
+TARAFLAR:
+1. HİZMET VEREN (Satıcı):
+   Ad Soyad: {seller_name}
+   Kullanıcı ID: {seller_id}
+
+2. HİZMET ALAN (Alıcı):
+   Ad Soyad: {buyer_name}
+   Kullanıcı ID: {buyer_id}
+
+HİZMET DETAYLARI:
+- Hizmet Adı: {service_title}
+- Hizmet Açıklaması: {service_description}
+- Teslim Süresi: {delivery_time}
+- Ücret: {price} TL
+
+ŞARTLAR VE KOŞULLAR:
+
+1. GENEL HÜKÜMLER
+1.1. Bu sözleşme, yukarıda belirtilen taraflar arasında akdedilmiştir.
+1.2. Hizmet veren, belirtilen hizmeti profesyonel standartlarda tamamlamayı taahhüt eder.
+
+2. ÖDEME KOŞULLARI
+2.1. Ödeme, hizmetin tamamlanmasının ardından yapılacaktır.
+2.2. Platform üzerinden yapılan ödemeler güvence altındadır.
+
+3. TESLİMAT
+3.1. Hizmet, belirtilen süre içinde teslim edilecektir.
+3.2. Gecikmeler için hizmet veren, alıcıyı önceden bilgilendirmelidir.
+
+4. REVİZYONLAR
+4.1. Hizmet kapsamında {revision_count} adet revizyon hakkı bulunmaktadır.
+4.2. Kapsam dışı talepler ek ücrete tabidir.
+
+5. İPTAL VE İADE
+5.1. Hizmet başlamadan önce her iki taraf da iptal edebilir.
+5.2. Hizmet başladıktan sonra iptal durumunda, tamamlanan iş oranına göre ödeme yapılır.
+
+6. GİZLİLİK
+6.1. Her iki taraf da hizmet sürecinde öğrenilen bilgileri gizli tutacaktır.
+6.2. Proje detayları üçüncü şahıslarla paylaşılmayacaktır.
+
+7. FİKRİ MÜLKİYET
+7.1. Ödeme tamamlandıktan sonra tüm haklar alıcıya devredilir.
+7.2. Hizmet veren, portföy amaçlı kullanım hakkını saklı tutar.
+
+8. UYUŞMAZLIK ÇÖZÜMÜ
+8.1. Uyuşmazlıklar öncelikle platform arabuluculuğu ile çözülecektir.
+8.2. Çözümsüzlük halinde Türkiye Cumhuriyeti mahkemeleri yetkilidir.
+
+9. SORUMLULUK REDDİ
+9.1. Platform, taraflar arasındaki anlaşmazlıklardan sorumlu değildir.
+9.2. Platform, aracı kurum olarak hizmet vermektedir.
+
+Bu sözleşme, her iki tarafın onayı ile yürürlüğe girer.
+
+Dijital Onay Bilgileri:
+- Satıcı Onayı: {seller_approval}
+- Alıcı Onayı: {buyer_approval}
+"""
+
+@api_router.post("/services/{service_id}/contract")
+async def create_service_contract(service_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Hizmet sözleşmesi oluştur"""
+    service = await db.services.find_one({"id": service_id})
+    if not service:
+        raise HTTPException(status_code=404, detail="Hizmet bulunamadı")
+    
+    seller = await db.users.find_one({"uid": service['userId']})
+    buyer = await db.users.find_one({"uid": current_user['uid']})
+    
+    contract_id = str(uuid.uuid4())[:8].upper()
+    
+    contract = {
+        "id": contract_id,
+        "serviceId": service_id,
+        "sellerId": service['userId'],
+        "sellerName": f"{seller.get('firstName', '')} {seller.get('lastName', '')}",
+        "buyerId": current_user['uid'],
+        "buyerName": f"{buyer.get('firstName', '')} {buyer.get('lastName', '')}",
+        "serviceTitle": service['title'],
+        "serviceDescription": service.get('description', ''),
+        "price": service.get('price', 0),
+        "deliveryTime": data.get('deliveryTime', '7 gün'),
+        "revisionCount": data.get('revisionCount', 2),
+        "requirements": data.get('requirements', ''),
+        "status": "pending_seller_approval",  # pending_seller_approval, active, completed, cancelled, disputed
+        "sellerApproval": None,
+        "buyerApproval": datetime.utcnow().isoformat(),
+        "createdAt": datetime.utcnow(),
+        "updatedAt": datetime.utcnow()
+    }
+    
+    await db.contracts.insert_one(contract)
+    
+    # Satıcıya bildirim gönder
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "userId": service['userId'],
+        "type": "contract_request",
+        "title": "Yeni Sözleşme Talebi",
+        "message": f"{buyer.get('firstName', '')} size bir hizmet talebi gönderdi",
+        "data": {"contractId": contract_id, "serviceId": service_id},
+        "read": False,
+        "createdAt": datetime.utcnow()
+    })
+    
+    return {"message": "Sözleşme oluşturuldu", "contractId": contract_id}
+
+@api_router.put("/contracts/{contract_id}/approve")
+async def approve_contract(contract_id: str, current_user: dict = Depends(get_current_user)):
+    """Sözleşmeyi onayla"""
+    contract = await db.contracts.find_one({"id": contract_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Sözleşme bulunamadı")
+    
+    if contract['sellerId'] != current_user['uid']:
+        raise HTTPException(status_code=403, detail="Bu sözleşmeyi onaylama yetkiniz yok")
+    
+    await db.contracts.update_one(
+        {"id": contract_id},
+        {"$set": {
+            "status": "active",
+            "sellerApproval": datetime.utcnow().isoformat(),
+            "updatedAt": datetime.utcnow()
+        }}
+    )
+    
+    # Alıcıya bildirim gönder
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "userId": contract['buyerId'],
+        "type": "contract_approved",
+        "title": "Sözleşme Onaylandı",
+        "message": "Hizmet sözleşmeniz onaylandı, iş başlıyor!",
+        "data": {"contractId": contract_id},
+        "read": False,
+        "createdAt": datetime.utcnow()
+    })
+    
+    return {"message": "Sözleşme onaylandı"}
+
+@api_router.get("/contracts")
+async def get_my_contracts(current_user: dict = Depends(get_current_user)):
+    """Kullanıcının sözleşmelerini getir"""
+    contracts = await db.contracts.find({
+        "$or": [
+            {"sellerId": current_user['uid']},
+            {"buyerId": current_user['uid']}
+        ]
+    }).sort("createdAt", -1).to_list(50)
+    
+    for c in contracts:
+        if '_id' in c:
+            del c['_id']
+        c['isSeller'] = c['sellerId'] == current_user['uid']
+    
+    return contracts
+
+@api_router.get("/contracts/{contract_id}")
+async def get_contract(contract_id: str, current_user: dict = Depends(get_current_user)):
+    """Sözleşme detayını getir"""
+    contract = await db.contracts.find_one({"id": contract_id})
+    if not contract:
+        raise HTTPException(status_code=404, detail="Sözleşme bulunamadı")
+    
+    if contract['sellerId'] != current_user['uid'] and contract['buyerId'] != current_user['uid']:
+        raise HTTPException(status_code=403, detail="Bu sözleşmeye erişim yetkiniz yok")
+    
+    if '_id' in contract:
+        del contract['_id']
+    
+    # Sözleşme metnini oluştur
+    contract['contractText'] = SERVICE_CONTRACT_TEMPLATE.format(
+        contract_id=contract['id'],
+        date=contract['createdAt'].strftime('%d/%m/%Y') if isinstance(contract['createdAt'], datetime) else str(contract['createdAt'])[:10],
+        seller_name=contract['sellerName'],
+        seller_id=contract['sellerId'][:8],
+        buyer_name=contract['buyerName'],
+        buyer_id=contract['buyerId'][:8],
+        service_title=contract['serviceTitle'],
+        service_description=contract['serviceDescription'][:200] + '...' if len(contract.get('serviceDescription', '')) > 200 else contract.get('serviceDescription', ''),
+        delivery_time=contract.get('deliveryTime', '7 gün'),
+        price=contract.get('price', 0),
+        revision_count=contract.get('revisionCount', 2),
+        seller_approval=contract.get('sellerApproval', 'Bekliyor'),
+        buyer_approval=contract.get('buyerApproval', 'Onaylandı')
+    )
+    
+    return contract
+
+# ============================================
+# ADVANCED SEARCH - Gelişmiş Arama
+# ============================================
+
+@api_router.get("/search/advanced")
+async def advanced_search(
+    q: str = "",
+    type: str = "all",  # all, users, posts, services, communities
+    occupation: str = "",
+    city: str = "",
+    skills: str = "",
+    experience_years: int = 0,
+    min_rating: float = 0,
+    has_badge: str = "",
+    sort_by: str = "relevance",  # relevance, rating, date
+    page: int = 1,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """Gelişmiş arama - meslek, beceri, deneyim, puan ile filtreleme"""
+    results = {
+        "users": [],
+        "posts": [],
+        "services": [],
+        "communities": [],
+        "total": 0
+    }
+    
+    skip = (page - 1) * limit
+    
+    # Kullanıcı araması
+    if type in ["all", "users"]:
+        user_query = {}
+        
+        if q:
+            user_query["$or"] = [
+                {"firstName": {"$regex": q, "$options": "i"}},
+                {"lastName": {"$regex": q, "$options": "i"}},
+                {"bio": {"$regex": q, "$options": "i"}},
+                {"occupation": {"$regex": q, "$options": "i"}},
+                {"skills": {"$regex": q, "$options": "i"}}
+            ]
+        
+        if occupation:
+            user_query["occupation"] = {"$regex": occupation, "$options": "i"}
+        
+        if city:
+            user_query["city"] = {"$regex": city, "$options": "i"}
+        
+        if skills:
+            skill_list = [s.strip() for s in skills.split(",")]
+            user_query["skills"] = {"$in": skill_list}
+        
+        if min_rating > 0:
+            user_query["rating.average"] = {"$gte": min_rating}
+        
+        if has_badge:
+            user_query["badges"] = has_badge
+        
+        # İş deneyimi yılı filtresi
+        if experience_years > 0:
+            user_query["workExperience"] = {"$exists": True, "$ne": []}
+        
+        sort_field = [("rating.average", -1)] if sort_by == "rating" else [("createdAt", -1)]
+        
+        users = await db.users.find(
+            user_query,
+            {"password": 0, "email": 0}
+        ).sort(sort_field).skip(skip).limit(limit).to_list(limit)
+        
+        for u in users:
+            if '_id' in u:
+                del u['_id']
+            # İş deneyimi yılını hesapla
+            work_exp = u.get('workExperience', [])
+            total_years = 0
+            for exp in work_exp:
+                start = exp.get('startDate', '')
+                end = exp.get('endDate', '') if not exp.get('current') else str(datetime.utcnow().year)
+                if start and end:
+                    try:
+                        start_year = int(start.split('/')[-1]) if '/' in start else int(start[:4])
+                        end_year = int(end.split('/')[-1]) if '/' in end else int(end[:4])
+                        total_years += max(0, end_year - start_year)
+                    except:
+                        pass
+            u['totalExperienceYears'] = total_years
+            
+            # Deneyim filtresi uygula
+            if experience_years > 0 and total_years < experience_years:
+                continue
+            
+            results["users"].append(u)
+    
+    # Post araması
+    if type in ["all", "posts"]:
+        post_query = {}
+        if q:
+            post_query["content"] = {"$regex": q, "$options": "i"}
+        
+        posts = await db.posts.find(post_query).sort("createdAt", -1).skip(skip).limit(limit).to_list(limit)
+        
+        for p in posts:
+            if '_id' in p:
+                del p['_id']
+            results["posts"].append(p)
+    
+    # Hizmet araması
+    if type in ["all", "services"]:
+        service_query = {"isActive": True}
+        if q:
+            service_query["$or"] = [
+                {"title": {"$regex": q, "$options": "i"}},
+                {"description": {"$regex": q, "$options": "i"}},
+                {"category": {"$regex": q, "$options": "i"}}
+            ]
+        
+        services = await db.services.find(service_query).sort("createdAt", -1).skip(skip).limit(limit).to_list(limit)
+        
+        for s in services:
+            if '_id' in s:
+                del s['_id']
+            results["services"].append(s)
+    
+    # Topluluk araması
+    if type in ["all", "communities"]:
+        community_query = {}
+        if q:
+            community_query["$or"] = [
+                {"name": {"$regex": q, "$options": "i"}},
+                {"description": {"$regex": q, "$options": "i"}}
+            ]
+        
+        communities = await db.communities.find(community_query).skip(skip).limit(limit).to_list(limit)
+        
+        for c in communities:
+            if '_id' in c:
+                del c['_id']
+            results["communities"].append(c)
+    
+    results["total"] = len(results["users"]) + len(results["posts"]) + len(results["services"]) + len(results["communities"])
+    
+    return results
+
+# ============================================
+# ADMIN MENTOR MANAGEMENT - Admin Mentor Yönetimi
+# ============================================
+
+@api_router.get("/admin/mentors")
+async def admin_get_mentors(current_user: dict = Depends(get_current_user)):
+    """Admin: Tüm mentorları getir"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user or (not user.get('isAdmin') and user.get('email', '').lower() != ADMIN_EMAIL.lower()):
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    mentors = await db.mentors.find().sort("createdAt", -1).to_list(100)
+    
+    for m in mentors:
+        if '_id' in m:
+            del m['_id']
+        # Mentor kullanıcı bilgilerini ekle
+        mentor_user = await db.users.find_one({"uid": m.get('userId')})
+        if mentor_user:
+            m['userInfo'] = {
+                "firstName": mentor_user.get('firstName', ''),
+                "lastName": mentor_user.get('lastName', ''),
+                "profileImageUrl": mentor_user.get('profileImageUrl', ''),
+                "rating": mentor_user.get('rating', {})
+            }
+    
+    return mentors
+
+@api_router.put("/admin/mentors/{mentor_id}/status")
+async def admin_update_mentor_status(mentor_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Admin: Mentor durumunu güncelle"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user or (not user.get('isAdmin') and user.get('email', '').lower() != ADMIN_EMAIL.lower()):
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    status = data.get('status')  # approved, rejected, suspended
+    
+    result = await db.mentors.update_one(
+        {"id": mentor_id},
+        {"$set": {
+            "status": status,
+            "updatedAt": datetime.utcnow(),
+            "updatedBy": current_user['uid']
+        }}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="Mentor bulunamadı")
+    
+    # Mentor kullanıcısına rozet ekle
+    mentor = await db.mentors.find_one({"id": mentor_id})
+    if mentor and status == "approved":
+        await db.users.update_one(
+            {"uid": mentor['userId']},
+            {"$addToSet": {"badges": "expert_mentor"}}
+        )
+    
+    return {"message": f"Mentor durumu '{status}' olarak güncellendi"}
+
+@api_router.delete("/admin/mentors/{mentor_id}")
+async def admin_delete_mentor(mentor_id: str, current_user: dict = Depends(get_current_user)):
+    """Admin: Mentor sil"""
+    user = await db.users.find_one({"uid": current_user['uid']})
+    if not user or (not user.get('isAdmin') and user.get('email', '').lower() != ADMIN_EMAIL.lower()):
+        raise HTTPException(status_code=403, detail="Yetkiniz yok")
+    
+    result = await db.mentors.delete_one({"id": mentor_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Mentor bulunamadı")
+    
+    return {"message": "Mentor silindi"}
+
 # Include the router in the main app
 app.include_router(api_router)
 
