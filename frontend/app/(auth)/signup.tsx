@@ -27,6 +27,7 @@ export default function SignupScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
@@ -39,6 +40,11 @@ export default function SignupScreen() {
     if (!email || !password || !confirmPassword) {
       console.log('Validation failed: empty fields');
       Alert.alert('Hata', 'Lütfen tüm alanları doldurun');
+      return;
+    }
+
+    if (!gender) {
+      Alert.alert('Hata', 'Lütfen cinsiyetinizi seçin');
       return;
     }
 
@@ -58,7 +64,7 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       console.log('Calling signUp...');
-      await signUp(email, password);
+      await signUp(email, password, gender);
       console.log('signUp successful!');
       
       // Email doğrulama gönder
