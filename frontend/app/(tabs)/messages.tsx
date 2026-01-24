@@ -49,6 +49,7 @@ interface GroupChat {
   lastMessage?: string;
   lastMessageTime?: string;
   imageUrl?: string;
+  unreadCount?: number;
 }
 
 export default function MessagesScreen() {
