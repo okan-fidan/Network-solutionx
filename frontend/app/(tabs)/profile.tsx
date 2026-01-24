@@ -387,7 +387,7 @@ export default function ProfileScreen() {
                 <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}20` }]}>
                   <Ionicons name={action.icon as any} size={24} color={action.color} />
                 </View>
-                <Text style={styles.quickActionLabel}>{action.label}</Text>
+                <Text style={styles.quickActionLabel} numberOfLines={2}>{action.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
