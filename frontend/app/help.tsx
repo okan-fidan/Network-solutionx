@@ -206,6 +206,7 @@ const styles = StyleSheet.create({
   contactItem: { alignItems: 'center' },
   contactIcon: { width: 56, height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center', marginBottom: 8 },
   contactLabel: { color: '#9ca3af', fontSize: 13 },
+  contactEmail: { color: '#6366f1', fontSize: 11, marginTop: 4 },
   faqSection: { paddingHorizontal: 16, paddingVertical: 16 },
   faqItem: { backgroundColor: '#111827', borderRadius: 12, marginBottom: 10, overflow: 'hidden' },
   faqHeader: { flexDirection: 'row', alignItems: 'center', padding: 14 },
