@@ -272,6 +272,10 @@ export default function HomeScreen() {
   const [showWelcome, setShowWelcome] = useState(false); // AsyncStorage'dan kontrol edilecek
   const [welcomeDismissed, setWelcomeDismissed] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const POSTS_PER_PAGE = 20;
   
   // Story States - Instagram tarzı
   const [showStoryViewer, setShowStoryViewer] = useState(false);
