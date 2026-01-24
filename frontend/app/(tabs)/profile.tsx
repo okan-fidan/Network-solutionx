@@ -785,4 +785,79 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
   },
+  // Skills Styles
+  skillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+    justifyContent: 'center',
+  },
+  skillBadge: {
+    backgroundColor: 'rgba(99, 102, 241, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  skillBadgeText: {
+    color: '#a5b4fc',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  // Experience Styles
+  experienceSection: {
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
+  experienceCard: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  experienceTimeline: {
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  timelineDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#6366f1',
+    marginTop: 4,
+  },
+  timelineLine: {
+    width: 2,
+    flex: 1,
+    backgroundColor: '#374151',
+    marginTop: 4,
+  },
+  experienceContent: {
+    flex: 1,
+    backgroundColor: '#111827',
+    borderRadius: 12,
+    padding: 14,
+  },
+  experienceTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  experienceCompany: {
+    color: '#6366f1',
+    fontSize: 14,
+    marginTop: 2,
+  },
+  experienceDate: {
+    color: '#6b7280',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  viewMoreButton: {
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  viewMoreText: {
+    color: '#6366f1',
+    fontSize: 14,
+    fontWeight: '500',
+  },
 });
