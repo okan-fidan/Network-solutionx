@@ -40,7 +40,7 @@ api.interceptors.request.use(async (config) => {
 });
 
 export const postApi = {
-  getAll: () => api.get('/api/posts'),
+  getAll: (skip?: number, limit?: number) => api.get(`/api/posts?skip=${skip || 0}&limit=${limit || 20}`),
   getOne: (id: string) => api.get(`/api/posts/${id}`),
   create: (data: any) => api.post('/api/posts', data),
   like: (id: string) => api.post(`/api/posts/${id}/like`),
