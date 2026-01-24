@@ -1163,6 +1163,20 @@ export default function HomeScreen() {
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#6366f1" />
           }
+          onEndReached={loadMorePosts}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            loadingMore ? (
+              <View style={styles.loadingMoreContainer}>
+                <ActivityIndicator size="small" color="#6366f1" />
+                <Text style={styles.loadingMoreText}>Daha fazla gönderi yükleniyor...</Text>
+              </View>
+            ) : hasMorePosts ? null : posts.length > 0 ? (
+              <View style={styles.noMorePostsContainer}>
+                <Text style={styles.noMorePostsText}>Tüm gönderileri gördünüz 🎉</Text>
+              </View>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <View style={styles.emptyIconContainer}>
