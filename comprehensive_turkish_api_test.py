@@ -223,11 +223,11 @@ class TurkishAPITester:
         # POST /api/posts/{id}/like - Beğeni
         self.test_endpoint("POST", "/posts/test-post-123/like", 403, "POST /api/posts/{id}/like - Beğeni")
         
-        # POST /api/posts/{id}/comment - Yorum
+        # POST /api/posts/{id}/comments - Yorum (correct endpoint)
         comment_data = {
             "content": "Test yorum"
         }
-        self.test_endpoint("POST", "/posts/test-post-123/comment", 403, "POST /api/posts/{id}/comment - Yorum", data=comment_data)
+        self.test_endpoint("POST", "/posts/test-post-123/comments", 403, "POST /api/posts/{id}/comments - Yorum", data=comment_data)
         
         # DELETE /api/posts/{id} - Post silme
         self.test_endpoint("DELETE", "/posts/test-post-123", 403, "DELETE /api/posts/{id} - Post silme")
