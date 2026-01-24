@@ -717,9 +717,10 @@ const styles = StyleSheet.create({
   },
   quickActionLabel: {
     color: '#fff',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
+    numberOfLines: 2,
   },
   menuContainer: {
     marginTop: 24,
