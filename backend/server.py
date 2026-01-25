@@ -1574,6 +1574,143 @@ async def typing_indicator(data: dict, current_user: dict = Depends(get_current_
 
 # ==================== USERS ====================
 
+# Gelişmiş Kullanıcı Arama - LinkedIn tarzı
+@api_router.get("/users/search")
+async def search_users_advanced(
+    q: str = None,  # Genel arama terimi
+    occupation: str = None,  # Meslek filtresi
+    city: str = None,  # Şehir filtresi
+    skills: str = None,  # Beceri filtresi (virgülle ayrılmış)
+    experience_title: str = None,  # İş deneyimi unvanı
+    experience_company: str = None,  # Şirket adı
+    min_experience_years: int = None,  # Minimum deneyim yılı
+    sort_by: str = "relevance",  # relevance, name, recent
+    skip: int = 0,
+    limit: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Gelişmiş kullanıcı arama - meslek, şehir, beceri ve deneyime göre filtreleme
+    LinkedIn kalitesinde profesyonel arama
+    """
+    # Temel filtre - kendini hariç tut
+    query = {"uid": {"$ne": current_user['uid']}}
+    
+    # Genel arama terimi - isim, meslek veya bio'da ara
+    if q and q.strip():
+        search_term = q.strip()
+        query["$or"] = [
+            {"firstName": {"$regex": search_term, "$options": "i"}},
+            {"lastName": {"$regex": search_term, "$options": "i"}},
+            {"occupation": {"$regex": search_term, "$options": "i"}},
+            {"bio": {"$regex": search_term, "$options": "i"}},
+            {"skills": {"$elemMatch": {"$regex": search_term, "$options": "i"}}},
+        ]
+    
+    # Meslek filtresi
+    if occupation and occupation.strip():
+        query["occupation"] = {"$regex": occupation.strip(), "$options": "i"}
+    
+    # Şehir filtresi
+    if city and city.strip():
+        query["city"] = {"$regex": city.strip(), "$options": "i"}
+    
+    # Beceri filtresi (virgülle ayrılmış birden fazla beceri)
+    if skills and skills.strip():
+        skill_list = [s.strip() for s in skills.split(",") if s.strip()]
+        if skill_list:
+            skill_conditions = [{"skills": {"$elemMatch": {"$regex": skill, "$options": "i"}}} for skill in skill_list]
+            if "$and" not in query:
+                query["$and"] = []
+            query["$and"].extend(skill_conditions)
+    
+    # İş deneyimi unvanı filtresi
+    if experience_title and experience_title.strip():
+        if "$and" not in query:
+            query["$and"] = []
+        query["$and"].append({
+            "workExperience": {
+                "$elemMatch": {"title": {"$regex": experience_title.strip(), "$options": "i"}}
+            }
+        })
+    
+    # Şirket adı filtresi
+    if experience_company and experience_company.strip():
+        if "$and" not in query:
+            query["$and"] = []
+        query["$and"].append({
+            "workExperience": {
+                "$elemMatch": {"company": {"$regex": experience_company.strip(), "$options": "i"}}
+            }
+        })
+    
+    # Sıralama
+    sort_options = {
+        "relevance": [("createdAt", -1)],  # Varsayılan
+        "name": [("firstName", 1), ("lastName", 1)],
+        "recent": [("createdAt", -1)],
+    }
+    sort_order = sort_options.get(sort_by, sort_options["relevance"])
+    
+    # Sonuçları getir
+    users = await db.users.find(query).sort(sort_order).skip(skip).limit(limit).to_list(limit)
+    
+    # Toplam sonuç sayısı
+    total_count = await db.users.count_documents(query)
+    
+    # Hassas bilgileri temizle ve sonuçları hazırla
+    result_users = []
+    for u in users:
+        safe_user = {
+            "uid": u.get("uid"),
+            "firstName": u.get("firstName", ""),
+            "lastName": u.get("lastName", ""),
+            "occupation": u.get("occupation", ""),
+            "city": u.get("city", ""),
+            "profileImageUrl": u.get("profileImageUrl"),
+            "bio": u.get("bio", ""),
+            "skills": u.get("skills", []),
+            "workExperience": u.get("workExperience", []),
+            "isAdmin": u.get("isAdmin", False),
+            "createdAt": u.get("createdAt"),
+        }
+        result_users.append(safe_user)
+    
+    return {
+        "users": result_users,
+        "total": total_count,
+        "skip": skip,
+        "limit": limit,
+        "hasMore": skip + len(result_users) < total_count
+    }
+
+# Popüler meslekleri getir (arama önerileri için)
+@api_router.get("/users/occupations")
+async def get_popular_occupations(current_user: dict = Depends(get_current_user)):
+    """Sistemdeki popüler meslekleri getir"""
+    pipeline = [
+        {"$match": {"occupation": {"$exists": True, "$ne": ""}}},
+        {"$group": {"_id": "$occupation", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 20}
+    ]
+    results = await db.users.aggregate(pipeline).to_list(20)
+    return [{"occupation": r["_id"], "count": r["count"]} for r in results]
+
+# Popüler becerileri getir (arama önerileri için)
+@api_router.get("/users/skills")
+async def get_popular_skills(current_user: dict = Depends(get_current_user)):
+    """Sistemdeki popüler becerileri getir"""
+    pipeline = [
+        {"$match": {"skills": {"$exists": True, "$ne": []}}},
+        {"$unwind": "$skills"},
+        {"$group": {"_id": "$skills", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 30}
+    ]
+    results = await db.users.aggregate(pipeline).to_list(30)
+    return [{"skill": r["_id"], "count": r["count"]} for r in results]
+
 @api_router.get("/users")
 async def get_users(current_user: dict = Depends(get_current_user)):
     users = await db.users.find({"uid": {"$ne": current_user['uid']}}).to_list(1000)
