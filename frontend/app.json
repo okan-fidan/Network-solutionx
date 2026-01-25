@@ -14,9 +14,15 @@
       "infoPlist": {
         "GADApplicationIdentifier": "ca-app-pub-4676051761874687~8110388870",
         "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" },
-          { "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork" },
-          { "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork" }
+          {
+            "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          }
         ],
         "NSCameraUsageDescription": "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli",
         "NSPhotoLibraryUsageDescription": "Profil fotoğrafı ve post paylaşımı için galeri erişimi gerekli",
@@ -84,7 +90,10 @@
           "photosPermission": "Profil fotoğrafı ve post paylaşımı için galeri erişimi gerekli",
           "cameraPermission": "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli"
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker",
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true
