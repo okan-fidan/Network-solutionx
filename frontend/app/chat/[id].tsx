@@ -22,7 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { conversationApi, userListApi, userInteractionApi, notificationApi } from '../../src/services/api';
+import { conversationApi, userListApi, userInteractionApi, notificationApi, chatStatusApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { useTheme } from '../../src/contexts/ThemeContext';
 import { format } from 'date-fns';
