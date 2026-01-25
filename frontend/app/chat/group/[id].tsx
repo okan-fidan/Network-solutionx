@@ -390,6 +390,13 @@ export default function GroupChatScreen() {
     
     if ((!inputText.trim() && !mediaUrl) || !groupId) return;
 
+    // Yazıyor göstergesini durdur
+    try {
+      await chatStatusApi.sendTyping(groupId, false);
+    } catch (error) {
+      // Sessizce devam et
+    }
+
     setSending(true);
     setShowEmojiPicker(false);
     setShowAttachMenu(false);
