@@ -103,10 +103,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
-      "eas": {
-        "projectId": "3d036d13-cf9c-47af-a55f-773eb160dd02"
-      }
+      "router": {}
     },
     "owner": "okan_1"
   }
