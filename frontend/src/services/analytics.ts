@@ -166,6 +166,7 @@ class AnalyticsService {
 
   // Local'e kaydet (offline support)
   private async saveQueuedEvents(events: AnalyticsEvent[]) {
+    if (isSSR) return;
     try {
       const existing = await AsyncStorage.getItem('analytics_queue');
       const existingEvents = existing ? JSON.parse(existing) : [];
@@ -178,6 +179,7 @@ class AnalyticsService {
 
   // Local'den yükle
   private async loadQueuedEvents() {
+    if (isSSR) return;
     try {
       const stored = await AsyncStorage.getItem('analytics_queue');
       if (stored) {
@@ -193,6 +195,7 @@ class AnalyticsService {
 
   // Periyodik flush
   private startFlushInterval() {
+    if (isSSR) return;
     this.flushInterval = setInterval(() => {
       this.flush();
     }, 30000); // 30 saniyede bir
