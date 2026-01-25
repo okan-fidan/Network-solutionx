@@ -164,6 +164,33 @@ export const userListApi = {
   getAll: () => api.get('/api/users'),
   getOne: (uid: string) => api.get(`/api/users/${uid}`),
   search: (query: string) => api.get(`/api/users/search?q=${query}`),
+  // Gelişmiş arama - LinkedIn tarzı
+  advancedSearch: (params: {
+    q?: string;
+    occupation?: string;
+    city?: string;
+    skills?: string;
+    experience_title?: string;
+    experience_company?: string;
+    sort_by?: string;
+    skip?: number;
+    limit?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params.q) searchParams.append('q', params.q);
+    if (params.occupation) searchParams.append('occupation', params.occupation);
+    if (params.city) searchParams.append('city', params.city);
+    if (params.skills) searchParams.append('skills', params.skills);
+    if (params.experience_title) searchParams.append('experience_title', params.experience_title);
+    if (params.experience_company) searchParams.append('experience_company', params.experience_company);
+    if (params.sort_by) searchParams.append('sort_by', params.sort_by);
+    if (params.skip !== undefined) searchParams.append('skip', params.skip.toString());
+    if (params.limit !== undefined) searchParams.append('limit', params.limit.toString());
+    return api.get(`/api/users/search?${searchParams.toString()}`);
+  },
+  // Popüler meslekler ve beceriler (öneri için)
+  getPopularOccupations: () => api.get('/api/users/occupations'),
+  getPopularSkills: () => api.get('/api/users/skills'),
 };
 
 export const notificationApi = {
