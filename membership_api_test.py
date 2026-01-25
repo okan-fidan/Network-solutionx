@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 
 # Backend URL - Production URL from frontend .env
-BASE_URL = "https://deploy-debug-hero.preview.emergentagent.com/api"
+BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
 
 def test_membership_apis():
     """Üyelik sistemi API testleri"""

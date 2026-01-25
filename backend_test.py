@@ -14,7 +14,7 @@ Test Categories:
 8. Admin Panel
 
 Admin test email: metaticaretim@gmail.com
-Base URL: https://deploy-debug-hero.preview.emergentagent.com/api
+Base URL: https://buildsaver.preview.emergentagent.com/api
 """
 
 import requests
@@ -23,7 +23,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://deploy-debug-hero.preview.emergentagent.com/api"
+BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
 TIMEOUT = 30
 
 class BackendTester:

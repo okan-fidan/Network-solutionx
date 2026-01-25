@@ -7,7 +7,7 @@ Testing newly added endpoints as per Turkish review request:
 3. Admin Event APIs
 4. Admin Mentor APIs
 
-Base URL: https://deploy-debug-hero.preview.emergentagent.com/api
+Base URL: https://buildsaver.preview.emergentagent.com/api
 """
 
 import requests
@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://deploy-debug-hero.preview.emergentagent.com/api"
+BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
 TIMEOUT = 30
 
 def test_endpoint(method, endpoint, data=None, headers=None, expected_status=None):
