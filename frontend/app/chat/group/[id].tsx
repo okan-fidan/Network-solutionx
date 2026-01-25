@@ -598,6 +598,25 @@ export default function GroupChatScreen() {
   const handleTextChange = (text: string) => {
     setInputText(text);
     
+    // Yazıyor göstergesini gönder
+    if (text.trim()) {
+      sendTypingIndicator();
+      
+      // 3 saniye sonra yazıyor göstergesini durdur
+      if (typingSendTimeoutRef.current) {
+        clearTimeout(typingSendTimeoutRef.current);
+      }
+      typingSendTimeoutRef.current = setTimeout(async () => {
+        if (groupId) {
+          try {
+            await chatStatusApi.sendTyping(groupId, false);
+          } catch (error) {
+            // Sessizce devam et
+          }
+        }
+      }, 3000);
+    }
+    
     const lastAtIndex = text.lastIndexOf('@');
     if (lastAtIndex !== -1) {
       const afterAt = text.slice(lastAtIndex + 1);
