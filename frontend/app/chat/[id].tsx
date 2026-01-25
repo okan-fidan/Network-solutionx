@@ -111,11 +111,15 @@ export default function PrivateChatScreen() {
   const [showReportModal, setShowReportModal] = useState(false);
   const [selectedReportReason, setSelectedReportReason] = useState('');
   const [reportDescription, setReportDescription] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const { userProfile, user } = useAuth();
   const { colors, isDark } = useTheme();
   const router = useRouter();
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingPollingRef = useRef<NodeJS.Timeout | null>(null);
   const menuAnimation = useRef(new Animated.Value(0)).current;
 
   // Push notification token kaydet
