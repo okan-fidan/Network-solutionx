@@ -78,7 +78,9 @@
   },
   "expo": {
     "install": {
-      "exclude": []
+      "exclude": [
+        "@types/react"
+      ]
     }
   },
   "private": true,
