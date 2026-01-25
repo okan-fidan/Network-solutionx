@@ -226,7 +226,7 @@ export const conversationApi = {
     api.post('/api/conversations/start', data),
   delete: (id: string) => api.delete(`/api/conversations/${id}`),
   getMessages: (conversationId: string) => api.get(`/api/conversations/${conversationId}/messages`),
-  sendMessage: (conversationId: string, data: { content: string; type?: string; mediaUrl?: string }) => 
+  sendMessage: (conversationId: string, data: { content: string; type?: string; mediaUrl?: string; replyTo?: any }) => 
     api.post(`/api/conversations/${conversationId}/messages`, data),
   // Okundu olarak işaretle
   markAsRead: (conversationId: string) => api.put(`/api/conversations/${conversationId}/read`),
@@ -246,6 +246,19 @@ export const conversationApi = {
     api.post(`/api/conversations/${conversationId}/upload`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     }),
+};
+
+// Yazıyor göstergesi ve okundu bilgisi API
+export const chatStatusApi = {
+  // Yazıyor göstergesi gönder (DM veya Grup)
+  sendTyping: (room: string, isTyping: boolean = true) => 
+    api.post('/api/typing', { room, isTyping }),
+  // Mesajı okundu olarak işaretle
+  markMessageRead: (messageId: string) => 
+    api.post(`/api/messages/${messageId}/status`, { status: 'read' }),
+  // Mesajı teslim edildi olarak işaretle
+  markMessageDelivered: (messageId: string) => 
+    api.post(`/api/messages/${messageId}/status`, { status: 'delivered' }),
 };
 
 // Kullanıcı etkileşimleri API
