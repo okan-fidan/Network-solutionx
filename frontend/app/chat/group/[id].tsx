@@ -138,6 +138,10 @@ export default function GroupChatScreen() {
   // Konum paylaşma için state'ler
   const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [loadingLocation, setLoadingLocation] = useState(false);
+  // Yazıyor göstergesi için state'ler
+  const [typingUsers, setTypingUsers] = useState<string[]>([]);
+  const [lastTypingTime, setLastTypingTime] = useState<number>(0);
+  const typingSendTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const flatListRef = useRef<FlatList>(null);
   const { user, userProfile } = useAuth();
