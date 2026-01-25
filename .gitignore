@@ -78,6 +78,7 @@ agenthub/agents/youtube/db
 
 # Mobile development
 android-sdk/ -e 
-# Environment files
-*.env
-*.env.*
+# Environment files - KEPT FOR EMERGENT DEPLOYMENT
+# Emergent auto-updates .env values during deployment
+# *.env
+# *.env.*

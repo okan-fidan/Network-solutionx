@@ -5,14 +5,15 @@ import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
+// Firebase configuration from environment variables
 const firebaseConfig = {
-  apiKey: "AIzaSyA8oDLSHBIFvMsadfzFSAZPv6Cb6csTiVs",
-  authDomain: "networksolution-a9480.firebaseapp.com",
-  projectId: "networksolution-a9480",
-  storageBucket: "networksolution-a9480.firebasestorage.app",
-  messagingSenderId: "354620308224",
-  appId: "1:354620308224:web:0502ece183e2a9265951e5",
-  measurementId: "G-92Q8JQZZ5J"
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || "AIzaSyA8oDLSHBIFvMsadfzFSAZPv6Cb6csTiVs",
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || "networksolution-a9480.firebaseapp.com",
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || "networksolution-a9480",
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || "networksolution-a9480.firebasestorage.app",
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "354620308224",
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || "1:354620308224:web:0502ece183e2a9265951e5",
+  measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-92Q8JQZZ5J"
 };
 
 // Initialize Firebase
