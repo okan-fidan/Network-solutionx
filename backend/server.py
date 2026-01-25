@@ -4602,8 +4602,30 @@ async def send_conversation_message(conversation_id: str, data: dict, current_us
     if not conversation:
         raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
     
+    content = data.get("content", "")
+    
+    # Moderasyon kontrolü
+    if content:
+        mod_result = moderate_content(content, 'message')
+        if mod_result['should_block']:
+            raise HTTPException(status_code=400, detail="Mesajınız uygunsuz içerik barındırıyor")
+        content = mod_result['filtered_text']
+    
     user = await db.users.find_one({"uid": current_user['uid']})
     sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+    
+    # Yanıtlanan mesajı bul
+    reply_to_id = data.get("replyToId")
+    reply_to_data = None
+    if reply_to_id:
+        reply_msg = await db.dm_messages.find_one({"id": reply_to_id})
+        if reply_msg:
+            reply_to_data = {
+                "id": reply_msg['id'],
+                "content": reply_msg['content'][:100] if reply_msg.get('content') else "",
+                "senderName": reply_msg.get('senderName', ''),
+                "senderId": reply_msg.get('senderId', '')
+            }
     
     message = {
         "id": str(uuid.uuid4()),
@@ -4611,10 +4633,13 @@ async def send_conversation_message(conversation_id: str, data: dict, current_us
         "senderId": current_user['uid'],
         "senderName": sender_name,
         "senderImage": user.get('profileImageUrl') if user else None,
-        "content": data.get("content", ""),
+        "content": content,
         "type": data.get("type", "text"),
         "mediaUrl": data.get("mediaUrl"),
+        "replyTo": reply_to_data,
         "timestamp": datetime.utcnow(),
+        "delivered": True,
+        "deliveredAt": datetime.utcnow(),
         "read": False,
         "readAt": None,
     }
@@ -4627,7 +4652,7 @@ async def send_conversation_message(conversation_id: str, data: dict, current_us
         {"id": conversation_id},
         {
             "$set": {
-                "lastMessage": message["content"][:100] if message["content"] else "[Medya]",
+                "lastMessage": content[:100] if content else "[Medya]",
                 "lastMessageTime": message["timestamp"],
                 "updatedAt": datetime.utcnow(),
             },
@@ -4640,7 +4665,7 @@ async def send_conversation_message(conversation_id: str, data: dict, current_us
         other_user_id, 
         current_user['uid'], 
         sender_name, 
-        message["content"][:100] if message["content"] else "[Medya]", 
+        content[:100] if content else "[Medya]", 
         conversation_id
     )
     
