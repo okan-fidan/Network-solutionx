@@ -232,6 +232,13 @@ const AnnouncementBanner = ({ announcement, onPress, onDismiss }: {
 // Quick Actions Component
 const QuickActions = ({ router }: { router: any }) => (
   <View style={styles.quickActionsContainer}>
+    <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/search/advanced')}>
+      <LinearGradient colors={['#8b5cf6', '#7c3aed']} style={styles.quickActionIcon}>
+        <Ionicons name="search" size={20} color="#fff" />
+      </LinearGradient>
+      <Text style={styles.quickActionLabel}>Kişi Ara</Text>
+    </TouchableOpacity>
+
     <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/chat/new')}>
       <LinearGradient colors={['#10b981', '#059669']} style={styles.quickActionIcon}>
         <Ionicons name="chatbubble" size={20} color="#fff" />
