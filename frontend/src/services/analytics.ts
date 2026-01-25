@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 import api from './api';
 
 // Event types
@@ -41,6 +42,9 @@ interface UserProperties {
   isAdmin?: boolean;
 }
 
+// SSR ortamında çalışıp çalışmadığını kontrol et
+const isSSR = typeof window === 'undefined';
+
 class AnalyticsService {
   private sessionId: string;
   private userId: string | null = null;
@@ -48,12 +52,18 @@ class AnalyticsService {
   private flushInterval: NodeJS.Timeout | null = null;
   private sessionStart: Date;
   private screenViewHistory: string[] = [];
+  private initialized: boolean = false;
 
   constructor() {
     this.sessionId = this.generateSessionId();
     this.sessionStart = new Date();
-    this.startFlushInterval();
-    this.loadQueuedEvents();
+    
+    // SSR ortamında başlatma
+    if (!isSSR) {
+      this.startFlushInterval();
+      this.loadQueuedEvents();
+      this.initialized = true;
+    }
   }
 
   private generateSessionId(): string {
