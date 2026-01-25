@@ -244,9 +244,65 @@ export default function PrivateChatScreen() {
     };
   }, [conversation?.id]);
 
+  // Yazıyor göstergesi gönder
+  const sendTypingIndicator = useCallback(async () => {
+    if (!conversation?.id) return;
+    
+    const now = Date.now();
+    // Her 2 saniyede bir gönder
+    if (now - lastTypingTime < 2000) return;
+    
+    setLastTypingTime(now);
+    
+    try {
+      await chatStatusApi.sendTyping(conversation.id, true);
+    } catch (error) {
+      // Sessizce devam et
+    }
+  }, [conversation?.id, lastTypingTime]);
+
+  // Input değiştiğinde yazıyor göstergesini gönder
+  const handleInputChange = (text: string) => {
+    setInputText(text);
+    
+    if (text.trim()) {
+      sendTypingIndicator();
+      
+      // 3 saniye sonra yazıyor göstergesini durdur
+      if (typingSendTimeoutRef.current) {
+        clearTimeout(typingSendTimeoutRef.current);
+      }
+      typingSendTimeoutRef.current = setTimeout(async () => {
+        if (conversation?.id) {
+          try {
+            await chatStatusApi.sendTyping(conversation.id, false);
+          } catch (error) {
+            // Sessizce devam et
+          }
+        }
+      }, 3000);
+    }
+  };
+
+  // Cleanup typing indicator on unmount
+  useEffect(() => {
+    return () => {
+      if (typingSendTimeoutRef.current) {
+        clearTimeout(typingSendTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // Mesaj gönder
   const handleSend = async () => {
     if (!inputText.trim() || !conversation?.id || sending) return;
+
+    // Yazıyor göstergesini durdur
+    try {
+      await chatStatusApi.sendTyping(conversation.id, false);
+    } catch (error) {
+      // Sessizce devam et
+    }
 
     const messageText = inputText.trim();
     setInputText('');
