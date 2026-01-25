@@ -79,7 +79,10 @@
   },
   "expo": {
     "install": {
-      "exclude": ["@types/react", "@types/lodash"]
+      "exclude": [
+        "@types/react",
+        "@types/lodash"
+      ]
     }
   },
   "private": true,
