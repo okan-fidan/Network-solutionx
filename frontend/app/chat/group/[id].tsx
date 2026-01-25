@@ -24,7 +24,7 @@ import * as Location from 'expo-location';
 import { Video, ResizeMode } from 'expo-av';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../../src/config/firebase';
-import { subgroupApi } from '../../../src/services/api';
+import { subgroupApi, chatStatusApi } from '../../../src/services/api';
 import { useAuth } from '../../../src/contexts/AuthContext';
 import { formatDistanceToNow, format, isToday, isYesterday } from 'date-fns';
 import { tr } from 'date-fns/locale';
