@@ -1065,7 +1065,7 @@ export default function PrivateChatScreen() {
           placeholder="Mesaj yazın..."
           placeholderTextColor={colors.textSecondary}
           value={inputText}
-          onChangeText={setInputText}
+          onChangeText={handleInputChange}
           multiline
           maxLength={1000}
         />
