@@ -14,7 +14,7 @@ import sys
 from datetime import datetime
 
 # Base URL from environment
-BASE_URL = "https://community-app-11.preview.emergentagent.com/api"
+BASE_URL = "https://mobil-market-pro.preview.emergentagent.com/api"
 
 def test_endpoint(method, endpoint, data=None, headers=None, expected_status=None):
     """Test bir endpoint'i ve sonucu döndür"""
