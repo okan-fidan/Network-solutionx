@@ -6514,6 +6514,244 @@ async def admin_delete_mentor(mentor_id: str, current_user: dict = Depends(get_c
     
     return {"message": "Mentor silindi"}
 
+# ============================================
+# MESSAGING ENHANCEMENTS - Gelişmiş Mesajlaşma
+# ============================================
+
+# Typing durumları (in-memory cache)
+typing_status = {}  # {conversation_id: {user_id: timestamp}}
+
+@api_router.post("/conversations/{conversation_id}/typing")
+async def set_typing_status(conversation_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Yazıyor durumunu ayarla"""
+    is_typing = data.get('isTyping', False)
+    
+    if conversation_id not in typing_status:
+        typing_status[conversation_id] = {}
+    
+    if is_typing:
+        typing_status[conversation_id][current_user['uid']] = datetime.utcnow()
+    else:
+        typing_status[conversation_id].pop(current_user['uid'], None)
+    
+    return {"status": "ok"}
+
+@api_router.get("/conversations/{conversation_id}/typing")
+async def get_typing_status(conversation_id: str, current_user: dict = Depends(get_current_user)):
+    """Yazıyor durumunu kontrol et"""
+    if conversation_id not in typing_status:
+        return {"typingUsers": []}
+    
+    # 5 saniyeden eski typing durumlarını temizle
+    now = datetime.utcnow()
+    active_typing = []
+    for user_id, timestamp in list(typing_status[conversation_id].items()):
+        if (now - timestamp).total_seconds() < 5 and user_id != current_user['uid']:
+            user = await db.users.find_one({"uid": user_id})
+            if user:
+                active_typing.append({
+                    "uid": user_id,
+                    "name": f"{user.get('firstName', '')} {user.get('lastName', '')}".strip()
+                })
+        elif (now - timestamp).total_seconds() >= 5:
+            del typing_status[conversation_id][user_id]
+    
+    return {"typingUsers": active_typing}
+
+@api_router.post("/conversations/{conversation_id}/messages/{message_id}/read")
+async def mark_message_read(conversation_id: str, message_id: str, current_user: dict = Depends(get_current_user)):
+    """Mesajı okundu olarak işaretle - Mavi tik"""
+    result = await db.dm_messages.update_one(
+        {"id": message_id, "conversationId": conversation_id},
+        {"$set": {
+            "read": True,
+            "readAt": datetime.utcnow(),
+            "readBy": current_user['uid']
+        }}
+    )
+    return {"status": "ok", "updated": result.modified_count > 0}
+
+@api_router.post("/conversations/{conversation_id}/messages/reply")
+async def send_reply_message(conversation_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Mesaja yanıt gönder (Reply/Quote)"""
+    conversation = await db.conversations.find_one({
+        "id": conversation_id,
+        "participants": current_user['uid']
+    })
+    
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Konuşma bulunamadı")
+    
+    content = data.get('content', '').strip()
+    reply_to_id = data.get('replyToId')
+    
+    if not content:
+        raise HTTPException(status_code=400, detail="Mesaj içeriği gerekli")
+    
+    # Moderasyon kontrolü
+    mod_result = moderate_content(content, 'message')
+    if mod_result['should_block']:
+        raise HTTPException(status_code=400, detail="Mesajınız uygunsuz içerik barındırıyor")
+    content = mod_result['filtered_text']
+    
+    # Yanıtlanan mesajı bul
+    reply_to_message = None
+    if reply_to_id:
+        reply_to_message = await db.dm_messages.find_one({"id": reply_to_id})
+        if reply_to_message and '_id' in reply_to_message:
+            del reply_to_message['_id']
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "conversationId": conversation_id,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "senderImage": user.get('profileImageUrl') if user else None,
+        "content": content,
+        "type": "reply",
+        "replyTo": {
+            "id": reply_to_message['id'] if reply_to_message else None,
+            "content": reply_to_message['content'][:100] if reply_to_message else None,
+            "senderName": reply_to_message.get('senderName') if reply_to_message else None,
+            "senderId": reply_to_message.get('senderId') if reply_to_message else None,
+        } if reply_to_message else None,
+        "timestamp": datetime.utcnow(),
+        "read": False,
+        "delivered": True,
+        "deliveredAt": datetime.utcnow(),
+    }
+    
+    await db.dm_messages.insert_one(message)
+    
+    other_user_id = [p for p in conversation["participants"] if p != current_user['uid']][0]
+    
+    await db.conversations.update_one(
+        {"id": conversation_id},
+        {
+            "$set": {
+                "lastMessage": content[:50] + "..." if len(content) > 50 else content,
+                "lastMessageTime": message["timestamp"],
+            },
+            "$inc": {f"unreadCount.{other_user_id}": 1}
+        }
+    )
+    
+    await create_dm_notification(other_user_id, current_user['uid'], sender_name, content[:100], conversation_id)
+    
+    if "_id" in message:
+        del message["_id"]
+    
+    return message
+
+# Grup mesajları için typing
+group_typing_status = {}  # {group_id: {user_id: timestamp}}
+
+@api_router.post("/subgroups/{group_id}/typing")
+async def set_group_typing_status(group_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Grup yazıyor durumunu ayarla"""
+    is_typing = data.get('isTyping', False)
+    
+    if group_id not in group_typing_status:
+        group_typing_status[group_id] = {}
+    
+    if is_typing:
+        group_typing_status[group_id][current_user['uid']] = datetime.utcnow()
+    else:
+        group_typing_status[group_id].pop(current_user['uid'], None)
+    
+    return {"status": "ok"}
+
+@api_router.get("/subgroups/{group_id}/typing")
+async def get_group_typing_status(group_id: str, current_user: dict = Depends(get_current_user)):
+    """Grup yazıyor durumunu kontrol et"""
+    if group_id not in group_typing_status:
+        return {"typingUsers": []}
+    
+    now = datetime.utcnow()
+    active_typing = []
+    for user_id, timestamp in list(group_typing_status[group_id].items()):
+        if (now - timestamp).total_seconds() < 5 and user_id != current_user['uid']:
+            user = await db.users.find_one({"uid": user_id})
+            if user:
+                active_typing.append({
+                    "uid": user_id,
+                    "name": f"{user.get('firstName', '')}".strip()
+                })
+        elif (now - timestamp).total_seconds() >= 5:
+            del group_typing_status[group_id][user_id]
+    
+    return {"typingUsers": active_typing}
+
+@api_router.post("/subgroups/{group_id}/messages/reply")
+async def send_group_reply_message(group_id: str, data: dict, current_user: dict = Depends(get_current_user)):
+    """Grup mesajına yanıt gönder"""
+    subgroup = await db.subgroups.find_one({"id": group_id})
+    if not subgroup:
+        raise HTTPException(status_code=404, detail="Grup bulunamadı")
+    
+    if current_user['uid'] not in subgroup.get('members', []):
+        raise HTTPException(status_code=403, detail="Bu grubun üyesi değilsiniz")
+    
+    content = data.get('content', '').strip()
+    reply_to_id = data.get('replyToId')
+    
+    if not content:
+        raise HTTPException(status_code=400, detail="Mesaj içeriği gerekli")
+    
+    # Moderasyon kontrolü
+    mod_result = moderate_content(content, 'message')
+    if mod_result['should_block']:
+        raise HTTPException(status_code=400, detail="Mesajınız uygunsuz içerik barındırıyor")
+    content = mod_result['filtered_text']
+    
+    # Yanıtlanan mesajı bul
+    reply_to_message = None
+    if reply_to_id:
+        reply_to_message = await db.messages.find_one({"id": reply_to_id, "groupId": group_id})
+        if reply_to_message and '_id' in reply_to_message:
+            del reply_to_message['_id']
+    
+    user = await db.users.find_one({"uid": current_user['uid']})
+    sender_name = f"{user.get('firstName', '')} {user.get('lastName', '')}".strip() if user else "Bilinmeyen"
+    
+    message = {
+        "id": str(uuid.uuid4()),
+        "groupId": group_id,
+        "senderId": current_user['uid'],
+        "senderName": sender_name,
+        "senderImage": user.get('profileImageUrl') if user else None,
+        "content": content,
+        "type": "reply",
+        "replyTo": {
+            "id": reply_to_message['id'] if reply_to_message else None,
+            "content": reply_to_message['content'][:100] if reply_to_message else None,
+            "senderName": reply_to_message.get('senderName') if reply_to_message else None,
+            "senderId": reply_to_message.get('senderId') if reply_to_message else None,
+        } if reply_to_message else None,
+        "timestamp": datetime.utcnow(),
+        "readBy": [current_user['uid']],
+        "reactions": {},
+    }
+    
+    await db.messages.insert_one(message)
+    
+    # Subgroup güncelle
+    await db.subgroups.update_one(
+        {"id": group_id},
+        {"$set": {
+            "lastMessage": content[:50] + "..." if len(content) > 50 else content,
+            "lastMessageTime": message["timestamp"],
+        }}
+    )
+    
+    if "_id" in message:
+        del message["_id"]
+    
+    return message
+
 # Include the router in the main app
 app.include_router(api_router)
 
