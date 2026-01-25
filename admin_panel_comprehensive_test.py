@@ -155,8 +155,14 @@ def main():
         {
             "name": "📈 7. ANALYTICS (YENİ)",
             "tests": [
-                ("GET", "/analytics/events", None, "Analytics olayları"),
-                ("GET", "/analytics/dashboard", None, "Analytics dashboard")
+                ("POST", "/analytics/events", {
+                    "eventName": "test_event",
+                    "properties": {"test": "value"}
+                }, "Analytics olayları kaydetme"),
+                ("POST", "/analytics/user-properties", {
+                    "properties": {"test_prop": "test_value"}
+                }, "Analytics kullanıcı özellikleri"),
+                ("GET", "/admin/analytics/dashboard", None, "Admin analytics dashboard")
             ]
         }
     ]
