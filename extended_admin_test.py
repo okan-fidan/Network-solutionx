@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 # Server configuration
-BASE_URL = "https://mobil-market-pro.preview.emergentagent.com/api"
+BASE_URL = "https://deploy-debug-hero.preview.emergentagent.com/api"
 
 def test_extended_admin_functionality():
     """Test admin endpoints with more comprehensive scenarios"""

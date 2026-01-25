@@ -6922,8 +6922,8 @@ app.include_router(api_router)
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://localhost:8081",
-    "https://mobil-market-pro.preview.emergentagent.com",
-    "https://mobil-market-pro.preview.emergentagent.com",
+    "https://deploy-debug-hero.preview.emergentagent.com",
+    "https://deploy-debug-hero.preview.emergentagent.com",
     "exp://",  # Expo Go için
 ]
 

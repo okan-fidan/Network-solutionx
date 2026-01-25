@@ -7,7 +7,7 @@ Test edilecek yeni özellikler:
 3. PUT /api/subgroups/{subgroup_id}/read - Grup mesajları okundu işaretleme
 4. Email doğrulama (Firebase tarafından yönetiliyor - backend endpoint yok)
 
-Sunucu: https://mobil-market-pro.preview.emergentagent.com/api
+Sunucu: https://deploy-debug-hero.preview.emergentagent.com/api
 """
 
 import requests
@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 
 # Test configuration
-BASE_URL = "https://mobil-market-pro.preview.emergentagent.com/api"
+BASE_URL = "https://deploy-debug-hero.preview.emergentagent.com/api"
 TEST_USER_ID = "test-user-123"
 TEST_CONVERSATION_ID = "test-conversation-456"
 TEST_SUBGROUP_ID = "test-subgroup-789"
