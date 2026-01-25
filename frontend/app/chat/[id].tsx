@@ -863,11 +863,15 @@ export default function PrivateChatScreen() {
           <Text style={[styles.headerName, { color: colors.text }]} numberOfLines={1}>
             {otherUser ? `${otherUser.firstName} ${otherUser.lastName}` : 'Yükleniyor...'}
           </Text>
-          {otherUser?.city && (
+          {otherUserTyping ? (
+            <Text style={[styles.headerStatus, { color: colors.primary }]}>
+              yazıyor...
+            </Text>
+          ) : otherUser?.city ? (
             <Text style={[styles.headerStatus, { color: colors.textSecondary }]}>
               {userStatus.isMuted ? '🔇 Sessize alındı' : otherUser.city}
             </Text>
-          )}
+          ) : null}
         </View>
       </TouchableOpacity>
 
