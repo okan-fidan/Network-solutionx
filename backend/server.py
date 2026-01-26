@@ -30,7 +30,21 @@ load_dotenv(ROOT_DIR / '.env')
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+# Extract database name from MONGO_URL or use DB_NAME env var as fallback
+# Format: mongodb://host:port/database or mongodb+srv://user:pass@host/database
+def get_db_name_from_url(url):
+    try:
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        db_name = parsed.path.strip('/')
+        if db_name and '?' not in db_name:
+            return db_name.split('?')[0]
+        # If no database in URL, try DB_NAME env var
+        return os.environ.get('DB_NAME', 'network_solution')
+    except:
+        return os.environ.get('DB_NAME', 'network_solution')
+
+db = client[get_db_name_from_url(mongo_url)]
 
 # Rate Limiter setup
 limiter = Limiter(key_func=get_remote_address)
