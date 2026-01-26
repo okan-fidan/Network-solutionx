@@ -27,7 +27,6 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000000"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.founderconnect.app",
       "permissions": [
         "android.permission.INTERNET",
