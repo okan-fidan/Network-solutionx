@@ -53,12 +53,8 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.RECORD_AUDIO",
-        "android.permission.VIBRATE",
-        "com.google.android.gms.permission.AD_ID"
-      ],
-      "config": {
-        "googleMobileAdsAppId": "ca-app-pub-4676051761874687~8110388870"
-      }
+        "android.permission.VIBRATE"
+      ]
     },
     "web": {
       "bundler": "metro",
