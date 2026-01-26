@@ -23,7 +23,6 @@
     "@types/react": "~19.1.10",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
-    "emoji-mart": "^5.6.0",
     "expo": "^54.0.32",
     "expo-av": "^16.0.8",
     "expo-blur": "~15.0.8",
