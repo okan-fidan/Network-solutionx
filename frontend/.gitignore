@@ -40,3 +40,7 @@ app-example
 
 # Metro cache
 .metro-cache/
+
+# EAS Credentials
+credentials.json
+credentials/
