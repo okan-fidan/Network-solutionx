@@ -78,7 +78,10 @@
   },
   "expo": {
     "install": {
-      "exclude": []
+      "exclude": [
+        "eslint-config-expo",
+        "eslint"
+      ]
     }
   },
   "private": true,
