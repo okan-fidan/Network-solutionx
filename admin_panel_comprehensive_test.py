@@ -21,7 +21,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from frontend .env
-BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
+BASE_URL = "https://build-doctor-9.preview.emergentagent.com/api"
 
 def test_endpoint(method, endpoint, data=None, headers=None, description=""):
     """Test bir endpoint'i ve sonucu yazdır"""

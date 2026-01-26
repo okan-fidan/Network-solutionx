@@ -10,7 +10,7 @@ import uuid
 from datetime import datetime
 
 # Base URL from frontend environment
-BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
+BASE_URL = "https://build-doctor-9.preview.emergentagent.com/api"
 
 class StoryAPITester:
     def __init__(self):

@@ -9,7 +9,7 @@ import sys
 from datetime import datetime
 
 # Server configuration
-BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
+BASE_URL = "https://build-doctor-9.preview.emergentagent.com/api"
 
 def test_extended_admin_functionality():
     """Test admin endpoints with more comprehensive scenarios"""

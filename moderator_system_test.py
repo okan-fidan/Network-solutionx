@@ -12,7 +12,7 @@ Test edilecek endpoint'ler:
 8. GET /api/subgroups/{subgroup_id}/kick-reports - Kick raporları listesi (sadece admin görür)
 9. GET /api/subgroups/{subgroup_id}/mod-logs - Moderasyon logları (sadece admin görür)
 
-Base URL: https://buildsaver.preview.emergentagent.com/api
+Base URL: https://build-doctor-9.preview.emergentagent.com/api
 Admin kullanıcı: metaticaretim@gmail.com
 """
 
@@ -22,7 +22,7 @@ import sys
 from datetime import datetime
 
 # Test Configuration
-BASE_URL = "https://buildsaver.preview.emergentagent.com/api"
+BASE_URL = "https://build-doctor-9.preview.emergentagent.com/api"
 TEST_SUBGROUP_ID = "test-subgroup-id"
 TEST_USER_ID = "test-user-123"
 TEST_MESSAGE_ID = "test-message-456"
