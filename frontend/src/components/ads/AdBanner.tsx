@@ -1,22 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import React from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import Constants from 'expo-constants';
-
-// AdMob Reklam ID'leri
-const AD_UNIT_IDS = {
-  android: {
-    banner: 'ca-app-pub-4676051761874687/9606646838', // Gerçek Android Banner ID
-  },
-  ios: {
-    banner: 'ca-app-pub-4676051761874687/9606646838', // iOS için de aynı veya farklı ID kullanılabilir
-  },
-  // Test ID'leri (Geliştirme için)
-  test: {
-    banner: 'ca-app-pub-3940256099942544/6300978111', // Google test banner ID
-  }
-};
 
 // Expo Go kontrolü
 const isExpoGo = Constants.appOwnership === 'expo';
@@ -27,84 +11,31 @@ interface AdBannerProps {
   testMode?: boolean;
 }
 
-// Herkes için reklam gösterimi + AdMob entegrasyonu
-export const AdBanner: React.FC<AdBannerProps> = ({ style, testMode = false }) => {
-  const [AdMobBanner, setAdMobBanner] = useState<any>(null);
-  const [adError, setAdError] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  useEffect(() => {
-    loadAdMob();
-  }, []);
-
-  const loadAdMob = async () => {
-    // Expo Go'da veya Web'de AdMob çalışmaz
-    if (isExpoGo || Platform.OS === 'web') {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const AdMobModule = await import('expo-ads-admob');
-      setAdMobBanner(() => AdMobModule.AdMobBanner);
-      
-      // AdMob'u başlat
-      await AdMobModule.setTestDeviceIDAsync('EMULATOR');
-    } catch (error) {
-      console.log('AdMob yüklenemedi:', error);
-      setAdError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getBannerAdUnitId = () => {
-    if (testMode) {
-      return AD_UNIT_IDS.test.banner;
-    }
-    return Platform.OS === 'ios' 
-      ? AD_UNIT_IDS.ios.banner 
-      : AD_UNIT_IDS.android.banner;
-  };
-
-  // Yüklenirken gösterme
-  if (loading) {
-    return null;
-  }
-
-  // Expo Go veya Web'de placeholder göster
-  if (isExpoGo || Platform.OS === 'web' || !AdMobBanner || adError) {
-    return (
-      <View style={[styles.placeholder, style]}>
-        <View style={styles.placeholderContent}>
-          <View style={styles.adHeader}>
-            <Text style={styles.placeholderText}>📢 Reklam Alanı</Text>
-          </View>
-          <Text style={styles.placeholderSubtext}>
-            {Platform.OS === 'web' 
-              ? 'Web\'de reklam desteklenmiyor' 
-              : isExpoGo 
-                ? 'EAS Build ile gerçek reklamlar gösterilecek'
-                : 'Reklam yükleniyor...'}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
-  // Gerçek AdMob Banner (EAS Build)
+/**
+ * AdBanner Component
+ * 
+ * NOT: expo-ads-admob paketi Expo SDK 54 ile uyumlu değil.
+ * Bu component şimdilik placeholder olarak çalışıyor.
+ * 
+ * Production için react-native-google-mobile-ads kullanılması önerilir.
+ * Kurulum: npx expo install react-native-google-mobile-ads
+ */
+export const AdBanner: React.FC<AdBannerProps> = ({ style }) => {
+  // Placeholder - AdMob SDK 54 ile uyumsuz olduğu için
   return (
-    <View style={[styles.adContainer, style]}>
-      <AdMobBanner
-        bannerSize="smartBannerPortrait"
-        adUnitID={getBannerAdUnitId()}
-        servePersonalizedAds={true}
-        onDidFailToReceiveAdWithError={(error: string) => {
-          console.log('AdMob error:', error);
-          setAdError(true);
-        }}
-      />
+    <View style={[styles.placeholder, style]}>
+      <View style={styles.placeholderContent}>
+        <View style={styles.adHeader}>
+          <Text style={styles.placeholderText}>📢 Reklam Alanı</Text>
+        </View>
+        <Text style={styles.placeholderSubtext}>
+          {Platform.OS === 'web' 
+            ? 'Web\'de reklam desteklenmiyor' 
+            : isExpoGo 
+              ? 'EAS Build ile gerçek reklamlar gösterilecek'
+              : 'Reklam yükleniyor...'}
+        </Text>
+      </View>
     </View>
   );
 };
@@ -122,16 +53,7 @@ export const FixedBannerAd: React.FC<{ position?: 'top' | 'bottom' }> = ({ posit
 };
 
 const styles = StyleSheet.create({
-  // Ad Container (Gerçek reklam)
-  adContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginHorizontal: 16,
-    marginVertical: 8,
-    position: 'relative',
-  },
-
-  // Placeholder (Expo Go / Web)
+  // Placeholder (Expo Go / Web / SDK Uyumsuzluk)
   placeholder: {
     height: 60,
     backgroundColor: '#1f2937',
