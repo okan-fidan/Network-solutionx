@@ -77,12 +77,6 @@
         }
       ],
       [
-        "expo-ads-admob",
-        {
-          "userTrackingPermission": "Size özel içerik ve reklamlar sunmak için izninizi istiyoruz."
-        }
-      ],
-      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Yakındaki girişimcileri görmek için konum erişimi gerekli"
