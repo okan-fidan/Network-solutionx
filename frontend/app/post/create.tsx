@@ -330,13 +330,7 @@ export default function CreatePostScreen() {
 
           {selectedVideo && (
             <View style={styles.imagePreview}>
-              <Video
-                source={{ uri: selectedVideo }}
-                style={styles.selectedImage}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                isLooping={false}
-              />
+              <SimpleVideoPlayer uri={selectedVideo} style={styles.selectedImage} />
               <TouchableOpacity
                 style={styles.removeImageButton}
                 onPress={() => setSelectedVideo(null)}
