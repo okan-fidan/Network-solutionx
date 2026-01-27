@@ -1,5 +1,5 @@
 /**
- * Sesli Mesaj Kaydedici Bileşeni
+ * Sesli Mesaj Kaydedici Bileşeni - expo-audio ile
  */
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -12,15 +12,22 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { useAudioRecorder, RecordingOptions, AudioModule } from 'expo-audio';
 
 interface VoiceRecorderProps {
   onRecordingComplete: (uri: string, duration: number) => void;
   onCancel: () => void;
 }
 
+const recordingOptions: RecordingOptions = {
+  extension: '.m4a',
+  sampleRate: 44100,
+  numberOfChannels: 2,
+  bitRate: 128000,
+};
+
 export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRecorderProps) {
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  const audioRecorder = useAudioRecorder(recordingOptions);
   const [isRecording, setIsRecording] = useState(false);
   const [duration, setDuration] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState(false);
@@ -58,9 +65,9 @@ export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRe
 
   const requestPermission = async () => {
     try {
-      const { granted } = await Audio.requestPermissionsAsync();
-      setPermissionGranted(granted);
-      if (!granted) {
+      const status = await AudioModule.requestRecordingPermissionsAsync();
+      setPermissionGranted(status.granted);
+      if (!status.granted) {
         Alert.alert('İzin Gerekli', 'Sesli mesaj göndermek için mikrofon izni gerekiyor.');
       }
     } catch (error) {
@@ -75,16 +82,7 @@ export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRe
     }
 
     try {
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
-
-      const { recording: newRecording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-
-      setRecording(newRecording);
+      await audioRecorder.record();
       setIsRecording(true);
       setDuration(0);
 
@@ -98,16 +96,15 @@ export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRe
   };
 
   const stopRecording = async () => {
-    if (!recording) return;
+    if (!isRecording) return;
 
     try {
       if (timerRef.current) clearInterval(timerRef.current);
       
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
       
       setIsRecording(false);
-      setRecording(null);
 
       if (uri && duration > 0) {
         onRecordingComplete(uri, duration);
@@ -118,14 +115,13 @@ export default function VoiceRecorder({ onRecordingComplete, onCancel }: VoiceRe
   };
 
   const cancelRecording = async () => {
-    if (recording) {
+    if (isRecording) {
       try {
         if (timerRef.current) clearInterval(timerRef.current);
-        await recording.stopAndUnloadAsync();
+        await audioRecorder.stop();
       } catch (e) {}
     }
     setIsRecording(false);
-    setRecording(null);
     setDuration(0);
     onCancel();
   };
