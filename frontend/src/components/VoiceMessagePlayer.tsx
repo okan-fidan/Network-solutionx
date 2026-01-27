@@ -1,5 +1,5 @@
 /**
- * Sesli Mesaj Oynatıcı Bileşeni
+ * Sesli Mesaj Oynatıcı Bileşeni - expo-audio ile
  */
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -10,7 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { useAudioPlayer, AudioModule } from 'expo-audio';
 
 interface VoiceMessagePlayerProps {
   uri: string;
@@ -19,71 +19,64 @@ interface VoiceMessagePlayerProps {
 }
 
 export default function VoiceMessagePlayer({ uri, duration, isMe = false }: VoiceMessagePlayerProps) {
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const player = useAudioPlayer(uri);
   const [isPlaying, setIsPlaying] = useState(false);
   const [position, setPosition] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const progressAnim = useRef(new Animated.Value(0)).current;
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // Setup audio mode
+    AudioModule.setAudioModeAsync({
+      playsInSilentMode: true,
+    });
+
     return () => {
-      if (sound) {
-        sound.unloadAsync();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
       }
     };
-  }, [sound]);
+  }, []);
 
-  const loadAndPlay = async () => {
+  useEffect(() => {
+    if (player.playing) {
+      setIsPlaying(true);
+      // Update position periodically
+      intervalRef.current = setInterval(() => {
+        if (player.currentTime !== undefined) {
+          setPosition(player.currentTime);
+          const progress = player.currentTime / (duration || 1);
+          progressAnim.setValue(Math.min(progress, 1));
+        }
+      }, 100);
+    } else {
+      setIsPlaying(false);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  }, [player.playing]);
+
+  const togglePlayPause = async () => {
     try {
       setIsLoading(true);
-
-      if (sound) {
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded) {
-          if (isPlaying) {
-            await sound.pauseAsync();
-            setIsPlaying(false);
-          } else {
-            await sound.playAsync();
-            setIsPlaying(true);
-          }
-          setIsLoading(false);
-          return;
+      
+      if (isPlaying) {
+        player.pause();
+      } else {
+        // Reset if finished
+        if (position >= duration) {
+          player.seekTo(0);
+          setPosition(0);
+          progressAnim.setValue(0);
         }
+        player.play();
       }
-
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
-
-      const { sound: newSound } = await Audio.Sound.createAsync(
-        { uri },
-        { shouldPlay: true },
-        onPlaybackStatusUpdate
-      );
-
-      setSound(newSound);
-      setIsPlaying(true);
     } catch (error) {
       console.error('Error playing audio:', error);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const onPlaybackStatusUpdate = (status: any) => {
-    if (status.isLoaded) {
-      setPosition(status.positionMillis / 1000);
-      
-      const progress = status.positionMillis / status.durationMillis;
-      progressAnim.setValue(progress);
-
-      if (status.didJustFinish) {
-        setIsPlaying(false);
-        setPosition(0);
-        progressAnim.setValue(0);
-      }
     }
   };
 
@@ -102,7 +95,7 @@ export default function VoiceMessagePlayer({ uri, duration, isMe = false }: Voic
     <View style={[styles.container, isMe && styles.containerMe]}>
       <TouchableOpacity
         style={[styles.playButton, isMe && styles.playButtonMe]}
-        onPress={loadAndPlay}
+        onPress={togglePlayPause}
         disabled={isLoading}
       >
         <Ionicons
