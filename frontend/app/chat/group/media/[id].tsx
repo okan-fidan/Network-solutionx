@@ -312,13 +312,7 @@ export default function GroupMediaScreen() {
               resizeMode="contain"
             />
           ) : selectedMedia?.type === 'video' ? (
-            <Video
-              source={{ uri: selectedMedia.url }}
-              style={styles.fullVideo}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-            />
+            <SimpleVideoPlayer uri={selectedMedia.url} style={styles.fullVideo} />
           ) : null}
           <View style={styles.mediaViewerInfo}>
             <Text style={styles.mediaViewerName}>{selectedMedia?.senderName}</Text>
