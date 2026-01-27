@@ -986,12 +986,7 @@ export default function GroupChatScreen() {
           
           {item.type === 'video' && item.mediaUrl && (
             <View style={styles.videoContainer}>
-              <Video
-                source={{ uri: item.mediaUrl }}
-                style={styles.messageVideo}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-              />
+              <SimpleVideoPlayer uri={item.mediaUrl} style={styles.messageVideo} />
             </View>
           )}
           
