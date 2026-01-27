@@ -28,6 +28,7 @@
         "backgroundColor": "#000000"
       },
       "package": "com.founderconnect.app",
+      "versionCode": 1,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE",
