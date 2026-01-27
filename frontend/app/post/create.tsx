@@ -19,7 +19,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
-import { Video, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { postApi, userListApi } from '../../src/services/api';
 import { useAuth } from '../../src/contexts/AuthContext';
 import { incrementPostCount, shouldShowRatingPrompt, requestReview } from '../../src/utils/appRating';
