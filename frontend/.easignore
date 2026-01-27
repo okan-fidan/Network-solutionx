@@ -1,0 +1,50 @@
+# EAS Build Ignore File
+# This file specifies which files should be ignored during EAS builds
+
+# Dependencies (will be installed fresh)
+node_modules/
+
+# Expo cache
+.expo/
+
+# Metro cache
+.metro-cache/
+.metro-health-check*
+
+# Build outputs
+dist/
+web-build/
+android/
+ios/
+
+# Debug files
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# Local environment
+.env*.local
+
+# TypeScript build info
+*.tsbuildinfo
+
+# macOS
+.DS_Store
+
+# Credentials
+credentials.json
+credentials/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Example/test files
+app-example/
+__tests__/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
