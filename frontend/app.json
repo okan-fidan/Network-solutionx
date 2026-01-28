@@ -81,8 +81,17 @@
     "experiments": {
       "typedRoutes": true
     },
+    "updates": {
+      "enabled": false
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
     "extra": {
-      "router": {}
+      "router": {},
+      "eas": {
+        "projectId": "founder-connect"
+      }
     },
     "owner": "okan_1"
   }
