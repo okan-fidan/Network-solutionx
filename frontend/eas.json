@@ -1,19 +1,25 @@
 {
   "cli": {
     "appVersionSource": "local",
-    "requireCommit": false
+    "requireCommit": false,
+    "promptToConfigurePushNotifications": false
   },
   "build": {
     "base": {
       "env": {
         "EAS_NO_VCS": "1",
         "EXPO_NO_GIT_STATUS": "1",
-        "CI": "1"
+        "CI": "1",
+        "EAS_BUILD_RUNNER": "eas-build"
+      },
+      "cache": {
+        "disabled": true
       }
     },
     "android": {
       "extends": "base",
-      "buildType": "apk"
+      "buildType": "apk",
+      "image": "latest"
     }
   }
 }
