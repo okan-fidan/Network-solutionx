@@ -150,8 +150,7 @@ const config = {
     "expo-web-browser",
     "expo-asset",
     "expo-video",
-    "expo-secure-store",
-    "expo-clipboard"
+    "expo-secure-store"
   ],
   
   // Experiments
