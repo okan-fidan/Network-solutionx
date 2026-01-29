@@ -84,3 +84,7 @@ android-sdk/ -e
 # Emergent auto-updates .env values during deployment
 # *.env
 # *.env.*
+-e 
+# Environment files
+*.env
+*.env.*
