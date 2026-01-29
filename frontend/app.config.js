@@ -79,6 +79,13 @@ const config = {
         cameraPermission: "Profil fotoğrafı ve post paylaşımı için kamera erişimi gerekli"
       }
     ],
+    [
+      "react-native-google-mobile-ads",
+      {
+        androidAppId: "ca-app-pub-3940256099942544~3347511713",
+        iosAppId: "ca-app-pub-3940256099942544~1458002511"
+      }
+    ],
     "@react-native-community/datetimepicker",
     "expo-font",
     "expo-web-browser",
