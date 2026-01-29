@@ -65,24 +65,9 @@ export const AdBanner: React.FC<AdBannerProps> = ({
   const [adError, setAdError] = useState<string | null>(null);
   const [adLoaded, setAdLoaded] = useState(false);
 
-  // Web veya Expo Go'da placeholder göster
+  // Web veya Expo Go'da hiçbir şey gösterme
   if (Platform.OS === 'web' || isExpoGo || !BannerAd) {
-    return (
-      <View style={[styles.placeholder, style]}>
-        <View style={styles.placeholderContent}>
-          <View style={styles.adHeader}>
-            <Text style={styles.placeholderText}>📢 Reklam Alanı</Text>
-          </View>
-          <Text style={styles.placeholderSubtext}>
-            {Platform.OS === 'web' 
-              ? 'Web\'de reklam desteklenmiyor' 
-              : isExpoGo 
-                ? 'EAS Build ile gerçek reklamlar gösterilecek'
-                : 'AdMob yüklenemedi'}
-          </Text>
-        </View>
-      </View>
-    );
+    return null;
   }
 
   // Native build'de gerçek reklam göster
