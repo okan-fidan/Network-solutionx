@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { auth } from '../config/firebase';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
 // Get backend URL from environment
 const getBaseUrl = () => {
@@ -8,6 +9,11 @@ const getBaseUrl = () => {
   const backendUrl = Constants.expoConfig?.extra?.EXPO_PUBLIC_BACKEND_URL 
     || process.env.EXPO_PUBLIC_BACKEND_URL 
     || '';
+  
+  console.log('API Base URL:', backendUrl || 'NOT SET');
+  console.log('Platform:', Platform.OS);
+  console.log('Expo Config:', JSON.stringify(Constants.expoConfig?.extra || {}).substring(0, 200));
+  
   return backendUrl;
 };
 
