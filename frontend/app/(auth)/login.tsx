@@ -12,6 +12,7 @@ import {
   Alert,
   ActivityIndicator,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -213,6 +214,24 @@ export default function LoginScreen() {
                 <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
               )}
             </TouchableOpacity>
+
+            {/* Hizmet Politikası ve Gizlilik */}
+            <View style={styles.policyContainer}>
+              <Text style={styles.policyText}>Giriş yaparak </Text>
+              <TouchableOpacity onPress={() => router.push('/terms')}>
+                <Text style={styles.policyLink}>Kullanım Koşulları</Text>
+              </TouchableOpacity>
+              <Text style={styles.policyText}> ve </Text>
+              <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+                <Text style={styles.policyLink}>Gizlilik Politikası</Text>
+              </TouchableOpacity>
+              <Text style={styles.policyText}>'nı kabul etmiş olursunuz.</Text>
+            </View>
+          </View>
+
+          {/* App Version */}
+          <View style={styles.versionContainer}>
+            <Text style={styles.versionText}>Versiyon 1.0.0</Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -315,5 +334,33 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
     fontSize: 14,
     textDecorationLine: 'underline',
+  },
+  policyContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+    paddingHorizontal: 16,
+  },
+  policyText: {
+    color: '#6b7280',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  policyLink: {
+    color: '#6366f1',
+    fontSize: 12,
+    lineHeight: 18,
+    textDecorationLine: 'underline',
+  },
+  versionContainer: {
+    alignItems: 'center',
+    marginTop: 32,
+    paddingBottom: 16,
+  },
+  versionText: {
+    color: '#4b5563',
+    fontSize: 12,
   },
 });

@@ -30,6 +30,7 @@ export default function SignupScreen() {
   const [gender, setGender] = useState<'male' | 'female' | ''>('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const { signUp } = useAuth();
   const router = useRouter();
 
@@ -45,6 +46,11 @@ export default function SignupScreen() {
 
     if (!gender) {
       Alert.alert('Hata', 'Lütfen cinsiyetinizi seçin');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      Alert.alert('Hata', 'Devam etmek için Kullanım Koşulları ve Gizlilik Politikası\'nı kabul etmelisiniz');
       return;
     }
 
@@ -217,14 +223,37 @@ export default function SignupScreen() {
               </View>
             </View>
 
+            {/* Kullanım Koşulları Onayı */}
+            <TouchableOpacity 
+              style={styles.termsContainer}
+              onPress={() => setAcceptedTerms(!acceptedTerms)}
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, acceptedTerms && styles.checkboxChecked]}>
+                {acceptedTerms && <Ionicons name="checkmark" size={16} color="#fff" />}
+              </View>
+              <View style={styles.termsTextContainer}>
+                <Text style={styles.termsText}>
+                  <TouchableOpacity onPress={() => router.push('/terms')}>
+                    <Text style={styles.termsLink}>Kullanım Koşulları</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.termsText}> ve </Text>
+                  <TouchableOpacity onPress={() => router.push('/privacy-policy')}>
+                    <Text style={styles.termsLink}>Gizlilik Politikası</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.termsText}>'nı okudum ve kabul ediyorum.</Text>
+                </Text>
+              </View>
+            </TouchableOpacity>
+
             <Pressable
               style={({ pressed }) => [
                 styles.button,
-                loading && styles.buttonDisabled,
+                (loading || !acceptedTerms) && styles.buttonDisabled,
                 pressed && { opacity: 0.8 }
               ]}
               onPress={handleSignup}
-              disabled={loading}
+              disabled={loading || !acceptedTerms}
               role="button"
               accessibilityRole="button"
             >
@@ -342,6 +371,42 @@ const styles = StyleSheet.create({
   genderTextSelected: {
     color: '#fff',
   },
+  termsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    paddingVertical: 8,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#374151',
+    backgroundColor: '#1f2937',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: '#6366f1',
+    borderColor: '#6366f1',
+  },
+  termsTextContainer: {
+    flex: 1,
+  },
+  termsText: {
+    color: '#9ca3af',
+    fontSize: 13,
+    lineHeight: 20,
+  },
+  termsLink: {
+    color: '#6366f1',
+    fontSize: 13,
+    lineHeight: 20,
+    textDecorationLine: 'underline',
+  },
   button: {
     backgroundColor: '#6366f1',
     height: 56,
@@ -351,7 +416,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   buttonDisabled: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
   buttonText: {
     color: '#fff',
