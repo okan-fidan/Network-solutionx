@@ -17,7 +17,7 @@ import sys
 from datetime import datetime
 
 # Base URL from frontend/.env
-BASE_URL = "https://build-doctor-9.preview.emergentagent.com/api"
+BASE_URL = "https://android-deploy-fix.preview.emergentagent.com/api"
 
 class LatestFeaturesTester:
     def __init__(self):
