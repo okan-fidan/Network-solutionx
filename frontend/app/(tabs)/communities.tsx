@@ -61,10 +61,14 @@ export default function CommunitiesScreen() {
 
   const loadCommunities = useCallback(async () => {
     try {
+      console.log('Loading communities...');
       const response = await communityApi.getAll();
-      setCommunities(response.data);
-    } catch (error) {
+      console.log('Communities response:', JSON.stringify(response.data).substring(0, 500));
+      console.log('Communities count:', response.data?.length || 0);
+      setCommunities(response.data || []);
+    } catch (error: any) {
       console.error('Error loading communities:', error);
+      console.error('Error details:', error.response?.data || error.message);
     } finally {
       setLoading(false);
       setRefreshing(false);
