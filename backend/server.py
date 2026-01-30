@@ -28,7 +28,9 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+# Mevcut satırı şununla değiştir:
+mongo_url = os.environ.get('MONGO_URL') or os.environ.get('MONGODB_URL')
+
 client = AsyncIOMotorClient(mongo_url)
 # Extract database name from MONGO_URL or use DB_NAME env var as fallback
 # Format: mongodb://host:port/database or mongodb+srv://user:pass@host/database
